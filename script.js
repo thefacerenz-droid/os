@@ -73,14 +73,16 @@ const webApps = {
     embedBlocked: false,
     note: "Type a search like 'space games' or a full URL. This is a normal browser frame, not a bypass proxy."
   },
+
   googlesnake: {
     title: "Google Snake",
     tag: "Game Site",
     description: "Google's real Snake arcade page opened through vel.os.",
     url: "https://www.google.com/fbx?fbx=snake_arcade&fbxga=1&hl=en&origin=www.google.com",
     embedBlocked: true,
-    note: "Google Snake currently sends X-Frame-Options: SAMEORIGIN, so browsers block it inside iframe projects. The built-in Offline Snake is the inside-only fallback."
+    note: "Google Snake blocks iframe loading, so use this as a fallback/external-style entry."
   },
+
   rocketgoal: {
     title: "RocketGoal",
     tag: "Game Site",
@@ -89,14 +91,16 @@ const webApps = {
     embedBlocked: false,
     note: "RocketGoal should load inside vel.os unless the site or network blocks iframe access."
   },
+
   dune: {
-    title: "Dune",
+    title: "Goon dash",
     tag: "Game Site",
-    description: "A better Dune game page opened inside vel.os.",
+    description: "The ball-flying dune game opened inside vel.os.",
     url: "https://www.gamepix.com/play/dune",
     embedBlocked: false,
-    note: "Replaced the Google Sites version because it refused to connect inside an iframe."
+    note: "Guys at school yk who this is dont snitch and dont get caught (-.-. .- .-.. .-.. .- -.)"
   },
+
   fourcolors: {
     title: "4 Colors Multiplayer",
     tag: "Game Site",
@@ -105,22 +109,205 @@ const webApps = {
     embedBlocked: false,
     note: "4 Colors should load inside vel.os unless the site or network blocks iframe access."
   },
+
   snowrider: {
-    title: "Snow Rider",
+    title: "Snow Rider 3D",
     tag: "Game Site",
-    description: "Snow Rider 3D opened inside vel.os using an inline-friendly version.",
+    description: "Snow Rider 3D opened inside vel.os.",
     url: "https://snowrider3dworld.com/",
     embedBlocked: false,
-    note: "This version did not advertise iframe blocking in the header check, so it has a good chance to stay inside vel.os."
+    note: "This version has a decent chance to stay inside vel.os."
   },
+
   slither: {
-    title: "Slither",
+    title: "Slither.io",
     tag: "Game Site",
     description: "Slither opened through vel.os using the official site.",
     url: "http://slither.io/",
     embedBlocked: false,
-    note: "The official Slither site uses HTTP, so it may be blocked if you later host vel.os on HTTPS. From a local file it has the best chance to load inline."
+    note: "The official Slither site uses HTTP, so it may get blocked later if vel.os is hosted on HTTPS."
   },
+
+  snakegame: {
+    title: "Snake Game",
+    tag: "Game Site",
+    description: "A standalone snake game page opened inside vel.os.",
+    url: "https://www.gamepix.com/play/snake-game",
+    embedBlocked: false,
+    note: "Good fallback if Google Snake refuses to load inside iframe."
+  },
+
+  snake2048: {
+    title: "Snake 2048",
+    tag: "Game Site",
+    description: "Snake mixed with 2048 in one arcade-style page.",
+    url: "https://www.gamepix.com/play/snake-2048-io",
+    embedBlocked: false,
+    note: "Arcade number-snake game from GamePix."
+  },
+
+  game2048: {
+    title: "2048",
+    tag: "Game Site",
+    description: "Classic 2048 sliding puzzle inside vel.os.",
+    url: "https://www.gamepix.com/play/2048",
+    embedBlocked: false,
+    note: "Simple puzzle game that fits the launcher well."
+  },
+
+  tetris: {
+    title: "Tetris",
+    tag: "Game Site",
+    description: "Falling block puzzle game inside vel.os.",
+    url: "https://www.gamepix.com/play/tetris",
+    embedBlocked: false,
+    note: "Classic block-stacking puzzle page."
+  },
+
+  pacman: {
+    title: "Pac-Man",
+    tag: "Game Site",
+    description: "Maze arcade game opened inside vel.os.",
+    url: "https://www.gamepix.com/play/pac-man",
+    embedBlocked: false,
+    note: "Classic arcade option for the catalog."
+  },
+
+  minesweeper: {
+    title: "Minesweeper",
+    tag: "Game Site",
+    description: "Classic minesweeper puzzle page.",
+    url: "https://www.gamepix.com/play/minesweeper",
+    embedBlocked: false,
+    note: "Simple puzzle game that should fit inside your current web window."
+  },
+
+  sudoku: {
+    title: "Sudoku",
+    tag: "Game Site",
+    description: "Sudoku puzzle game inside vel.os.",
+    url: "https://www.gamepix.com/play/sudoku",
+    embedBlocked: false,
+    note: "Good slower-paced puzzle option."
+  },
+
+  chess: {
+    title: "Chess",
+    tag: "Game Site",
+    description: "Chess page opened inside vel.os.",
+    url: "https://www.gamepix.com/play/chess",
+    embedBlocked: false,
+    note: "Board game option for the web catalog."
+  },
+
+  checkers: {
+    title: "Checkers",
+    tag: "Game Site",
+    description: "Checkers page opened inside vel.os.",
+    url: "https://www.gamepix.com/play/checkers-legend",
+    embedBlocked: false,
+    note: "Simple board game entry."
+  },
+
+  basketrandom: {
+    title: "Basket Random",
+    tag: "Game Site",
+    description: "Chaotic basketball game inside vel.os.",
+    url: "https://www.crazygames.com/game/basket-random",
+    embedBlocked: true,
+    note: "CrazyGames pages may block iframe loading, so keep this as a likely fallback."
+  },
+
+  volleyrandom: {
+    title: "Volley Random",
+    tag: "Game Site",
+    description: "Random physics volleyball game.",
+    url: "https://www.crazygames.com/game/volley-random",
+    embedBlocked: true,
+    note: "May need fallback handling if iframe loading is blocked."
+  },
+
+  shellshockers: {
+    title: "Shell Shockers",
+    tag: "Game Site",
+    description: "Egg FPS game loaded through vel.os.",
+    url: "https://www.crazygames.com/game/shellshockersio",
+    embedBlocked: true,
+    note: "Likely to block iframe embedding, so this is a fallback-style entry."
+  },
+
+  cuttherope: {
+    title: "Cut the Rope",
+    tag: "Game Site",
+    description: "Physics puzzle game with Om Nom.",
+    url: "https://www.crazygames.com/game/cut-the-rope-ebx",
+    embedBlocked: true,
+    note: "Set as blocked fallback because some platform pages refuse iframe embedding."
+  },
+
+  subway: {
+    title: "Subway Surfers",
+    tag: "Game Site",
+    description: "Runner game inside vel.os.",
+    url: "https://poki.com/en/g/subway-surfers",
+    embedBlocked: true,
+    note: "Poki often blocks iframe loading, so this should be treated as a likely fallback."
+  },
+
+  temple: {
+    title: "Temple Run 2",
+    tag: "Game Site",
+    description: "Temple Run 2 through vel.os.",
+    url: "https://poki.com/en/g/temple-run-2",
+    embedBlocked: true,
+    note: "Good catalog entry, but Poki pages often block iframe use."
+  },
+
+  motox3m: {
+    title: "Moto X3M",
+    tag: "Game Site",
+    description: "Bike stunt game opened through vel.os.",
+    url: "https://poki.com/en/g/moto-x3m",
+    embedBlocked: true,
+    note: "Poki pages often need fallback handling."
+  },
+
+  drivemad: {
+    title: "Drive Mad",
+    tag: "Game Site",
+    description: "Physics driving game through vel.os.",
+    url: "https://poki.com/en/g/drive-mad",
+    embedBlocked: true,
+    note: "Likely needs fallback handling if iframe loading fails."
+  },
+
+  retrobowl: {
+    title: "Retro Bowl",
+    tag: "Game Site",
+    description: "Retro football game opened through vel.os.",
+    url: "https://poki.com/en/g/retro-bowl",
+    embedBlocked: true,
+    note: "Useful catalog entry, but Poki may block embedding."
+  },
+
+  tunnelrush: {
+    title: "Tunnel Rush",
+    tag: "Game Site",
+    description: "Fast tunnel reflex game.",
+    url: "https://www.crazygames.com/game/tunnel-rush",
+    embedBlocked: true,
+    note: "Likely to require fallback if iframe access is blocked."
+  },
+
+  stickmanhook: {
+    title: "Stickman Hook",
+    tag: "Game Site",
+    description: "Swing through levels in Stickman Hook.",
+    url: "https://poki.com/en/g/stickman-hook",
+    embedBlocked: true,
+    note: "Poki page, so iframe loading may fail."
+  },
+
   youtube: {
     title: "YouTube",
     tag: "Media Provider",
@@ -131,6 +318,7 @@ const webApps = {
     embedBlocked: false,
     note: "YouTube search runs through /api/youtube/search so the API key stays on the server."
   },
+
   spotify: {
     title: "Spotify",
     tag: "Media Provider",
@@ -141,6 +329,7 @@ const webApps = {
     embedBlocked: false,
     note: "Spotify search runs through /api/spotify/search using server-side client credentials."
   },
+
   shorts: {
     title: "Shorts Feed",
     tag: "Short Video",
@@ -151,6 +340,7 @@ const webApps = {
     embedBlocked: false,
     note: "This opens the vel.os Shorts feed because YouTube videos support official iframe embeds."
   },
+
   tiktok: {
     title: "TikTok",
     tag: "Media Provider",
@@ -161,6 +351,7 @@ const webApps = {
     embedBlocked: false,
     note: "TikTok uses official Login Kit and Display API endpoints only."
   },
+
   tubi: {
     title: "Tubi",
     tag: "Watch Site",
@@ -170,6 +361,7 @@ const webApps = {
     embedBlocked: true,
     note: "Tubi blocks iframe loading for the main app. To keep the project inside-only, use local videos or official embeddable trailers instead."
   },
+
   pluto: {
     title: "Pluto TV",
     tag: "Watch Site",
