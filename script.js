@@ -354,6 +354,41 @@ function createGameBadgeSrc(title, category = "Game") {
   return src;
 }
 
+const gameSourceLabels = {
+  all: "All",
+  local: "Local",
+  gamepix: "GamePix",
+  poki: "Poki",
+  google: "Google",
+  crazygames: "CrazyGames",
+  other: "More Sites"
+};
+
+function getGameSourceLabel(source) {
+  return gameSourceLabels[source] || gameSourceLabels.other;
+}
+
+function titleFromSlug(slug) {
+  return String(slug || "game")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => {
+      if (/^\d/.test(part) || part.length <= 2) return part.toUpperCase();
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" ");
+}
+
+function inferGameSource(game) {
+  const urls = [game.url, ...(game.mirrors || [])].join(" ");
+  if (game.source) return game.source;
+  if (/gamepix\.com/i.test(urls)) return "gamepix";
+  if (/poki\.com/i.test(urls)) return "poki";
+  if (/google\.com/i.test(urls)) return "google";
+  if (/crazygames\.com/i.test(urls)) return "crazygames";
+  return "other";
+}
+
 const webApps = {
   browser: {
     title: "Web Browser",
@@ -767,6 +802,26 @@ const gameCatalog = [
   }
 ];
 
+function addCatalogGame(game) {
+  const urls = [game.url, ...(game.mirrors || [])].filter(Boolean);
+  const existingUrl = gameCatalog.some((item) => {
+    const itemUrls = [item.url, ...(item.mirrors || [])].filter(Boolean);
+    return itemUrls.some((url) => urls.includes(url));
+  });
+
+  if (gameCatalog.some((item) => item.id === game.id) || existingUrl) {
+    return false;
+  }
+
+  gameCatalog.push({
+    source: inferGameSource(game),
+    badgeText: getBadgeInitials(game.title),
+    mirrors: [],
+    ...game
+  });
+  return true;
+}
+
 const gameSourceOverrides = {
   motox3m: {
     url: "https://gameforge.com/en-US/littlegames/moto-x3m/",
@@ -873,11 +928,340 @@ const gameSourceOverrides = {
     category,
     badgeText,
     url: override?.url || gamepixUrl,
+    source: override?.source || "gamepix",
     mirrors: override
       ? [...new Set([...(override.mirrors || []), gamepixUrl].filter((url) => url && url !== override.url))]
       : [],
     note: override?.note || `${title} loaded from a direct GamePix page.`
   });
+});
+
+[
+  "body-drop-3d",
+  "tentrix",
+  "turbo-dismounting",
+  "bloxd-io",
+  "basketball-stars",
+  "slope-racing-3d",
+  "car-crash-test",
+  "survival-456-but-its-impostor",
+  "funny-shooter-2",
+  "dogeminer-2",
+  "hoop-world",
+  "10x10",
+  "agame-stunt-car",
+  "kobadoo-flags",
+  "fortzone-battle-royale",
+  "ships-3d",
+  "ultimate-flying-car",
+  "moto-x3m-spooky-land",
+  "copa-toon",
+  "red-stickman-fighting-stick",
+  "shell-shockers",
+  "mr-racer-car-racing-game",
+  "territorial-io",
+  "gulper-io",
+  "battle-for-the-galaxy",
+  "little-big-snake",
+  "madalin-cars-multiplayer",
+  "racing-ball-3d",
+  "crazy-shooters",
+  "rocket-bot-royale",
+  "flip-trickster-parkour-simulator",
+  "demolition-derby-life",
+  "stickman-street-fighting",
+  "cat-clicker",
+  "ultimate-offroad-cars-2",
+  "sploop-io",
+  "my-parking-lot",
+  "mega-lamba-ramp",
+  "warfare-1942-online-shooter",
+  "strike-galaxy-attack",
+  "1942-pacific-front",
+  "1941-frozen-front",
+  "brutal-battle-royale-2",
+  "ballistic",
+  "dinosaur-evolution",
+  "kour-io",
+  "spinning-oia-oia-cat-bricker",
+  "moon-city-stunt",
+  "taming-io",
+  "dynamons-6",
+  "spider-evolution-runner-game",
+  "bodybuilder-karate-fighting",
+  "zoo-boom",
+  "madness-cars-destroy",
+  "war-the-knights",
+  "4-colors-multiplayer",
+  "yummy-tales",
+  "kogama-the-elevator",
+  "crazy-shooters-2",
+  "color-pixel-art-classic",
+  "kogama-roller-coaster-world",
+  "wild-west-gun-game",
+  "horse-simulator-3d",
+  "brutal-zombies",
+  "kopanito-all-stars-soccer",
+  "kogama-adopt-a-cat-or-dog-to-your-family",
+  "3d-bowling",
+  "stickman-archero-fight",
+  "rummikub",
+  "rovercraft",
+  "bonk-io",
+  "bomber-friends",
+  "8-ball-billiards-classic",
+  "real-extreme-car-driving-drift",
+  "2048-x2-merge-blocks",
+  "helicopter-and-tank-battle-desert-storm-multiplayer",
+  "kogama-adopt-me",
+  "merge-battle-tactics",
+  "100-doors-escape-from-prison",
+  "flying-motorbike-real-simulator",
+  "worms-zone",
+  "bubble-trouble",
+  "kogama-escape-from-prison",
+  "gem-valley",
+  "explainable-minesweeper",
+  "pixel-gun-apocalypse-3",
+  "tank-forces-survival",
+  "ben-10-world-rescue",
+  "superstar-family-dress-up-game",
+  "car-eats-car-volcanic-adventure",
+  "war-brokers",
+  "getaway",
+  "skibidi-strike",
+  "dino-merge-and-fight",
+  "kogama-d-day",
+  "mountain-tank",
+  "pixely-color-by-number",
+  "blockle",
+  "smash-karts",
+  "boat-drive",
+  "moto-x3m",
+  "top-10-soccer-managers",
+  "battle-simulator-sandbox",
+  "ninja-parkour-multiplayer",
+  "mini-car"
+].forEach((slug) => {
+  const title = titleFromSlug(slug);
+  addCatalogGame({
+    id: `gamepix-${slug}`,
+    title,
+    category: "GamePix",
+    source: "gamepix",
+    url: `https://www.gamepix.com/play/${slug}`,
+    note: `${title} from the official GamePix game catalog. If a network blocks GamePix, vel.os cannot bypass that.`
+  });
+});
+
+[
+  "count-war",
+  "stickers-merge",
+  "going-up-rooftop",
+  "sushi-situation",
+  "leaf-vacuum-simulator",
+  "rail-in-the-air",
+  "keyboard-warrior",
+  "wheel-master",
+  "soccer-skills-2-world-cup",
+  "ogus",
+  "dino-fighter",
+  "cleanup-crew",
+  "zombit",
+  "pixel-perfect",
+  "drift-hunters",
+  "satisbox-builder",
+  "duck-merge",
+  "draft-wars",
+  "crazy-merge",
+  "zombie-merge",
+  "guns-guns-guns",
+  "tricky-witch",
+  "carnado-bike-stunt",
+  "kpop-concert-dress-up",
+  "jelly-sokoban",
+  "punchy-guy",
+  "bunny-miner",
+  "decor-life",
+  "alchemix-match-3",
+  "push-titans",
+  "snacky-snake",
+  "card-hog",
+  "tower-emoji-defense",
+  "real-city-bikes",
+  "knockout-penguins",
+  "bubble-tower",
+  "merge-ink",
+  "janes-fashion-studio",
+  "jelly-fruit-merge",
+  "sort-the-court",
+  "freaky-clown-town-mystery",
+  "fashion-tour-simulator",
+  "skill-knight",
+  "sprunki",
+  "wreck-the-robot",
+  "lips-diy-master",
+  "magic-battleground",
+  "free-skate",
+  "tictoc-catwalk-fashion",
+  "tuning-car-racing",
+  "cozyville-find-hidden-objects",
+  "alien-raid-monster-evolution",
+  "sword-road",
+  "metamon",
+  "blast-buddies",
+  "flat-baseball",
+  "crazy-race",
+  "astro-rancher",
+  "67-game",
+  "diva-makeup-studio",
+  "cat-simulator",
+  "bot-crash-combat-arena",
+  "fashion-legends",
+  "diy-desk-designer",
+  "you-monster",
+  "snow-riders",
+  "ludo-king",
+  "chef-bacon",
+  "idle-spinner-factory-builder",
+  "adventure-miner",
+  "mine-and-dig",
+  "mr-squarely",
+  "apocalypse-merge",
+  "tank-stars",
+  "deadrise-io",
+  "4th-and-goal-2026",
+  "first-and-ten",
+  "speed-stars",
+  "neon-challenge-legends",
+  "pizza-planet",
+  "gas-station",
+  "collect-n-evolve",
+  "grass-knight",
+  "slime-dunk",
+  "carrom-multiplayer",
+  "the-superhero-league-2",
+  "moley-miner",
+  "bombhopper-io",
+  "draw-the-road",
+  "mad-skills-rallycross",
+  "mirror-image",
+  "turnament",
+  "pixel-pop",
+  "papa-louie-3",
+  "bos-bedroom",
+  "racing-rampage",
+  "snek-left",
+  "bubble-heroes",
+  "whip-flip",
+  "funny-rescue-sumo",
+  "yummy-ice-cream-factory",
+  "papa-louie-2",
+  "jackfrost",
+  "ice-beak",
+  "graveyard-shift"
+].forEach((slug) => {
+  const title = titleFromSlug(slug);
+  addCatalogGame({
+    id: `poki-${slug}`,
+    title,
+    category: "Poki",
+    source: "poki",
+    url: `https://poki.com/en/g/${slug}`,
+    embedBlocked: true,
+    note: `${title} is from Poki's official catalog, but Poki blocks third-party iframe loading with browser security rules. Use the GamePix, CrazyGames, or More Sites tabs for games that can stay inside vel.os.`
+  });
+});
+
+[
+  {
+    id: "google-snake-official",
+    title: "Google Snake",
+    category: "Google",
+    badgeSrc: "./assets/images/apps/google-snake.svg",
+    url: "https://www.google.com/fbx?fbx=snake_arcade&fbxga=1&hl=en&origin=www.google.com"
+  },
+  {
+    id: "google-pacman-doodle",
+    title: "Google Pac-Man",
+    category: "Google",
+    url: "https://www.google.com/logos/2010/pacman10-i.html"
+  },
+  {
+    id: "google-halloween-2016",
+    title: "Magic Cat Academy",
+    category: "Google",
+    url: "https://www.google.com/logos/2016/halloween16/halloween16.html"
+  },
+  {
+    id: "google-cricket-2017",
+    title: "Google Cricket",
+    category: "Google",
+    url: "https://www.google.com/logos/2017/cricket17/cricket17.html"
+  },
+  {
+    id: "google-basketball-2012",
+    title: "Google Basketball",
+    category: "Google",
+    url: "https://www.google.com/logos/2012/basketball-2012-hp.html"
+  },
+  {
+    id: "google-hurdles-2012",
+    title: "Google Hurdles",
+    category: "Google",
+    url: "https://www.google.com/logos/2012/hurdles-2012-hp.html"
+  },
+  {
+    id: "google-canoe-2012",
+    title: "Google Slalom Canoe",
+    category: "Google",
+    url: "https://www.google.com/logos/2012/slalom_canoe-2012-hp.html"
+  },
+  {
+    id: "google-baseball-2019",
+    title: "Google Baseball",
+    category: "Google",
+    url: "https://www.google.com/logos/2019/july4th19/r6/july4th19.html"
+  },
+  {
+    id: "google-champion-island",
+    title: "Champion Island",
+    category: "Google",
+    url: "https://www.google.com/logos/2020/kitsune/rc6/kitsune20.html"
+  }
+].forEach((game) => {
+  addCatalogGame({
+    source: "google",
+    embedBlocked: true,
+    note: `${game.title} is an official Google game, but Google blocks third-party iframe loading with browser security rules. Use the GamePix, CrazyGames, or More Sites tabs for in-app play.`,
+    ...game
+  });
+});
+
+[
+  ["crazygames-slither", "Slither.io", "IO", "https://www.crazygames.com/embed/slitherio"],
+  ["crazygames-tunnel-rush", "Tunnel Rush", "Reflex", "https://www.crazygames.com/embed/tunnel-rush"],
+  ["crazygames-basket-random", "Basket Random", "Sports", "https://www.crazygames.com/embed/basket-random"],
+  ["crazygames-shell-shockers", "Shell Shockers", "Shooter", "https://www.crazygames.com/embed/shellshockersio"],
+  ["crazygames-smash-karts", "Smash Karts", "Racing", "https://www.crazygames.com/embed/smash-karts"],
+  ["crazygames-moto-x3m", "Moto X3M", "Racing", "https://www.crazygames.com/embed/moto-x3m"],
+  ["crazygames-bloxd", "Bloxd.io", "Sandbox", "https://www.crazygames.com/embed/bloxdhop-io"],
+  ["crazygames-8-ball", "8 Ball Billiards", "Sports", "https://www.crazygames.com/embed/8-ball-billiards-classic"],
+  ["crazygames-words-of-wonders", "Words of Wonders", "Word", "https://www.crazygames.com/embed/words-of-wonders"],
+  ["crazygames-house-of-hazards", "House of Hazards", "Party", "https://www.crazygames.com/embed/house-of-hazards"]
+].forEach(([id, title, category, url]) => {
+  addCatalogGame({
+    id,
+    title,
+    category,
+    source: "crazygames",
+    url,
+    note: `${title} using a CrazyGames embed URL. If the embed is unavailable, try another source tab.`
+  });
+});
+
+gameCatalog.forEach((game) => {
+  game.source = inferGameSource(game);
 });
 
 gameCatalog.forEach((game) => {
@@ -891,7 +1275,8 @@ gameCatalog.forEach((game) => {
     note: game.note,
     badgeText: game.badgeText || game.title.slice(0, 2).toUpperCase(),
     badgeSrc: game.badgeSrc || createGameBadgeSrc(game.title, game.category),
-    category: game.category
+    category: game.category,
+    source: game.source
   };
 });
 
@@ -1361,6 +1746,9 @@ const clockTime = document.getElementById("clockTime");
 const clockDate = document.getElementById("clockDate");
 const bootScreen = document.getElementById("bootScreen");
 const launcherGameSearch = document.getElementById("launcherGameSearch");
+const launcherOfflineToggle = document.getElementById("launcherOfflineToggle");
+const gameSourceTabs = document.getElementById("gameSourceTabs");
+const gameSourceButtons = [...document.querySelectorAll("[data-game-source]")];
 const launcherGameGrid = document.getElementById("launcherGameGrid");
 const catalogCount = document.getElementById("catalogCount");
 const recentAppsTray = document.getElementById("recentAppsTray");
@@ -1485,6 +1873,11 @@ let youtubePlayer = null;
 let youtubeApiReadyPromise = null;
 let mediaSearchDebounceTimer = null;
 let launcherGameQuery = "";
+let launcherOfflineOnly = storage.get("vel-launcher-offline-only", isLikelyIpad() ? "1" : "0") === "1";
+let launcherGameSource = storage.get("vel-launcher-game-source", "all");
+if (!gameSourceLabels[launcherGameSource]) {
+  launcherGameSource = "all";
+}
 let velofySearchQuery = "";
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2249,6 +2642,13 @@ function matchesSearchQuery(parts, query) {
   return normalizeSearchText(parts.filter(Boolean).join(" ")).includes(needle);
 }
 
+function isLikelyIpad() {
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  return /iPad/i.test(userAgent)
+    || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 function loadTrack(index, shouldPlay = false) {
   currentTrackIndex = (index + velofyTracks.length) % velofyTracks.length;
   const track = velofyTracks[currentTrackIndex];
@@ -2302,11 +2702,22 @@ function renderLauncherCatalog() {
   if (!launcherGameGrid) return;
 
   const localGameIds = Object.keys(localGameMeta);
-  const localItems = localGameIds
-    .map((gameId) => ({ id: gameId, ...localGameMeta[gameId], local: true }))
-    .filter((game) => matchesSearchQuery([game.title, game.category, "offline local"], launcherGameQuery));
-  const webItems = gameCatalog
-    .filter((game) => matchesSearchQuery([game.title, game.category], launcherGameQuery));
+  const wantsLocal = launcherGameSource === "all" || launcherGameSource === "local";
+  const wantsWeb = launcherGameSource === "all" || launcherGameSource !== "local";
+  const localItems = wantsLocal
+    ? localGameIds
+      .map((gameId) => ({ id: gameId, ...localGameMeta[gameId], local: true }))
+      .filter((game) => matchesSearchQuery([game.title, game.category, "offline local"], launcherGameQuery))
+    : [];
+  const webItems = launcherOfflineOnly || !wantsWeb
+    ? []
+    : gameCatalog.filter((game) => {
+      const sourceMatches = launcherGameSource === "all" || game.source === launcherGameSource;
+      return sourceMatches && matchesSearchQuery(
+        [game.title, game.category, getGameSourceLabel(game.source)],
+        launcherGameQuery
+      );
+    });
 
   const localCards = localItems.map((game) => {
     const gameId = game.id;
@@ -2318,7 +2729,7 @@ function renderLauncherCatalog() {
           badgeText: game.title.slice(0, 2).toUpperCase()
         }, "app-badge")}
         <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">Offline ${escapeHtml(game.category)}</span>
+        <span class="icon-meta">Local · ${escapeHtml(game.category)}</span>
       </button>
     `;
   });
@@ -2329,7 +2740,7 @@ function renderLauncherCatalog() {
       <button class="app-icon" type="button" data-open-web="${escapeHtml(game.id)}">
         ${renderBadge(app, "app-badge")}
         <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">${escapeHtml(game.category)}</span>
+        <span class="icon-meta">${escapeHtml(getGameSourceLabel(game.source))} · ${escapeHtml(game.category)}</span>
       </button>
     `;
   });
@@ -2340,12 +2751,30 @@ function renderLauncherCatalog() {
   }
 
   if (catalogCount) {
-    const totalCount = gameCatalog.length + localGameIds.length;
+    const totalLocal = wantsLocal ? localGameIds.length : 0;
+    const totalWeb = launcherOfflineOnly || !wantsWeb
+      ? 0
+      : gameCatalog.filter((game) => launcherGameSource === "all" || game.source === launcherGameSource).length;
+    const totalCount = totalLocal + totalWeb;
     const visibleCount = localItems.length + webItems.length;
+    const suffix = launcherGameSource === "all"
+      ? launcherOfflineOnly ? "offline games" : "games"
+      : `${getGameSourceLabel(launcherGameSource)} games`;
     catalogCount.textContent = launcherGameQuery
-      ? `${visibleCount} / ${totalCount} games`
-      : `${totalCount} games`;
+      ? `${visibleCount} / ${totalCount} ${suffix}`
+      : `${totalCount} ${suffix}`;
   }
+
+  if (launcherOfflineToggle) {
+    launcherOfflineToggle.classList.toggle("is-active", launcherOfflineOnly);
+    launcherOfflineToggle.setAttribute("aria-pressed", String(launcherOfflineOnly));
+  }
+
+  gameSourceButtons.forEach((button) => {
+    const isActive = button.dataset.gameSource === launcherGameSource;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
 }
 
 function applyDensity(key) {
@@ -3651,6 +4080,39 @@ closePanelButtons.forEach((button) => {
 
 launcherGameSearch?.addEventListener("input", () => {
   launcherGameQuery = launcherGameSearch.value;
+  renderLauncherCatalog();
+});
+
+launcherOfflineToggle?.addEventListener("click", () => {
+  launcherOfflineOnly = !launcherOfflineOnly;
+  if (launcherOfflineOnly) {
+    launcherGameSource = "local";
+  } else if (launcherGameSource === "local") {
+    launcherGameSource = "all";
+  }
+  storage.set("vel-launcher-offline-only", launcherOfflineOnly ? "1" : "0");
+  storage.set("vel-launcher-game-source", launcherGameSource);
+  renderLauncherCatalog();
+});
+
+gameSourceTabs?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-game-source]");
+  if (!button) return;
+
+  launcherGameSource = button.dataset.gameSource;
+  if (!gameSourceLabels[launcherGameSource]) {
+    launcherGameSource = "all";
+  }
+
+  if (launcherGameSource === "local" && !launcherOfflineOnly) {
+    launcherOfflineOnly = true;
+    storage.set("vel-launcher-offline-only", "1");
+  } else if (launcherGameSource !== "local" && launcherOfflineOnly) {
+    launcherOfflineOnly = false;
+    storage.set("vel-launcher-offline-only", "0");
+  }
+
+  storage.set("vel-launcher-game-source", launcherGameSource);
   renderLauncherCatalog();
 });
 

@@ -95,6 +95,16 @@
             </div>
             <div class="catalog-tools">
               <input class="mini-search-input" id="launcherGameSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search games" aria-label="Search games" />
+              <button class="catalog-filter-button" id="launcherOfflineToggle" type="button" aria-pressed="false">Offline Only</button>
+            </div>
+            <div class="catalog-source-tabs" id="gameSourceTabs" role="tablist" aria-label="Game source filters">
+              <button class="catalog-source-tab is-active" type="button" data-game-source="all" role="tab" aria-selected="true">All</button>
+              <button class="catalog-source-tab" type="button" data-game-source="gamepix" role="tab" aria-selected="false">GamePix</button>
+              <button class="catalog-source-tab" type="button" data-game-source="poki" role="tab" aria-selected="false">Poki</button>
+              <button class="catalog-source-tab" type="button" data-game-source="google" role="tab" aria-selected="false">Google</button>
+              <button class="catalog-source-tab" type="button" data-game-source="crazygames" role="tab" aria-selected="false">CrazyGames</button>
+              <button class="catalog-source-tab" type="button" data-game-source="other" role="tab" aria-selected="false">More Sites</button>
+              <button class="catalog-source-tab" type="button" data-game-source="local" role="tab" aria-selected="false">Local</button>
             </div>
             <div class="icon-grid" id="launcherGameGrid"></div>
           </section>

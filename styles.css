@@ -640,6 +640,8 @@ body.is-music-playing .desktop-wallpaper {
 
 .catalog-tools {
   display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin-top: 0.7rem;
 }
 
@@ -663,6 +665,68 @@ body.is-music-playing .desktop-wallpaper {
 .mini-search-input:focus {
   border-color: var(--line-strong);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.catalog-filter-button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0.68rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.catalog-filter-button.is-active {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: #050505;
+}
+
+.catalog-source-tabs {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  overflow-x: auto;
+  padding: 0.05rem 0.02rem 0.2rem;
+  scrollbar-width: thin;
+}
+
+.catalog-source-tab {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0.54rem 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.catalog-source-tab.is-active {
+  border-color: #fff;
+  background: #fff;
+  color: #050505;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .catalog-source-tab:hover,
+  .catalog-source-tab:focus-visible {
+    transform: translateY(-2px);
+    border-color: var(--line-strong);
+  }
 }
 
 .icon-grid {
