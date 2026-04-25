@@ -1891,12 +1891,13 @@ body.is-music-playing .desktop-wallpaper {
   place-items: center;
   opacity: 0;
   background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.22));
-  pointer-events: auto;
+  pointer-events: none;
   touch-action: none;
 }
 
 .shorts-feed-card.is-active-short .shorts-scroll-grip {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .shorts-scroll-grip span {

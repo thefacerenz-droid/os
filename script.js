@@ -2034,6 +2034,7 @@ let youtubeAppState = {
   embedHost: storage.get("vel-youtube-embed-host", "privacy")
 };
 const SHORTS_DEFAULT_QUERY = "gaming funny shorts";
+const SHORTS_FOR_YOU_TOPIC_LIMIT = 2;
 let shortsState = {
   query: storage.get("vel-shorts-query", SHORTS_DEFAULT_QUERY),
   results: [],
@@ -2048,6 +2049,7 @@ let shortsState = {
   didInitialLoad: false
 };
 let shortsFeedObserver = null;
+let shortsAutoPlayTimer = null;
 let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
 youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
   ? youtubeWatchHistory.filter((item) => item?.id).slice(0, YOUTUBE_HISTORY_LIMIT)
@@ -3078,7 +3080,7 @@ function getShortsForYouTopics() {
       seen.add(topic);
       return true;
     })
-    .slice(0, 4);
+    .slice(0, SHORTS_FOR_YOU_TOPIC_LIMIT);
 }
 
 function getShortsForYouSignature() {
@@ -3086,6 +3088,37 @@ function getShortsForYouSignature() {
     youtubeWatchHistory[0]?.watchedAt || 0,
     youtubeInterestTopics.map((item) => `${item.topic}:${item.count || 0}:${item.updatedAt || 0}`).join("|")
   ].join("::");
+}
+
+function getShortsSeedVideos(topics = []) {
+  const topicText = topics.join(" ");
+  const seedSources = [
+    ...youtubeWatchHistory,
+    youtubeAppState.currentVideo,
+    ...youtubeAppState.results
+  ].filter(Boolean);
+  const seen = new Set();
+
+  return seedSources
+    .map((video) => {
+      const topic = normalizeYouTubeTopic(video.topic || video.recommendationTopic || topicText) || inferYouTubeTopic(video);
+      return {
+        id: video.id,
+        title: video.title || "YouTube Video",
+        channel: video.channel || "YouTube",
+        thumbnail: video.thumbnail || "",
+        publishedAt: video.publishedAt || "",
+        description: video.description || "",
+        recommendationTopic: topic,
+        topic
+      };
+    })
+    .filter((video) => {
+      if (!video.id || seen.has(video.id)) return false;
+      seen.add(video.id);
+      return true;
+    })
+    .slice(0, 60);
 }
 
 function getShortsEmbedUrl(videoId) {
@@ -3104,6 +3137,10 @@ function getShortsEmbedUrl(videoId) {
 }
 
 function pauseShortsPlayback() {
+  if (shortsAutoPlayTimer) {
+    window.clearTimeout(shortsAutoPlayTimer);
+    shortsAutoPlayTimer = null;
+  }
   shortsFeed?.querySelectorAll("iframe").forEach((iframe) => {
     if (!iframe.contentWindow) return;
     try {
@@ -3116,6 +3153,59 @@ function pauseShortsPlayback() {
       return;
     }
   });
+}
+
+function scheduleShortsAutoPlay(index, delay = 180) {
+  const nextIndex = Number(index);
+  if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= shortsState.results.length) return;
+  if (nextIndex === shortsState.activeIndex) return;
+  if (shortsAutoPlayTimer) window.clearTimeout(shortsAutoPlayTimer);
+  shortsAutoPlayTimer = window.setTimeout(() => {
+    shortsAutoPlayTimer = null;
+    activateShortsIndex(nextIndex);
+  }, delay);
+}
+
+function setupShortsAutoPlay() {
+  if (!shortsFeed || !shortsState.results.length) return;
+  if (shortsFeedObserver) {
+    shortsFeedObserver.disconnect();
+    shortsFeedObserver = null;
+  }
+
+  const cards = [...shortsFeed.querySelectorAll("[data-shorts-index]")];
+  if (!cards.length) return;
+
+  if ("IntersectionObserver" in window) {
+    shortsFeedObserver = new IntersectionObserver((entries) => {
+      const bestEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!bestEntry || bestEntry.intersectionRatio < 0.58) return;
+      scheduleShortsAutoPlay(Number(bestEntry.target.dataset.shortsIndex));
+    }, {
+      root: shortsFeed,
+      threshold: [0.58, 0.72, 0.88]
+    });
+    cards.forEach((card) => shortsFeedObserver.observe(card));
+    return;
+  }
+
+  let fallbackTimer = null;
+  shortsFeed.addEventListener("scroll", () => {
+    window.clearTimeout(fallbackTimer);
+    fallbackTimer = window.setTimeout(() => {
+      const feedRect = shortsFeed.getBoundingClientRect();
+      const feedCenter = feedRect.top + (feedRect.height / 2);
+      const closest = cards
+        .map((card) => ({
+          card,
+          distance: Math.abs((card.getBoundingClientRect().top + (card.getBoundingClientRect().height / 2)) - feedCenter)
+        }))
+        .sort((a, b) => a.distance - b.distance)[0]?.card;
+      if (closest) scheduleShortsAutoPlay(Number(closest.dataset.shortsIndex), 80);
+    }, 120);
+  }, { passive: true });
 }
 
 function setShortsStatus() {
@@ -3178,6 +3268,10 @@ function activateShortsIndex(index, { scroll = false } = {}) {
   }
   shortsState.activeIndex = nextIndex;
   setShortsCardMedia(shortsState.activeIndex, true);
+  recordYouTubeWatch({
+    ...shortsState.results[nextIndex],
+    topic: shortsState.results[nextIndex]?.topic || shortsState.results[nextIndex]?.recommendationTopic
+  });
   if (scroll) {
     shortsFeed?.querySelector(`[data-shorts-index="${shortsState.activeIndex}"]`)?.scrollIntoView({
       behavior: "smooth",
@@ -3257,6 +3351,7 @@ function renderShortsAppFeed() {
       </article>
     `;
   }).join("");
+  setupShortsAutoPlay();
 }
 
 async function loadShortsForYou({ append = false } = {}) {
@@ -3273,7 +3368,7 @@ async function loadShortsForYou({ append = false } = {}) {
 
   if (!append) {
     pauseShortsPlayback();
-    shortsState.results = [];
+    shortsState.results = getShortsSeedVideos(topics);
     shortsState.activeIndex = -1;
     shortsState.feedPageTokens = {};
     shortsState.nextPageToken = "";
@@ -3312,7 +3407,8 @@ async function loadShortsForYou({ append = false } = {}) {
       shortsState.error = "Your For You feed is ready, but YouTube did not return Shorts yet. Try searching a topic.";
     }
   } catch (error) {
-    shortsState.error = getYouTubeFetchError(error);
+    shortsState.error = shortsState.results.length ? "" : getYouTubeFetchError(error);
+    shortsState.nextPageToken = "";
   } finally {
     shortsState.loading = false;
     shortsState.didInitialLoad = true;
