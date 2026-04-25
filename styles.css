@@ -1897,6 +1897,25 @@ body.is-music-playing .desktop-wallpaper {
   transition: transform 180ms ease;
 }
 
+.shorts-cover::after {
+  content: "Tap to play";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  padding: 0.56rem 0.74rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.58);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
 .shorts-cover:hover .shorts-play-dot,
 .shorts-cover:focus-visible .shorts-play-dot {
   transform: scale(1.08);

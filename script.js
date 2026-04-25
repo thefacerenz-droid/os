@@ -2035,7 +2035,7 @@ let shortsState = {
   query: storage.get("vel-shorts-query", SHORTS_DEFAULT_QUERY),
   results: [],
   nextPageToken: "",
-  activeIndex: 0,
+  activeIndex: -1,
   loading: false,
   error: "",
   didInitialLoad: false
@@ -3091,12 +3091,14 @@ function activateShortsIndex(index, { scroll = false } = {}) {
   }
 }
 
-function renderShortsFeed() {
+function renderShortsAppFeed() {
   if (!shortsFeed) return;
   if (shortsFeedObserver) {
     shortsFeedObserver.disconnect();
     shortsFeedObserver = null;
   }
+
+  setShortsStatus();
 
   if (shortsState.loading && !shortsState.results.length) {
     shortsFeed.innerHTML = Array.from({ length: 4 }, (_, index) => `
@@ -3110,7 +3112,6 @@ function renderShortsFeed() {
         </div>
       </article>
     `).join("");
-    setShortsStatus();
     return;
   }
 
@@ -3122,7 +3123,6 @@ function renderShortsFeed() {
         <button class="ghost-button is-solid" type="button" data-shorts-retry>Retry</button>
       </article>
     `;
-    setShortsStatus();
     return;
   }
 
@@ -3133,11 +3133,12 @@ function renderShortsFeed() {
         <p>Search something like gaming, music, edits, sports, or funny clips.</p>
       </article>
     `;
-    setShortsStatus();
     return;
   }
 
-  shortsState.activeIndex = clampNumber(shortsState.activeIndex, 0, shortsState.results.length - 1);
+  if (shortsState.activeIndex >= shortsState.results.length) {
+    shortsState.activeIndex = -1;
+  }
   shortsFeed.innerHTML = shortsState.results.map((video, index) => {
     const isActive = index === shortsState.activeIndex;
     return `
@@ -3160,7 +3161,6 @@ function renderShortsFeed() {
       </article>
     `;
   }).join("");
-  setShortsStatus();
 }
 
 async function searchShorts({ append = false } = {}) {
@@ -3174,9 +3174,9 @@ async function searchShorts({ append = false } = {}) {
     pauseShortsPlayback();
     shortsState.results = [];
     shortsState.nextPageToken = "";
-    shortsState.activeIndex = 0;
+    shortsState.activeIndex = -1;
   }
-  renderShortsFeed();
+  renderShortsAppFeed();
 
   try {
     const searchText = /\bshorts?\b/i.test(query) ? query : `${query} shorts`;
@@ -3197,7 +3197,7 @@ async function searchShorts({ append = false } = {}) {
   } finally {
     shortsState.loading = false;
     shortsState.didInitialLoad = true;
-    renderShortsFeed();
+    renderShortsAppFeed();
   }
 }
 
@@ -8065,7 +8065,7 @@ if (shortsSearchInput) {
 renderLauncherCatalog();
 renderRecentApps();
 renderAiMessages();
-renderShortsFeed();
+renderShortsAppFeed();
 initDraggableDrawers();
 initScrollAssist();
 initDraggableLyricsWidget();
