@@ -1851,7 +1851,8 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .shorts-media-slot,
-.shorts-media-slot iframe {
+.shorts-media-slot iframe,
+.shorts-local-video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1861,6 +1862,12 @@ body.is-music-playing .desktop-wallpaper {
 
 .shorts-media-slot {
   touch-action: pan-y;
+}
+
+.shorts-local-video {
+  display: block;
+  object-fit: cover;
+  background: #000;
 }
 
 .shorts-cover {

@@ -2035,6 +2035,7 @@ let youtubeAppState = {
 };
 const SHORTS_DEFAULT_QUERY = "gaming funny shorts";
 const SHORTS_FOR_YOU_TOPIC_LIMIT = 2;
+const SHORTS_FALLBACK_LIMIT = 80;
 let shortsState = {
   query: storage.get("vel-shorts-query", SHORTS_DEFAULT_QUERY),
   results: [],
@@ -2046,6 +2047,7 @@ let shortsState = {
   activeIndex: -1,
   loading: false,
   error: "",
+  notice: "",
   didInitialLoad: false
 };
 let shortsFeedObserver = null;
@@ -3121,6 +3123,35 @@ function getShortsSeedVideos(topics = []) {
     .slice(0, 60);
 }
 
+function getShortsFallbackVideos(topics = []) {
+  const topicWords = topics
+    .join(" ")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  const ranked = mediaTikTokCatalog
+    .map((item, index) => {
+      const haystack = `${item.title || ""} ${item.creator || ""} ${(item.tags || []).join(" ")}`.toLowerCase();
+      const score = topicWords.reduce((total, word) => total + (haystack.includes(word) ? 1 : 0), 0);
+      return { item, index, score };
+    })
+    .sort((a, b) => (b.score - a.score) || (a.index - b.index));
+
+  return ranked.slice(0, SHORTS_FALLBACK_LIMIT).map(({ item, index }) => ({
+    id: `local-short-${index}`,
+    title: item.title || "Short Clip",
+    channel: item.creator || "vel.os Shorts",
+    thumbnail: "",
+    poster: item.thumbnail || "linear-gradient(135deg, #050505, #555)",
+    src: item.src,
+    localShort: true,
+    publishedAt: "",
+    description: "Starter short-form clip shown when YouTube API results are unavailable.",
+    recommendationTopic: topics[0] || "shorts",
+    topic: topics[0] || "shorts"
+  }));
+}
+
 function getShortsEmbedUrl(videoId) {
   const params = new URLSearchParams({
     autoplay: "1",
@@ -3215,7 +3246,9 @@ function setShortsStatus() {
       ? "Loading"
       : shortsState.error
         ? "Error"
-        : `${label} - ${shortsState.results.length || 0} shorts`;
+        : shortsState.notice
+          ? `${label} - Starter feed`
+          : `${label} - ${shortsState.results.length || 0} shorts`;
   }
   if (shortsLoadMore) {
     shortsLoadMore.hidden = !shortsState.nextPageToken || shortsState.loading || Boolean(shortsState.error);
@@ -3229,8 +3262,9 @@ function setShortsStatus() {
 }
 
 function renderShortsCover(video, index) {
+  const posterStyle = video.poster ? ` style="background: ${escapeHtml(video.poster)};"` : "";
   return `
-    <button class="shorts-cover" type="button" data-shorts-play="${index}" aria-label="Play ${escapeHtml(video.title || "Short")}">
+    <button class="shorts-cover" type="button" data-shorts-play="${index}" aria-label="Play ${escapeHtml(video.title || "Short")}"${posterStyle}>
       ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="" loading="lazy" />` : ""}
       <span class="shorts-play-dot">Play</span>
     </button>
@@ -3238,6 +3272,20 @@ function renderShortsCover(video, index) {
 }
 
 function renderShortsIframe(video) {
+  if (video.src) {
+    return `
+      <video
+        class="shorts-local-video"
+        src="${escapeHtml(video.src)}"
+        autoplay
+        muted
+        loop
+        playsinline
+        controls
+      ></video>
+    `;
+  }
+
   return `
     <iframe
       title="${escapeHtml(video.title || "YouTube Short")}"
@@ -3268,10 +3316,12 @@ function activateShortsIndex(index, { scroll = false } = {}) {
   }
   shortsState.activeIndex = nextIndex;
   setShortsCardMedia(shortsState.activeIndex, true);
-  recordYouTubeWatch({
-    ...shortsState.results[nextIndex],
-    topic: shortsState.results[nextIndex]?.topic || shortsState.results[nextIndex]?.recommendationTopic
-  });
+  if (!shortsState.results[nextIndex]?.localShort) {
+    recordYouTubeWatch({
+      ...shortsState.results[nextIndex],
+      topic: shortsState.results[nextIndex]?.topic || shortsState.results[nextIndex]?.recommendationTopic
+    });
+  }
   if (scroll) {
     shortsFeed?.querySelector(`[data-shorts-index="${shortsState.activeIndex}"]`)?.scrollIntoView({
       behavior: "smooth",
@@ -3351,6 +3401,14 @@ function renderShortsAppFeed() {
       </article>
     `;
   }).join("");
+  if (shortsState.notice) {
+    shortsFeed.insertAdjacentHTML("afterbegin", `
+      <article class="shorts-state-card shorts-notice-card">
+        <strong>Starter feed active</strong>
+        <p>${escapeHtml(shortsState.notice)}</p>
+      </article>
+    `);
+  }
   setupShortsAutoPlay();
 }
 
@@ -3365,6 +3423,7 @@ async function loadShortsForYou({ append = false } = {}) {
   shortsState.feedTopics = topics;
   shortsState.loading = true;
   shortsState.error = "";
+  shortsState.notice = "";
 
   if (!append) {
     pauseShortsPlayback();
@@ -3404,10 +3463,16 @@ async function loadShortsForYou({ append = false } = {}) {
       : nextItems;
     shortsState.nextPageToken = Object.values(shortsState.feedPageTokens).some(Boolean) ? "for-you" : "";
     if (!shortsState.results.length) {
-      shortsState.error = "Your For You feed is ready, but YouTube did not return Shorts yet. Try searching a topic.";
+      shortsState.results = getShortsFallbackVideos(topics);
+      shortsState.notice = "YouTube did not return Shorts for this feed, so vel.os is showing its starter short-form feed.";
     }
   } catch (error) {
-    shortsState.error = shortsState.results.length ? "" : getYouTubeFetchError(error);
+    const message = getYouTubeFetchError(error).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    if (!shortsState.results.length) {
+      shortsState.results = getShortsFallbackVideos(topics);
+    }
+    shortsState.error = "";
+    shortsState.notice = `YouTube API is unavailable right now (${message}). Showing the vel.os starter feed until real results work again.`;
     shortsState.nextPageToken = "";
   } finally {
     shortsState.loading = false;
@@ -3427,6 +3492,7 @@ async function searchShorts({ append = false } = {}) {
   recordYouTubeInterest(query, 2, "shorts-search");
   shortsState.loading = true;
   shortsState.error = "";
+  shortsState.notice = "";
   if (!append) {
     pauseShortsPlayback();
     shortsState.results = [];
@@ -3446,10 +3512,17 @@ async function searchShorts({ append = false } = {}) {
       : nextItems;
     shortsState.nextPageToken = data.nextPageToken || "";
     if (!shortsState.results.length) {
-      shortsState.error = "YouTube returned no short videos for that search.";
+      shortsState.results = getShortsFallbackVideos([query]);
+      shortsState.notice = "YouTube returned no Shorts for that search, so vel.os is showing starter clips instead.";
     }
   } catch (error) {
-    shortsState.error = getYouTubeFetchError(error);
+    const message = getYouTubeFetchError(error).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    if (!append || !shortsState.results.length) {
+      shortsState.results = getShortsFallbackVideos([query]);
+    }
+    shortsState.error = "";
+    shortsState.notice = `YouTube search is unavailable right now (${message}). Showing starter clips for this search.`;
+    shortsState.nextPageToken = "";
   } finally {
     shortsState.loading = false;
     shortsState.didInitialLoad = true;
