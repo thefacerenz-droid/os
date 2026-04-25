@@ -193,6 +193,7 @@
           <div class="youtube-shell" id="youtubeShell">
             <aside class="youtube-sidebar" aria-label="YouTube sections">
               <strong class="youtube-logo"><span>YT</span>YouTube</strong>
+              <button type="button" data-youtube-topic="popular videos today">Home</button>
               <button type="button" data-youtube-topic="Trending music">Trending</button>
               <button type="button" data-youtube-topic="Gaming videos">Gaming</button>
               <button type="button" data-youtube-topic="Sports highlights">Sports</button>
@@ -290,6 +291,7 @@
           <div class="music-layout">
             <section class="music-player-card">
               <div class="album-art"><img id="velofyArtwork" src="./assets/images/wallpaper/vel.png" alt="vel.os artwork" /></div>
+              <div class="velofy-spotify-player" id="velofySpotifyPlayer" hidden></div>
               <div class="track-copy">
                 <p class="micro-label">Now Playing</p>
                 <h3 id="velofyTitle">Rock N Roll</h3>
@@ -316,7 +318,16 @@
                 <input class="mini-search-input velofy-search" id="velofySearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search music" aria-label="Search music" />
                 <input id="velofyImportInput" type="file" accept="audio/*" multiple hidden />
                 <div class="playlist-list" id="velofyPlaylist"></div>
-                <p class="tiny-note">Built-in tracks now use your local playlist. Imported extras still last for this session.</p>
+                <p class="tiny-note">Local MP3s play with full Velofy controls. Saved Spotify songs open official Spotify embeds.</p>
+              </article>
+              <article class="side-card spotify-velofy-card">
+                <div class="music-side-head">
+                  <p class="section-label">Spotify Search</p>
+                  <button class="ghost-button" id="velofySpotifySearchButton" type="button">Search</button>
+                </div>
+                <input class="mini-search-input velofy-search" id="velofySpotifySearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search Spotify songs" aria-label="Search Spotify songs" />
+                <div class="spotify-result-list" id="velofySpotifyResults"></div>
+                <p class="tiny-note">Spotify playback uses official embeds. Save songs here to build a huge Velofy list fast.</p>
               </article>
             </section>
           </div>
@@ -781,6 +792,12 @@
               <div class="font-picker">
                 <button class="font-option" type="button" data-density-option="roomy"><strong>Roomy</strong><span>Bigger panels and spacing</span><span class="font-sample">Best for desktop and iPad.</span></button>
                 <button class="font-option" type="button" data-density-option="compact"><strong>Compact</strong><span>Smaller icons and tighter windows</span><span class="font-sample">Best for phones and small screens.</span></button>
+              </div>
+              <p class="section-label settings-sub-label">Display Zoom</p>
+              <div class="font-picker">
+                <button class="font-option" type="button" data-zoom-option="normal"><strong>100%</strong><span>Normal size</span><span class="font-sample">Default vel.os scale.</span></button>
+                <button class="font-option" type="button" data-zoom-option="out"><strong>90%</strong><span>Zoomed out</span><span class="font-sample">Better fit for iPad video.</span></button>
+                <button class="font-option" type="button" data-zoom-option="mini"><strong>80%</strong><span>Extra small</span><span class="font-sample">Maximum screen room.</span></button>
               </div>
               <button class="ghost-button settings-action" type="button" data-reset-windows>Reset Window Positions</button>
               <p class="tiny-note settings-note">Drag any window by its top bar. Positions save after refresh.</p>

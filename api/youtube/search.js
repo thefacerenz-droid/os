@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
-    maxResults: "18",
+    maxResults: "25",
     safeSearch: "moderate",
     q,
     key

@@ -121,7 +121,7 @@ async function handleYoutubeSearch(req, res, url) {
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
-    maxResults: "18",
+    maxResults: "25",
     safeSearch: "moderate",
     q,
     key
@@ -199,15 +199,21 @@ async function handleSpotifySearch(req, res, url) {
       .filter((item) => ["track", "artist", "album", "playlist"].includes(item))
       .join(",") || "track";
     const token = await getSpotifyToken();
-    const params = new URLSearchParams({ q, type, limit: "12", market: "US" });
+    const params = new URLSearchParams({ q, type, limit: "20", market: "US" });
     const response = await fetch(`https://api.spotify.com/v1/search?${params}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    const data = await response.json().catch(() => ({}));
+    const raw = await response.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+      data = {};
+    }
     if (!response.ok) {
       return sendJson(res, response.status, {
         error: data.error?.status || "spotify_error",
-        message: data.error?.message || "Spotify search failed."
+        message: data.error?.message || data.error_description || raw || "Spotify search failed."
       });
     }
     sendJson(res, 200, normalizeSpotifySearch(data));

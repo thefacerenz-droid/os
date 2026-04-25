@@ -49,6 +49,14 @@ body[data-font="rounded"] {
   --font-family: "Avenir Next Rounded", "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
 }
 
+body[data-zoom="out"] {
+  font-size: 0.88rem;
+}
+
+body[data-zoom="mini"] {
+  font-size: 0.82rem;
+}
+
 button,
 input {
   font: inherit;
@@ -389,6 +397,58 @@ body.is-music-playing .desktop-wallpaper {
 .youtube-drawer.is-youtube-fullscreen .youtube-head,
 .youtube-drawer.is-youtube-fullscreen .youtube-toolbar {
   display: none;
+}
+
+.youtube-drawer.is-video-fullscreen {
+  z-index: 80;
+  pointer-events: auto;
+}
+
+.youtube-drawer.is-video-fullscreen .drawer-scrim {
+  opacity: 1;
+  background: #000;
+}
+
+.youtube-drawer.is-video-fullscreen .youtube-panel {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  transform: none !important;
+}
+
+.youtube-drawer.is-video-fullscreen .youtube-head,
+.youtube-drawer.is-video-fullscreen .youtube-toolbar,
+.youtube-drawer.is-video-fullscreen .youtube-sidebar,
+.youtube-drawer.is-video-fullscreen .youtube-results-panel,
+.youtube-drawer.is-video-fullscreen .youtube-player-meta,
+.youtube-drawer.is-video-fullscreen .youtube-player-hint {
+  display: none;
+}
+
+.youtube-drawer.is-video-fullscreen .youtube-shell,
+.youtube-drawer.is-video-fullscreen .youtube-player-area,
+.youtube-drawer.is-video-fullscreen .youtube-player-card {
+  display: block;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+.youtube-drawer.is-video-fullscreen .youtube-frame-wrap {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  aspect-ratio: auto;
 }
 
 .settings-panel {
@@ -1722,7 +1782,25 @@ body.is-music-playing .desktop-wallpaper {
   min-height: 0;
 }
 
+.velofy-spotify-player {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #000;
+}
+
+.velofy-spotify-player iframe {
+  display: block;
+  width: 100%;
+  min-height: 152px;
+  border: 0;
+}
+
 .settings-action {
+  margin-top: 1rem;
+}
+
+.settings-sub-label {
   margin-top: 1rem;
 }
 
@@ -1783,6 +1861,7 @@ body.is-music-playing .desktop-wallpaper {
 
 .music-side {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(220px, 0.9fr);
   gap: 1rem;
   min-height: 0;
 }
@@ -1816,6 +1895,94 @@ body.is-music-playing .desktop-wallpaper {
   overflow-y: auto;
   padding-right: 0.25rem;
   overscroll-behavior: contain;
+}
+
+.playlist-group-label {
+  margin: 0.38rem 0 0.1rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.spotify-result-list {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  min-height: 0;
+  margin-top: 0.72rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.spotify-result-card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.56rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.spotify-result-art {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1db954, #101010);
+  color: #fff;
+  object-fit: cover;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.spotify-result-card strong,
+.spotify-result-card span {
+  display: block;
+}
+
+.spotify-result-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spotify-result-card span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spotify-result-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.spotify-result-actions button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spotify-result-card.is-loading .spotify-result-art {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+  background-size: 200% 100%;
+  animation: youtube-skeleton 1.15s linear infinite;
 }
 
 .track-button,
@@ -1915,6 +2082,12 @@ body.is-music-playing .desktop-wallpaper {
 .track-button.is-active {
   border-color: var(--line-strong);
   background: rgba(255, 255, 255, 0.08);
+}
+
+.spotify-track-button {
+  border-color: rgba(29, 185, 84, 0.28);
+  background:
+    linear-gradient(180deg, rgba(29, 185, 84, 0.12), rgba(255, 255, 255, 0.018));
 }
 
 .quick-switchers {
@@ -2780,9 +2953,32 @@ body.is-music-playing .desktop-wallpaper {
 
 .youtube-shell {
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr) minmax(300px, 410px);
+  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-areas: "sidebar results";
   gap: 0.75rem;
   min-height: min(72dvh, 790px);
+}
+
+.youtube-sidebar {
+  grid-area: sidebar;
+}
+
+.youtube-player-area {
+  grid-area: player;
+  display: none;
+}
+
+.youtube-results-panel {
+  grid-area: results;
+}
+
+.youtube-drawer.is-youtube-watching .youtube-shell {
+  grid-template-columns: 190px minmax(0, 1fr) minmax(300px, 410px);
+  grid-template-areas: "sidebar player results";
+}
+
+.youtube-drawer.is-youtube-watching .youtube-player-area {
+  display: block;
 }
 
 .youtube-sidebar,
@@ -2866,6 +3062,63 @@ body.is-music-playing .desktop-wallpaper {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.youtube-video-fullscreen {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 38px;
+  padding: 0.46rem 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(12px);
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.youtube-video-fullscreen:hover,
+.youtube-video-fullscreen:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.youtube-video-fullscreen span {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  box-shadow: inset 4px -4px 0 -2px currentColor;
+}
+
+.youtube-frame-wrap:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  background: #000;
+}
+
+.youtube-frame-wrap:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  background: #000;
+}
+
+.youtube-frame-wrap:fullscreen .youtube-player-hint,
+.youtube-frame-wrap:-webkit-full-screen .youtube-player-hint {
+  display: none;
 }
 
 .youtube-player-hint {
@@ -2984,6 +3237,11 @@ body.is-music-playing .desktop-wallpaper {
   margin: 0.25rem 0 0;
 }
 
+.youtube-drawer.is-youtube-browsing .youtube-results-head h3::before {
+  content: "Home - ";
+  color: #fff;
+}
+
 .youtube-results-head span {
   flex: 0 0 auto;
   padding: 0.44rem 0.62rem;
@@ -2999,21 +3257,22 @@ body.is-music-playing .desktop-wallpaper {
 .youtube-results-grid {
   display: grid;
   align-content: start;
-  gap: 0.62rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1.1rem 0.8rem;
   min-height: 0;
   overflow: auto;
-  padding: 0.75rem 0.15rem 0.75rem 0;
+  padding: 0.9rem 0.25rem 0.75rem 0;
 }
 
 .youtube-video-card {
   display: grid;
-  grid-template-columns: 118px minmax(0, 1fr);
-  gap: 0.68rem;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.035);
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
   color: var(--text);
   text-align: left;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
@@ -3023,16 +3282,15 @@ body.is-music-playing .desktop-wallpaper {
 .youtube-video-card:focus-visible,
 .youtube-video-card.is-active {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .youtube-video-card img,
 .youtube-video-thumb {
-  width: 118px;
+  width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 11px;
+  border-radius: 14px;
   background: #050505;
 }
 
@@ -3052,15 +3310,66 @@ body.is-music-playing .desktop-wallpaper {
   line-height: 1.35;
 }
 
+.youtube-video-card > span {
+  padding-inline: 0.15rem;
+}
+
+.youtube-video-card.is-loading .youtube-video-thumb {
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+  background-size: 200% 100%;
+  animation: youtube-skeleton 1.15s linear infinite;
+}
+
+.youtube-state-card {
+  grid-column: 1 / -1;
+  grid-template-columns: 120px minmax(0, 1fr);
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.youtube-drawer.is-youtube-watching .youtube-results-grid {
+  grid-template-columns: 1fr;
+  gap: 0.62rem;
+}
+
+.youtube-drawer.is-youtube-watching .youtube-video-card {
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 0.68rem;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.youtube-drawer.is-youtube-watching .youtube-video-card img,
+.youtube-drawer.is-youtube-watching .youtube-video-thumb {
+  width: 118px;
+  border-radius: 11px;
+}
+
+@keyframes youtube-skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 .youtube-load-more {
   width: 100%;
 }
 
 .youtube-drawer.is-youtube-fullscreen .youtube-shell {
-  grid-template-columns: 1fr minmax(300px, 410px);
+  grid-template-columns: 1fr;
+  grid-template-areas: "results";
   min-height: 100dvh;
   height: 100dvh;
   gap: 0;
+}
+
+.youtube-drawer.is-youtube-fullscreen.is-youtube-watching .youtube-shell {
+  grid-template-columns: 1fr minmax(300px, 410px);
+  grid-template-areas: "player results";
 }
 
 .youtube-drawer.is-youtube-fullscreen .youtube-sidebar {
@@ -3583,6 +3892,27 @@ body[data-density="compact"] .taskbar {
   padding-block: 0.22rem;
 }
 
+body[data-zoom="out"] .drawer-panel {
+  max-height: calc(100dvh - 3.8rem);
+}
+
+body[data-zoom="out"] .youtube-panel {
+  width: min(1600px, calc(100% - 0.5rem));
+}
+
+body[data-zoom="mini"] .drawer-panel {
+  max-height: calc(100dvh - 3.2rem);
+  padding: 0.62rem;
+}
+
+body[data-zoom="mini"] .youtube-panel {
+  width: min(1680px, calc(100% - 0.35rem));
+}
+
+body[data-zoom="mini"] .taskbar {
+  min-height: 46px;
+}
+
 @keyframes boot-pulse {
   0%, 100% {
     opacity: 0.28;
@@ -3697,7 +4027,30 @@ body[data-density="compact"] .taskbar {
   .media-hero,
   .youtube-toolbar,
   .youtube-shell {
+    min-height: 0;
     grid-template-columns: 1fr;
+  }
+
+  .youtube-shell {
+    grid-template-areas:
+      "sidebar"
+      "results";
+  }
+
+  .youtube-drawer.is-youtube-watching .youtube-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "sidebar"
+      "player"
+      "results";
+  }
+
+  .youtube-player-card {
+    height: auto;
+  }
+
+  .youtube-frame-wrap {
+    min-height: 0;
   }
 
   .youtube-sidebar {
@@ -3720,7 +4073,12 @@ body[data-density="compact"] .taskbar {
   }
 
   .youtube-results-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     max-height: calc(min(42dvh, 420px) - 86px);
+  }
+
+  .youtube-drawer.is-youtube-watching .youtube-results-grid {
+    grid-template-columns: 1fr;
   }
 
   .network-hero,
@@ -3736,8 +4094,16 @@ body[data-density="compact"] .taskbar {
     height: auto;
   }
 
+  .music-side {
+    grid-template-rows: auto;
+  }
+
   .playlist-list {
     max-height: min(42dvh, 360px);
+  }
+
+  .spotify-result-list {
+    max-height: min(36dvh, 320px);
   }
 
   .web-toolbar {
@@ -3885,7 +4251,7 @@ body[data-density="compact"] .taskbar {
   }
 
   .youtube-frame-wrap {
-    min-height: 190px;
+    min-height: 0;
   }
 
   .youtube-player-meta {
@@ -3898,7 +4264,12 @@ body[data-density="compact"] .taskbar {
   }
 
   .youtube-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: calc(min(40dvh, 360px) - 82px);
+  }
+
+  .youtube-drawer.is-youtube-watching .youtube-results-grid {
+    grid-template-columns: 1fr;
   }
 
   .roulette-layout,
@@ -3988,13 +4359,26 @@ body[data-density="compact"] .taskbar {
   }
 
   .youtube-video-card {
-    grid-template-columns: 86px minmax(0, 1fr);
+    grid-template-columns: 1fr;
     gap: 0.5rem;
     padding: 0.42rem;
   }
 
   .youtube-video-card img,
   .youtube-video-thumb {
+    width: 100%;
+  }
+
+  .youtube-results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .youtube-drawer.is-youtube-watching .youtube-video-card {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .youtube-drawer.is-youtube-watching .youtube-video-card img,
+  .youtube-drawer.is-youtube-watching .youtube-video-thumb {
     width: 86px;
   }
 
@@ -4034,6 +4418,14 @@ body[data-density="compact"] .taskbar {
   .youtube-player-hint-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .youtube-video-fullscreen {
+    top: 0.5rem;
+    right: 0.5rem;
+    min-height: 34px;
+    padding: 0.4rem 0.58rem;
+    font-size: 0.68rem;
   }
 
   .proxy-note-form {
