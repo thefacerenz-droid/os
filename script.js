@@ -1877,6 +1877,7 @@ const shortsSearchInput = document.getElementById("shortsSearchInput");
 const shortsFeed = document.getElementById("shortsFeed");
 const shortsStatus = document.getElementById("shortsStatus");
 const shortsLoadMore = document.getElementById("shortsLoadMore");
+const shortsHomeButton = document.getElementById("shortsHomeButton");
 const shortsRefreshButton = document.getElementById("shortsRefreshButton");
 const shortsOpenTabButton = document.getElementById("shortsOpenTabButton");
 const mediaTools = document.getElementById("mediaTools");
@@ -1961,7 +1962,9 @@ let networkNote = storage.get("vel-network-note", "");
 const AI_HISTORY_KEY = "vel-ai-history";
 const AI_HISTORY_LIMIT = 24;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
+const YOUTUBE_INTEREST_KEY = "vel-youtube-interest-topics";
 const YOUTUBE_HISTORY_LIMIT = 80;
+const YOUTUBE_INTEREST_LIMIT = 28;
 const YOUTUBE_HOME_TOPIC_LIMIT = 3;
 const YOUTUBE_GENERIC_QUERIES = new Set([
   "popular videos today",
@@ -2035,6 +2038,10 @@ let shortsState = {
   query: storage.get("vel-shorts-query", SHORTS_DEFAULT_QUERY),
   results: [],
   nextPageToken: "",
+  feedTopics: [],
+  feedPageTokens: {},
+  interestSignature: "",
+  mode: "forYou",
   activeIndex: -1,
   loading: false,
   error: "",
@@ -2044,6 +2051,12 @@ let shortsFeedObserver = null;
 let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
 youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
   ? youtubeWatchHistory.filter((item) => item?.id).slice(0, YOUTUBE_HISTORY_LIMIT)
+  : [];
+let youtubeInterestTopics = readStoredJson(YOUTUBE_INTEREST_KEY, []);
+youtubeInterestTopics = Array.isArray(youtubeInterestTopics)
+  ? youtubeInterestTopics
+    .filter((item) => item?.topic)
+    .slice(0, YOUTUBE_INTEREST_LIMIT)
   : [];
 let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
 aiMessages = Array.isArray(aiMessages)
@@ -2316,8 +2329,9 @@ function openPanel(name) {
 
   if (name === "shorts") {
     recordRecentApp({ type: "panel", id: "shorts" });
-    if (!shortsState.didInitialLoad) {
-      searchShorts();
+    const signature = getShortsForYouSignature();
+    if (!shortsState.loading && (!shortsState.didInitialLoad || shortsState.mode !== "forYou" || shortsState.interestSignature !== signature)) {
+      loadShortsForYou();
     }
   }
 
@@ -2633,6 +2647,46 @@ function persistYouTubeHistory() {
   storage.set(YOUTUBE_HISTORY_KEY, JSON.stringify(youtubeWatchHistory));
 }
 
+function persistYouTubeInterests() {
+  storage.set(YOUTUBE_INTEREST_KEY, JSON.stringify(youtubeInterestTopics.slice(0, YOUTUBE_INTEREST_LIMIT)));
+}
+
+function recordYouTubeInterest(value, weight = 1, source = "youtube") {
+  const topic = normalizeYouTubeTopic(value);
+  if (!topic || YOUTUBE_GENERIC_QUERIES.has(topic)) return;
+  const existing = youtubeInterestTopics.find((item) => item.topic === topic);
+  if (existing) {
+    existing.count = Math.min(99, (existing.count || 0) + weight);
+    existing.updatedAt = Date.now();
+    existing.source = source;
+  } else {
+    youtubeInterestTopics.unshift({
+      topic,
+      count: weight,
+      updatedAt: Date.now(),
+      source
+    });
+  }
+  youtubeInterestTopics = youtubeInterestTopics
+    .sort((a, b) => ((b.count || 0) - (a.count || 0)) || ((b.updatedAt || 0) - (a.updatedAt || 0)))
+    .slice(0, YOUTUBE_INTEREST_LIMIT);
+  persistYouTubeInterests();
+}
+
+function getYouTubeInterestTopics(limit = YOUTUBE_HOME_TOPIC_LIMIT) {
+  const seen = new Set();
+  return youtubeInterestTopics
+    .filter((item) => item?.topic)
+    .sort((a, b) => ((b.count || 0) - (a.count || 0)) || ((b.updatedAt || 0) - (a.updatedAt || 0)))
+    .map((item) => item.topic)
+    .filter((topic) => {
+      if (!topic || seen.has(topic)) return false;
+      seen.add(topic);
+      return true;
+    })
+    .slice(0, limit);
+}
+
 function recordYouTubeWatch(video) {
   if (!video?.id) return;
   const topic = normalizeYouTubeTopic(video.topic || video.recommendationTopic) || inferYouTubeTopic(video);
@@ -2651,6 +2705,7 @@ function recordYouTubeWatch(video) {
     ...youtubeWatchHistory.filter((item) => item.id !== historyItem.id)
   ].slice(0, YOUTUBE_HISTORY_LIMIT);
   persistYouTubeHistory();
+  recordYouTubeInterest(topic || video.title || video.channel, 3, "watch");
 }
 
 function getYouTubeHomeTopics() {
@@ -2767,7 +2822,9 @@ async function loadYouTubeHome() {
 
 function clearYouTubeHistory() {
   youtubeWatchHistory = [];
+  youtubeInterestTopics = [];
   persistYouTubeHistory();
+  persistYouTubeInterests();
   if (youtubeAppState.mode === "history") {
     showYouTubeHistory();
     return;
@@ -2959,6 +3016,7 @@ async function searchYouTubeApp({ append = false } = {}) {
   youtubeAppState.query = query;
   youtubeAppState.homeTopics = [];
   storage.set("vel-youtube-query", query);
+  recordYouTubeInterest(query, 1, "youtube-search");
   if (youtubeSearchInput) youtubeSearchInput.value = query;
   youtubeAppState.loading = true;
   youtubeAppState.error = "";
@@ -2997,6 +3055,39 @@ function getShortsWatchUrl(video = shortsState.results[shortsState.activeIndex])
     : "https://www.youtube.com/shorts";
 }
 
+function getShortsSearchText(topic) {
+  const cleaned = String(topic || SHORTS_DEFAULT_QUERY).trim() || SHORTS_DEFAULT_QUERY;
+  return /\bshorts?\b/i.test(cleaned) ? cleaned : `${cleaned} shorts`;
+}
+
+function getShortsForYouTopics() {
+  const seen = new Set();
+  const topics = [
+    ...getYouTubeInterestTopics(6),
+    ...getYouTubeHomeTopics(),
+    SHORTS_DEFAULT_QUERY,
+    "gaming edits",
+    "funny clips",
+    "music shorts"
+  ];
+
+  return topics
+    .map((topic) => normalizeYouTubeTopic(topic) || topic)
+    .filter((topic) => {
+      if (!topic || seen.has(topic)) return false;
+      seen.add(topic);
+      return true;
+    })
+    .slice(0, 4);
+}
+
+function getShortsForYouSignature() {
+  return [
+    youtubeWatchHistory[0]?.watchedAt || 0,
+    youtubeInterestTopics.map((item) => `${item.topic}:${item.count || 0}:${item.updatedAt || 0}`).join("|")
+  ].join("::");
+}
+
 function getShortsEmbedUrl(videoId) {
   const params = new URLSearchParams({
     autoplay: "1",
@@ -3029,17 +3120,21 @@ function pauseShortsPlayback() {
 
 function setShortsStatus() {
   if (shortsStatus) {
+    const label = shortsState.mode === "forYou" ? "For You" : "Search";
     shortsStatus.textContent = shortsState.loading
       ? "Loading"
       : shortsState.error
         ? "Error"
-        : `${shortsState.results.length || 0} shorts`;
+        : `${label} - ${shortsState.results.length || 0} shorts`;
   }
   if (shortsLoadMore) {
     shortsLoadMore.hidden = !shortsState.nextPageToken || shortsState.loading || Boolean(shortsState.error);
   }
+  if (shortsHomeButton) {
+    shortsHomeButton.disabled = shortsState.loading && shortsState.mode === "forYou";
+  }
   if (shortsSearchInput && document.activeElement !== shortsSearchInput) {
-    shortsSearchInput.value = shortsState.query;
+    shortsSearchInput.value = shortsState.mode === "forYou" ? "" : shortsState.query;
   }
 }
 
@@ -3147,6 +3242,7 @@ function renderShortsAppFeed() {
           <div class="shorts-media-slot" data-shorts-slot>
             ${isActive ? renderShortsIframe(video) : renderShortsCover(video, index)}
           </div>
+          <div class="shorts-scroll-grip" aria-hidden="true"><span>Swipe</span></div>
           <div class="feed-overlay">
             <strong>${escapeHtml(video.channel || "YouTube")}</strong>
             <span>${escapeHtml(video.title || "YouTube Short")}</span>
@@ -3163,11 +3259,76 @@ function renderShortsAppFeed() {
   }).join("");
 }
 
+async function loadShortsForYou({ append = false } = {}) {
+  if (shortsState.loading) return;
+  const topics = append && shortsState.feedTopics.length
+    ? shortsState.feedTopics
+    : getShortsForYouTopics();
+  const signature = getShortsForYouSignature();
+  shortsState.mode = "forYou";
+  shortsState.query = "For You";
+  shortsState.feedTopics = topics;
+  shortsState.loading = true;
+  shortsState.error = "";
+
+  if (!append) {
+    pauseShortsPlayback();
+    shortsState.results = [];
+    shortsState.activeIndex = -1;
+    shortsState.feedPageTokens = {};
+    shortsState.nextPageToken = "";
+    shortsState.interestSignature = signature;
+  }
+
+  renderShortsAppFeed();
+
+  try {
+    const buckets = await Promise.all(topics.map(async (topic) => {
+      const pageToken = append ? shortsState.feedPageTokens[topic] || "" : "";
+      if (append && !pageToken) return { topic, items: [], nextPageToken: "" };
+      const data = await fetchYouTubeSearchItems(getShortsSearchText(topic), pageToken, {
+        duration: "short"
+      });
+      return {
+        topic,
+        items: data.items.map((item) => ({ ...item, recommendationTopic: topic })),
+        nextPageToken: data.nextPageToken || ""
+      };
+    }));
+    const failedAll = buckets.every((bucket) => bucket.error);
+    if (failedAll) throw buckets.find((bucket) => bucket.error)?.error || new Error("Shorts feed failed.");
+    buckets.forEach((bucket) => {
+      shortsState.feedPageTokens[bucket.topic] = bucket.nextPageToken || "";
+    });
+    const seen = new Set(shortsState.results.map((item) => item.id));
+    const nextItems = mergeYouTubeTopicBuckets(buckets)
+      .filter((item) => item?.id && !seen.has(item.id))
+      .slice(0, 96);
+    shortsState.results = append
+      ? [...shortsState.results, ...nextItems]
+      : nextItems;
+    shortsState.nextPageToken = Object.values(shortsState.feedPageTokens).some(Boolean) ? "for-you" : "";
+    if (!shortsState.results.length) {
+      shortsState.error = "Your For You feed is ready, but YouTube did not return Shorts yet. Try searching a topic.";
+    }
+  } catch (error) {
+    shortsState.error = getYouTubeFetchError(error);
+  } finally {
+    shortsState.loading = false;
+    shortsState.didInitialLoad = true;
+    renderShortsAppFeed();
+  }
+}
+
 async function searchShorts({ append = false } = {}) {
   const typedQuery = (shortsSearchInput?.value || "").trim();
   const query = typedQuery || shortsState.query || SHORTS_DEFAULT_QUERY;
+  shortsState.mode = "search";
   shortsState.query = query;
+  shortsState.feedTopics = [query];
+  shortsState.feedPageTokens = {};
   storage.set("vel-shorts-query", query);
+  recordYouTubeInterest(query, 2, "shorts-search");
   shortsState.loading = true;
   shortsState.error = "";
   if (!append) {
@@ -3179,8 +3340,7 @@ async function searchShorts({ append = false } = {}) {
   renderShortsAppFeed();
 
   try {
-    const searchText = /\bshorts?\b/i.test(query) ? query : `${query} shorts`;
-    const data = await fetchYouTubeSearchItems(searchText, append ? shortsState.nextPageToken : "", {
+    const data = await fetchYouTubeSearchItems(getShortsSearchText(query), append ? shortsState.nextPageToken : "", {
       duration: "short"
     });
     const seen = new Set(shortsState.results.map((item) => item.id));
@@ -4339,6 +4499,33 @@ function initAssistedScrollSurface(surface, scroller) {
     event.preventDefault();
     event.stopPropagation();
   }, true);
+
+  if (!("PointerEvent" in window)) {
+    surface.addEventListener("touchstart", (event) => {
+      if (!canScrollVertically(scroller)) return;
+      if (event.target.closest(ignoreSelector)) return;
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      dragScrolling = true;
+      suppressClick = false;
+      startY = touch.clientY;
+      startScrollTop = scroller.scrollTop;
+    }, { passive: true });
+
+    surface.addEventListener("touchmove", (event) => {
+      if (!dragScrolling) return;
+      const touch = event.touches?.[0];
+      if (!touch) return;
+      const deltaY = touch.clientY - startY;
+      if (Math.abs(deltaY) < 5) return;
+      suppressClick = true;
+      scroller.scrollTop = startScrollTop - deltaY;
+      event.preventDefault();
+    }, { passive: false });
+
+    surface.addEventListener("touchend", stop, { passive: true });
+    surface.addEventListener("touchcancel", stop, { passive: true });
+  }
 }
 
 function initScrollAssist() {
@@ -5740,10 +5927,22 @@ shortsFeed?.addEventListener("click", (event) => {
 });
 
 shortsLoadMore?.addEventListener("click", () => {
+  if (shortsState.mode === "forYou") {
+    loadShortsForYou({ append: true });
+    return;
+  }
   searchShorts({ append: true });
 });
 
+shortsHomeButton?.addEventListener("click", () => {
+  loadShortsForYou();
+});
+
 shortsRefreshButton?.addEventListener("click", () => {
+  if (shortsState.mode === "forYou") {
+    loadShortsForYou();
+    return;
+  }
   searchShorts();
 });
 

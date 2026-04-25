@@ -385,6 +385,7 @@ body.is-music-playing .desktop-wallpaper {
 .shorts-panel {
   width: min(1180px, calc(100% - 0.8rem));
   max-height: calc(100dvh - 3.5rem);
+  touch-action: pan-y;
 }
 
 .youtube-drawer.is-youtube-fullscreen {
@@ -1797,6 +1798,7 @@ body.is-music-playing .desktop-wallpaper {
   grid-template-columns: minmax(0, 1fr) 260px;
   gap: 0.8rem;
   min-height: min(74dvh, 820px);
+  touch-action: pan-y;
 }
 
 .shorts-feed-app {
@@ -1813,6 +1815,7 @@ body.is-music-playing .desktop-wallpaper {
   scroll-padding: 0.8rem;
   padding: 0.2rem 0.45rem 0.2rem 0.1rem;
   scrollbar-width: thin;
+  touch-action: pan-y;
 }
 
 .shorts-feed-card {
@@ -1827,6 +1830,7 @@ body.is-music-playing .desktop-wallpaper {
     radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.12), transparent 32%),
     linear-gradient(180deg, rgba(24, 24, 24, 0.9), rgba(4, 4, 4, 0.95));
   scroll-snap-align: start;
+  touch-action: pan-y;
 }
 
 .shorts-feed-card.is-active-short {
@@ -1843,6 +1847,7 @@ body.is-music-playing .desktop-wallpaper {
   border-radius: 34px;
   background: #000;
   box-shadow: 0 26px 70px rgba(0, 0, 0, 0.48);
+  touch-action: pan-y;
 }
 
 .shorts-media-slot,
@@ -1852,6 +1857,10 @@ body.is-music-playing .desktop-wallpaper {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.shorts-media-slot {
+  touch-action: pan-y;
 }
 
 .shorts-cover {
@@ -1869,6 +1878,39 @@ body.is-music-playing .desktop-wallpaper {
   color: #fff;
   overflow: hidden;
   touch-action: pan-y;
+}
+
+.shorts-scroll-grip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: clamp(3.6rem, 16%, 5.2rem);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.22));
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.shorts-feed-card.is-active-short .shorts-scroll-grip {
+  opacity: 1;
+}
+
+.shorts-scroll-grip span {
+  padding: 0.48rem 0.36rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.52);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  backdrop-filter: blur(12px);
 }
 
 .shorts-cover img {
@@ -4775,6 +4817,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .shorts-feed-app {
     max-height: min(70dvh, 740px);
+    scroll-snap-type: y proximity;
   }
 
   #launcherGameGrid {
@@ -5020,6 +5063,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .shorts-feed-app {
     max-height: min(75dvh, 760px);
+    scroll-snap-type: y proximity;
   }
 
   .shorts-feed-card {
