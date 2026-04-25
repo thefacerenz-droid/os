@@ -1846,6 +1846,7 @@ const youtubePlayerTitle = document.getElementById("youtubePlayerTitle");
 const youtubePlayerDescription = document.getElementById("youtubePlayerDescription");
 const youtubeOpenTabButton = document.getElementById("youtubeOpenTabButton");
 const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton");
+const youtubeToggleResultsButton = document.getElementById("youtubeToggleResultsButton");
 const mediaTools = document.getElementById("mediaTools");
 const mediaEmbedForm = document.getElementById("mediaEmbedForm");
 const mediaEmbedInput = document.getElementById("mediaEmbedInput");
@@ -1935,6 +1936,7 @@ let youtubeAppState = {
   didInitialLoad: false,
   fullscreen: false,
   videoFullscreen: false,
+  resultsHidden: storage.get("vel-youtube-results-hidden", "0") === "1",
   embedHost: storage.get("vel-youtube-embed-host", "privacy")
 };
 let velofySearchQuery = "";
@@ -2329,6 +2331,13 @@ function renderYouTubeStatus() {
   const isWatching = Boolean(youtubeAppState.currentVideo);
   youtubeDrawer?.classList.toggle("is-youtube-watching", isWatching);
   youtubeDrawer?.classList.toggle("is-youtube-browsing", !isWatching);
+  const shouldHideResults = isWatching && youtubeAppState.resultsHidden;
+  youtubeDrawer?.classList.toggle("is-youtube-results-hidden", shouldHideResults);
+  if (youtubeToggleResultsButton) {
+    youtubeToggleResultsButton.hidden = !isWatching;
+    youtubeToggleResultsButton.textContent = shouldHideResults ? "Show List" : "Hide List";
+    youtubeToggleResultsButton.setAttribute("aria-pressed", String(shouldHideResults));
+  }
   if (youtubeStatus) {
     youtubeStatus.textContent = youtubeAppState.loading
       ? "Loading"
@@ -2345,6 +2354,12 @@ function renderYouTubeStatus() {
   if (youtubeAddressInput) {
     youtubeAddressInput.value = getYouTubeWatchUrl();
   }
+}
+
+function toggleYouTubeResultsPanel() {
+  youtubeAppState.resultsHidden = !youtubeAppState.resultsHidden;
+  storage.set("vel-youtube-results-hidden", youtubeAppState.resultsHidden ? "1" : "0");
+  renderYouTubeStatus();
 }
 
 function renderYouTubePlayer() {
@@ -4897,6 +4912,10 @@ youtubeOpenTabButton?.addEventListener("click", () => {
 
 youtubeFullscreenButton?.addEventListener("click", () => {
   toggleYouTubeFullscreen();
+});
+
+youtubeToggleResultsButton?.addEventListener("click", () => {
+  toggleYouTubeResultsPanel();
 });
 
 youtubeDrawer?.addEventListener("click", (event) => {

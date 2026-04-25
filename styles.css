@@ -536,8 +536,8 @@ body.is-music-playing .desktop-wallpaper {
 
 .lyrics-show-button {
   position: fixed;
-  top: clamp(8.25rem, 16vh, 10.5rem);
-  left: 1rem;
+  top: calc(clamp(0.75rem, 1.7vw, 1rem) + 3.45rem);
+  right: clamp(0.75rem, 1.7vw, 1rem);
   z-index: 81;
   min-height: 38px;
   padding: 0.58rem 0.9rem;
@@ -2977,6 +2977,15 @@ body.is-music-playing .desktop-wallpaper {
   grid-template-areas: "sidebar player results";
 }
 
+.youtube-drawer.is-youtube-watching.is-youtube-results-hidden .youtube-shell {
+  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-areas: "sidebar player";
+}
+
+.youtube-drawer.is-youtube-results-hidden .youtube-results-panel {
+  display: none;
+}
+
 .youtube-drawer.is-youtube-watching .youtube-player-area {
   display: block;
 }
@@ -3370,6 +3379,11 @@ body.is-music-playing .desktop-wallpaper {
 .youtube-drawer.is-youtube-fullscreen.is-youtube-watching .youtube-shell {
   grid-template-columns: 1fr minmax(300px, 410px);
   grid-template-areas: "player results";
+}
+
+.youtube-drawer.is-youtube-fullscreen.is-youtube-watching.is-youtube-results-hidden .youtube-shell {
+  grid-template-columns: 1fr;
+  grid-template-areas: "player";
 }
 
 .youtube-drawer.is-youtube-fullscreen .youtube-sidebar {
@@ -4045,6 +4059,12 @@ body[data-zoom="mini"] .taskbar {
       "results";
   }
 
+  .youtube-drawer.is-youtube-watching.is-youtube-results-hidden .youtube-shell {
+    grid-template-areas:
+      "sidebar"
+      "player";
+  }
+
   .youtube-player-card {
     height: auto;
   }
@@ -4440,8 +4460,8 @@ body[data-zoom="mini"] .taskbar {
   }
 
   .lyrics-show-button {
-    top: 7.2rem;
-    left: 0.5rem;
+    top: calc(5.95rem + env(safe-area-inset-bottom));
+    right: 0.5rem;
   }
 
   .web-frame {
