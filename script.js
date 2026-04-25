@@ -2954,9 +2954,9 @@ async function showYouTubeGlobal() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Global favorites could not load.");
     youtubeAppState.results = Array.isArray(data.items) ? data.items : [];
-    youtubeGlobalMessage = data.storage === "memory"
-      ? "Global links are shared live, but permanent Vercel storage needs KV/database setup."
-      : "Shared links show up for everyone using vel.os.";
+    youtubeGlobalMessage = data.message || (data.persistent
+      ? "Permanent Global Favs storage is connected."
+      : "Permanent Global Favs storage is not connected yet.");
   } catch (error) {
     youtubeAppState.error = error.message || "Global favorites could not load.";
   } finally {
@@ -2996,7 +2996,9 @@ async function addGlobalYouTubeFavorite(value) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Could not save that YouTube link.");
     if (youtubeGlobalInput) youtubeGlobalInput.value = "";
-    youtubeGlobalMessage = "Saved to Global Favs.";
+    youtubeGlobalMessage = data.storage === "kv"
+      ? "Saved to Global Favs forever."
+      : "Saved to Global Favs.";
     youtubeAppState.results = Array.isArray(data.items) ? data.items : [data.item, ...youtubeAppState.results].filter(Boolean);
     youtubeAppState.mode = "global";
     renderYouTubeResults();
