@@ -57,6 +57,10 @@ body[data-zoom="mini"] {
   font-size: 0.82rem;
 }
 
+body[data-zoom="ipad"] {
+  font-size: 0.76rem;
+}
+
 button,
 input {
   font: inherit;
@@ -3952,6 +3956,56 @@ body[data-zoom="mini"] .taskbar {
   min-height: 46px;
 }
 
+body[data-zoom="ipad"] .drawer-panel {
+  width: min(1540px, calc(100% - 0.4rem));
+  max-height: calc(100dvh - 3.1rem);
+  margin-bottom: 3rem;
+  padding: 0.58rem;
+  border-radius: 20px;
+}
+
+body[data-zoom="ipad"] .settings-panel,
+body[data-zoom="ipad"] .network-panel {
+  width: min(1280px, calc(100% - 0.4rem));
+}
+
+body[data-zoom="ipad"] .icon-grid {
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 0.65rem;
+}
+
+body[data-zoom="ipad"] .app-icon {
+  min-height: 118px;
+  padding: 0.58rem 0.48rem 0.64rem;
+}
+
+body[data-zoom="ipad"] .app-badge {
+  width: 52px;
+  height: 52px;
+}
+
+body[data-zoom="ipad"] .taskbar {
+  width: min(100%, calc(100% - 0.45rem));
+  min-height: 44px;
+  gap: 0.34rem;
+  padding: 0.22rem 0.36rem calc(0.22rem + env(safe-area-inset-bottom));
+}
+
+body[data-zoom="ipad"] .desktop-shortcuts {
+  grid-template-columns: repeat(3, minmax(70px, 92px));
+  gap: 0.58rem;
+}
+
+body[data-zoom="ipad"] .desktop-shortcut {
+  min-height: 82px;
+  padding: 0.58rem;
+}
+
+body[data-zoom="ipad"] .desktop-shortcut-badge {
+  width: 42px;
+  height: 42px;
+}
+
 @keyframes boot-pulse {
   0%, 100% {
     opacity: 0.28;
@@ -4330,6 +4384,151 @@ body[data-zoom="mini"] .taskbar {
   .poker-paytable,
   .dice-picks {
     justify-content: center;
+  }
+}
+
+@media (min-width: 700px) and (max-width: 1180px) {
+  body[data-zoom="ipad"] {
+    overflow: hidden;
+  }
+
+  body[data-zoom="ipad"] .drawer-panel {
+    width: calc(100% - 0.35rem);
+    max-height: calc(100dvh - 2.85rem);
+    margin-bottom: 2.75rem;
+    padding: 0.54rem;
+  }
+
+  body[data-zoom="ipad"] .drawer-head,
+  body[data-zoom="ipad"] .game-toolbar,
+  body[data-zoom="ipad"] .media-player-head,
+  body[data-zoom="ipad"] .media-status {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  body[data-zoom="ipad"] .window-actions,
+  body[data-zoom="ipad"] .toolbar-actions {
+    justify-content: flex-end;
+  }
+
+  body[data-zoom="ipad"] .settings-layout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  body[data-zoom="ipad"] .settings-card,
+  body[data-zoom="ipad"] .music-player-card,
+  body[data-zoom="ipad"] .side-card,
+  body[data-zoom="ipad"] .network-card {
+    padding: 0.78rem;
+  }
+
+  body[data-zoom="ipad"] .wallpaper-picker {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-zoom="ipad"] .wallpaper-picker,
+  body[data-zoom="ipad"] .font-picker {
+    gap: 0.58rem;
+    margin-top: 0.62rem;
+  }
+
+  body[data-zoom="ipad"] .font-sample {
+    padding: 0.58rem 0.65rem;
+  }
+
+  body[data-zoom="ipad"] .youtube-toolbar {
+    grid-template-columns: minmax(190px, 0.68fr) minmax(280px, 1fr);
+  }
+
+  body[data-zoom="ipad"] .youtube-shell {
+    grid-template-columns: 128px minmax(0, 1fr);
+    grid-template-areas: "sidebar results";
+    gap: 0.58rem;
+    min-height: calc(100dvh - 10.4rem);
+  }
+
+  body[data-zoom="ipad"] .youtube-drawer.is-youtube-watching .youtube-shell {
+    grid-template-columns: 126px minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar player"
+      "sidebar results";
+  }
+
+  body[data-zoom="ipad"] .youtube-drawer.is-youtube-watching.is-youtube-results-hidden .youtube-shell {
+    grid-template-columns: 126px minmax(0, 1fr);
+    grid-template-areas: "sidebar player";
+  }
+
+  body[data-zoom="ipad"] .youtube-sidebar {
+    display: grid;
+    overflow: hidden auto;
+    gap: 0.38rem;
+    padding: 0.48rem;
+  }
+
+  body[data-zoom="ipad"] .youtube-logo {
+    gap: 0.38rem;
+    margin-bottom: 0.2rem;
+  }
+
+  body[data-zoom="ipad"] .youtube-logo span {
+    width: 34px;
+    height: 25px;
+  }
+
+  body[data-zoom="ipad"] .youtube-sidebar button {
+    min-height: 34px;
+    padding: 0.42rem 0.5rem;
+    border-radius: 11px;
+  }
+
+  body[data-zoom="ipad"] .youtube-results-panel {
+    min-height: 0;
+    max-height: none;
+  }
+
+  body[data-zoom="ipad"] .youtube-results-grid {
+    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    gap: 0.78rem 0.58rem;
+    max-height: calc(100dvh - 12.7rem);
+  }
+
+  body[data-zoom="ipad"] .youtube-drawer.is-youtube-watching .youtube-results-panel {
+    max-height: min(30dvh, 260px);
+  }
+
+  body[data-zoom="ipad"] .youtube-drawer.is-youtube-watching .youtube-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: calc(min(30dvh, 260px) - 78px);
+  }
+
+  body[data-zoom="ipad"] .youtube-drawer.is-youtube-results-hidden .youtube-results-panel {
+    display: none;
+  }
+
+  body[data-zoom="ipad"] .music-layout {
+    grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr);
+    height: min(72dvh, 720px);
+  }
+
+  body[data-zoom="ipad"] .playlist-list {
+    max-height: min(48dvh, 430px);
+  }
+
+  body[data-zoom="ipad"] .web-frame {
+    min-height: min(70dvh, 760px);
+  }
+
+  body[data-zoom="ipad"] .play-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-zoom="ipad"] .score-pills,
+  body[data-zoom="ipad"] .toolbar-actions,
+  body[data-zoom="ipad"] .word-form {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   }
 }
 

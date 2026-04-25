@@ -3790,7 +3790,7 @@ function applyDensity(key) {
 }
 
 function applyZoom(key) {
-  const nextKey = ["normal", "out", "mini"].includes(key) ? key : "normal";
+  const nextKey = ["normal", "out", "mini", "ipad"].includes(key) ? key : "normal";
   currentZoomKey = nextKey;
   document.body.dataset.zoom = currentZoomKey;
   settingsZoomButtons.forEach((button) => {
