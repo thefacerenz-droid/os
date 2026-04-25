@@ -2179,8 +2179,53 @@ function pauseDynamicGames(nextGame) {
   }
 }
 
+function unloadWebFrame() {
+  if (!webFrame) return;
+  webFrame.removeAttribute("srcdoc");
+  webFrame.src = "about:blank";
+}
+
+function stopMediaPanelPlayback() {
+  pauseAllFeedMedia();
+  youtubePlayer?.destroy?.();
+  youtubePlayer = null;
+  if (mediaPlayerFrame) mediaPlayerFrame.innerHTML = "";
+  if (mediaPlayer) mediaPlayer.hidden = true;
+}
+
+function suspendPanelPlayback(name) {
+  if (name === "music") return;
+
+  if (name === "game") {
+    pauseDynamicGames("");
+    return;
+  }
+
+  if (name === "web") {
+    unloadWebFrame();
+    return;
+  }
+
+  if (name === "media") {
+    stopMediaPanelPlayback();
+    return;
+  }
+
+  if (name === "youtube") {
+    pauseYouTubeAppPlayback();
+    setYouTubeFullscreen(false);
+    setYouTubeVideoFullscreen(false);
+  }
+}
+
 function openPanel(name) {
   pauseAllFeedMedia();
+
+  Object.keys(drawers).forEach((key) => {
+    if (key !== name && isDrawerOpen(key)) {
+      suspendPanelPlayback(key);
+    }
+  });
 
   Object.keys(drawers).forEach((key) => {
     setDrawerState(key, key === name);
@@ -2218,31 +2263,20 @@ function openPanel(name) {
 }
 
 function closeAllPanels() {
+  Object.keys(drawers).forEach((key) => {
+    if (isDrawerOpen(key)) {
+      suspendPanelPlayback(key);
+    }
+  });
   Object.keys(drawers).forEach((key) => setDrawerState(key, false));
   activePanel = "";
-  pauseDynamicGames("");
   pauseAllFeedMedia();
-  setYouTubeFullscreen(false);
-  setYouTubeVideoFullscreen(false);
-  youtubePlayer?.destroy?.();
-  youtubePlayer = null;
   syncTaskbarState();
 }
 
 function closePanel(name) {
+  suspendPanelPlayback(name);
   setDrawerState(name, false);
-  if (name === "game") {
-    pauseDynamicGames("");
-  }
-  if (name === "media") {
-    pauseAllFeedMedia();
-    youtubePlayer?.destroy?.();
-    youtubePlayer = null;
-  }
-  if (name === "youtube") {
-    setYouTubeFullscreen(false);
-    setYouTubeVideoFullscreen(false);
-  }
   if (activePanel === name) {
     activePanel = "";
   }
@@ -2349,6 +2383,7 @@ function getYouTubeEmbedUrl(videoId) {
   const params = new URLSearchParams({
     autoplay: "1",
     controls: "1",
+    enablejsapi: "1",
     rel: "0",
     modestbranding: "1",
     playsinline: "1"
@@ -2357,6 +2392,20 @@ function getYouTubeEmbedUrl(videoId) {
     params.set("origin", location.origin);
   }
   return `https://${getYouTubeEmbedHost()}/embed/${encodeURIComponent(videoId)}?${params}`;
+}
+
+function pauseYouTubeAppPlayback() {
+  const iframe = youtubeFrameWrap?.querySelector("iframe");
+  if (!iframe?.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage(JSON.stringify({
+      event: "command",
+      func: "pauseVideo",
+      args: []
+    }), "*");
+  } catch (error) {
+    return;
+  }
 }
 
 function clearYouTubePlayerHintTimer() {
