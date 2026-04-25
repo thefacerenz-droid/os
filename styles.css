@@ -79,8 +79,8 @@ a {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.48)),
     var(--wallpaper-image) center center / cover no-repeat;
-  transform: scale(1.02);
-  filter: contrast(1.04) saturate(1.02) brightness(0.68);
+  transform: scale(1.01);
+  filter: contrast(1.08) saturate(0.84) brightness(0.6);
   transition:
     filter 260ms ease,
     transform 260ms ease;
@@ -93,8 +93,9 @@ body.is-music-playing .desktop-wallpaper {
 
 .wallpaper-shade {
   background:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.05), transparent 28%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.72));
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.055), transparent 30%),
+    radial-gradient(circle at 70% 100%, rgba(255, 255, 255, 0.04), transparent 32%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.52) 62%, rgba(0, 0, 0, 0.9));
 }
 
 .wallpaper-grain {
@@ -108,7 +109,7 @@ body.is-music-playing .desktop-wallpaper {
 
 .hero-clock {
   position: fixed;
-  inset: clamp(1.1rem, 3vw, 2.25rem) auto auto clamp(1.1rem, 3vw, 2.4rem);
+  inset: clamp(1.1rem, 3vw, 2.25rem) auto auto clamp(1.1rem, 3vw, 2.35rem);
   z-index: 2;
   display: grid;
   gap: 0.25rem;
@@ -141,7 +142,7 @@ body.is-music-playing .desktop-wallpaper {
 
 .clock-time {
   margin: 0;
-  font-size: clamp(4rem, 12vw, 8.5rem);
+  font-size: clamp(3.5rem, 9vw, 6.6rem);
   line-height: 0.88;
   letter-spacing: -0.04em;
   color: #fff;
@@ -170,6 +171,109 @@ body.is-music-playing .desktop-wallpaper {
 .now-playing-chip strong {
   font-size: 0.95rem;
   font-weight: 600;
+}
+
+.desktop-status {
+  position: fixed;
+  top: clamp(0.75rem, 1.7vw, 1rem);
+  right: clamp(0.75rem, 1.7vw, 1rem);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(24, 24, 24, 0.72), rgba(4, 4, 4, 0.74));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(18px);
+}
+
+.desktop-status span,
+.desktop-status strong,
+.status-pill-button {
+  padding: 0.48rem 0.68rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.desktop-status span {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.desktop-status strong {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.status-pill-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #050505;
+}
+
+.desktop-shortcuts {
+  position: fixed;
+  left: clamp(1rem, 2.2vw, 2rem);
+  top: clamp(15.8rem, 34vh, 21rem);
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(78px, 92px));
+  gap: 0.7rem;
+}
+
+.desktop-shortcut {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  min-height: 98px;
+  padding: 0.62rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.desktop-shortcut:hover,
+.desktop-shortcut:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.desktop-shortcut-badge {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.24), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(12, 12, 12, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 26px rgba(0, 0, 0, 0.36);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.desktop-shortcut strong {
+  max-width: 88px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .drawer {
@@ -218,15 +322,15 @@ body.is-music-playing .desktop-wallpaper {
   z-index: 1;
   --drag-x: 0px;
   --drag-y: 0px;
-  width: min(1420px, calc(100% - 0.9rem));
-  max-height: calc(100dvh - 6.7rem);
-  margin: 0 auto 5.35rem;
-  padding: 0.82rem;
+  width: min(1420px, calc(100% - 1.4rem));
+  max-height: calc(100dvh - 4.8rem);
+  margin: 0 auto 4rem;
+  padding: 0.72rem;
   overflow: auto;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(20, 20, 20, 0.98), rgba(8, 8, 8, 0.98));
+    linear-gradient(180deg, rgba(34, 34, 34, 0.96), rgba(10, 10, 10, 0.97));
   box-shadow: var(--shadow);
   backdrop-filter: blur(22px);
   transition:
@@ -253,6 +357,10 @@ body.is-music-playing .desktop-wallpaper {
 
 .settings-panel {
   width: min(1080px, calc(100% - 1rem));
+}
+
+.network-panel {
+  width: min(1120px, calc(100% - 1rem));
 }
 
 .game-panel {
@@ -2535,6 +2643,145 @@ body.is-music-playing .desktop-wallpaper {
   color: var(--muted);
 }
 
+.network-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.network-hero,
+.network-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(24, 24, 24, 0.94), rgba(6, 6, 6, 0.95));
+}
+
+.network-hero {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 220px;
+  padding: clamp(1rem, 3vw, 1.45rem);
+}
+
+.network-hero h3,
+.network-card h3 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.5rem, 3.4vw, 2.6rem);
+  letter-spacing: -0.04em;
+}
+
+.network-hero p,
+.network-card p {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.network-orb {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(116px, 18vw, 176px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 28%, #fff, rgba(255, 255, 255, 0.2) 18%, transparent 19%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.06) 50%, rgba(0, 0, 0, 0.95) 72%);
+  box-shadow:
+    inset 0 0 42px rgba(0, 0, 0, 0.78),
+    0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.network-orb span {
+  position: absolute;
+  inset: 18%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: inherit;
+  animation: network-pulse 2.4s ease-in-out infinite;
+}
+
+.network-card {
+  padding: 1rem;
+}
+
+.network-wide {
+  grid-column: 1 / -1;
+}
+
+.network-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.network-badge {
+  flex: 0 0 auto;
+  padding: 0.44rem 0.66rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.network-action,
+.proxy-note-form {
+  margin-top: 1rem;
+}
+
+.proxy-note-form {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.compat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.compat-grid div {
+  display: grid;
+  gap: 0.45rem;
+  min-height: 112px;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.compat-grid strong {
+  font-size: 0.95rem;
+}
+
+.compat-grid span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+@keyframes network-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
 @keyframes slot-flicker {
   0% { transform: translateY(-26px) scale(0.92); opacity: 0.35; }
   100% { transform: translateY(26px) scale(1.08); opacity: 1; }
@@ -2553,23 +2800,25 @@ body.is-music-playing .desktop-wallpaper {
 
 .taskbar {
   position: fixed;
-  left: 50%;
-  right: auto;
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transform: none;
   z-index: 20;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(0, 1.2fr) minmax(220px, 0.8fr);
   align-items: center;
-  gap: 0.9rem;
-  width: min(1360px, calc(100% - 1rem));
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 20px;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 54px;
+  padding: 0.28rem 0.65rem max(0.28rem, env(safe-area-inset-bottom));
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 0;
   background:
-    linear-gradient(180deg, rgba(20, 20, 20, 0.9), rgba(10, 10, 10, 0.92));
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(22px);
+    linear-gradient(180deg, rgba(37, 37, 37, 0.84), rgba(20, 20, 20, 0.92));
+  box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(24px) saturate(1.1);
 }
 
 .taskbar-left,
@@ -2577,38 +2826,94 @@ body.is-music-playing .desktop-wallpaper {
 .taskbar-right {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.4rem;
 }
 
 .taskbar-center {
-  justify-content: flex-start;
+  justify-content: center;
   min-width: 0;
+  width: fit-content;
+  justify-self: center;
+  padding: 0.18rem 0.28rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.16);
 }
 
 .taskbar-right {
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .start-button,
-.taskbar-app {
+.taskbar-app,
+.taskbar-search {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  min-height: 52px;
-  padding: 0.5rem 0.82rem;
+  justify-content: center;
+  gap: 0.48rem;
+  min-height: 42px;
+  padding: 0.42rem 0.62rem;
   border: 1px solid transparent;
-  border-radius: 16px;
-  background: transparent;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
   color: var(--text);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .start-button {
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-color: var(--line);
-  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.start-glyph {
+  width: 16px;
+  height: 16px;
+  background:
+    linear-gradient(#fff 0 0) left top / 7px 7px no-repeat,
+    linear-gradient(#fff 0 0) right top / 7px 7px no-repeat,
+    linear-gradient(#fff 0 0) left bottom / 7px 7px no-repeat,
+    linear-gradient(#fff 0 0) right bottom / 7px 7px no-repeat;
+}
+
+.taskbar-search {
+  justify-content: flex-start;
+  width: min(260px, 32vw);
+  color: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.taskbar-search span {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.62);
+  border-radius: 50%;
+}
+
+.taskbar-search span::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 7px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  transform: rotate(45deg);
+}
+
+.taskbar-search strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .start-button.is-active {
@@ -2618,13 +2923,24 @@ body.is-music-playing .desktop-wallpaper {
 
 .taskbar-app.is-active {
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.start-button:hover,
+.start-button:focus-visible,
+.taskbar-app:hover,
+.taskbar-app:focus-visible,
+.taskbar-search:hover,
+.taskbar-search:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .taskbar-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
 }
 
 .taskbar-icon-text {
@@ -2633,26 +2949,37 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .taskbar-label {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
+.taskbar-center .taskbar-label,
+.system-taskbar-app .taskbar-label {
+  display: none;
+}
+
 .taskbar-now-playing {
-  display: grid;
-  gap: 0.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   text-align: right;
+  max-width: min(360px, 34vw);
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .taskbar-media-controls {
   display: flex;
   justify-content: flex-end;
-  gap: 0.4rem;
-  margin-top: 0.35rem;
+  gap: 0.25rem;
+  margin-top: 0;
 }
 
 .taskbar-media-button {
-  min-height: 34px;
-  padding: 0.35rem 0.65rem;
+  min-height: 28px;
+  padding: 0.25rem 0.48rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -2678,26 +3005,30 @@ body.is-music-playing .desktop-wallpaper {
 .taskbar-now-playing span,
 .taskbar-clock span {
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .taskbar-now-playing strong,
 .taskbar-clock strong {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .taskbar-clock {
   display: grid;
   gap: 0.1rem;
   text-align: right;
+  min-width: 74px;
+  padding: 0.25rem 0.45rem;
+  border-radius: 10px;
 }
 
 .recent-apps-tray {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  justify-content: center;
+  gap: 0.38rem;
   min-width: 0;
   overflow-x: auto;
   padding-bottom: 0.1rem;
@@ -2709,10 +3040,7 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .recent-apps-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  white-space: nowrap;
+  display: none;
 }
 
 .boot-screen {
@@ -2912,7 +3240,9 @@ body[data-density="compact"] .app-badge {
 }
 
 body[data-density="compact"] .taskbar {
-  width: min(1260px, calc(100% - 0.8rem));
+  width: 100%;
+  min-height: 48px;
+  padding-block: 0.22rem;
 }
 
 @keyframes boot-pulse {
@@ -3025,7 +3355,17 @@ body[data-density="compact"] .taskbar {
   .brand-layout,
   .music-layout,
   .settings-layout,
+  .network-layout,
   .media-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .network-hero,
+  .network-wide {
+    grid-column: auto;
+  }
+
+  .compat-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3081,6 +3421,19 @@ body[data-density="compact"] .taskbar {
     font-size: clamp(3.4rem, 16vw, 6rem);
   }
 
+  .desktop-status {
+    top: auto;
+    right: 0.5rem;
+    bottom: calc(5.95rem + env(safe-area-inset-bottom));
+  }
+
+  .desktop-shortcuts {
+    top: auto;
+    left: 0.75rem;
+    bottom: calc(6.1rem + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(2, minmax(74px, 86px));
+  }
+
   .drawer-panel {
     width: calc(100% - 0.5rem);
     max-height: calc(100dvh - 5.9rem);
@@ -3110,8 +3463,9 @@ body[data-density="compact"] .taskbar {
 
   .taskbar {
     grid-template-columns: 1fr;
-    width: calc(100% - 0.5rem);
+    width: 100%;
     gap: 0.55rem;
+    padding-inline: 0.5rem;
   }
 
   .taskbar-left,
@@ -3182,13 +3536,35 @@ body[data-density="compact"] .taskbar {
   }
 
   .taskbar-app,
-  .start-button {
+  .start-button,
+  .taskbar-search {
     justify-content: center;
     padding-inline: 0.7rem;
   }
 
+  .taskbar-search {
+    width: auto;
+  }
+
   .hero-clock {
     inset: 1rem auto auto 1rem;
+  }
+
+  .desktop-status {
+    left: 0.5rem;
+    right: 0.5rem;
+    justify-content: center;
+  }
+
+  .desktop-shortcuts {
+    left: 0.5rem;
+    bottom: calc(6.9rem + env(safe-area-inset-bottom));
+    transform: scale(0.92);
+    transform-origin: left bottom;
+  }
+
+  .proxy-note-form {
+    flex-direction: column;
   }
 
   .lyrics-widget {

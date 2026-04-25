@@ -1301,6 +1301,13 @@ const utilityApps = {
     action: "panel",
     panel: "settings"
   },
+  network: {
+    title: "Network",
+    label: "Network",
+    badgeText: "NW",
+    action: "panel",
+    panel: "network"
+  },
   localArcade: {
     title: "Local Arcade",
     label: "Arcade",
@@ -1738,6 +1745,7 @@ const drawers = {
   web: document.getElementById("webDrawer"),
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
+  network: document.getElementById("networkDrawer"),
   settings: document.getElementById("settingsDrawer")
 };
 
@@ -1782,6 +1790,7 @@ const openLocalGamesButton = document.getElementById("openLocalGamesButton");
 const openMediaButton = document.getElementById("openMediaButton");
 const openMusicButton = document.getElementById("openMusicButton");
 const openSettingsButton = document.getElementById("openSettingsButton");
+const openNetworkButton = document.getElementById("openNetworkButton");
 const startButton = document.getElementById("startButton");
 const closePanelButtons = [...document.querySelectorAll("[data-close-panel]")];
 const panelOpenButtons = [...document.querySelectorAll("[data-open-panel]")];
@@ -1795,6 +1804,7 @@ const taskbarButtons = [
   openMediaButton,
   openMusicButton,
   openSettingsButton,
+  openNetworkButton,
   ...[...document.querySelectorAll(".taskbar-app[data-open-web]")]
 ].filter(Boolean);
 
@@ -1858,6 +1868,11 @@ const settingsWallpaperButtons = [...document.querySelectorAll("[data-wallpaper-
 const settingsFontButtons = [...document.querySelectorAll("[data-font-option]")];
 const settingsDensityButtons = [...document.querySelectorAll("[data-density-option]")];
 const resetWindowsButton = document.querySelector("[data-reset-windows]");
+const desktopNetworkStatus = document.getElementById("desktopNetworkStatus");
+const networkVpnButton = document.getElementById("networkVpnButton");
+const proxyNoteInput = document.getElementById("proxyNoteInput");
+const proxyNoteSave = document.getElementById("proxyNoteSave");
+const proxyNoteReadout = document.getElementById("proxyNoteReadout");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -1878,6 +1893,7 @@ let launcherGameSource = storage.get("vel-launcher-game-source", "all");
 if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
+let networkNote = storage.get("vel-network-note", "");
 let velofySearchQuery = "";
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2012,6 +2028,11 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "network") {
+    openNetworkButton?.classList.add("is-active");
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="network"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "web") {
     recentAppsTray?.querySelector(`[data-recent-type="web"][data-recent-id="${activeWeb}"]`)?.classList.add("is-active");
   }
@@ -2059,6 +2080,11 @@ function openPanel(name) {
 
   if (name === "settings") {
     recordRecentApp({ type: "panel", id: "settings" });
+  }
+
+  if (name === "network") {
+    recordRecentApp({ type: "panel", id: "network" });
+    renderNetworkState();
   }
 
   if (name === "game" && activeLocalGame === "snake") {
@@ -2141,6 +2167,19 @@ function updateClock() {
     setNodeText(clockDate, "Date unavailable");
     setNodeText(taskbarTime, "--:--");
     setNodeText(taskbarDate, "---");
+  }
+}
+
+function renderNetworkState() {
+  const label = networkNote ? `Direct: ${networkNote}` : "Direct Mode";
+  setNodeText(desktopNetworkStatus, label);
+  if (proxyNoteReadout) {
+    proxyNoteReadout.textContent = networkNote
+      ? `Saved note: ${networkNote}. Traffic still loads in direct mode.`
+      : "No network note saved yet.";
+  }
+  if (proxyNoteInput) {
+    proxyNoteInput.value = networkNote;
   }
 }
 
@@ -4058,6 +4097,10 @@ openMusicButton?.addEventListener("click", () => {
   togglePanel("music");
 });
 
+openNetworkButton?.addEventListener("click", () => {
+  togglePanel("network");
+});
+
 openLocalGamesButton?.addEventListener("click", () => {
   if (isDrawerOpen("game")) {
     closePanel("game");
@@ -4247,6 +4290,25 @@ settingsDensityButtons.forEach((button) => {
 
 resetWindowsButton?.addEventListener("click", () => {
   resetWindowPositions();
+});
+
+networkVpnButton?.addEventListener("click", () => {
+  networkVpnButton.textContent = "Use Device Settings";
+  window.setTimeout(() => {
+    networkVpnButton.textContent = "Direct Mode Active";
+  }, 1600);
+});
+
+proxyNoteSave?.addEventListener("click", () => {
+  networkNote = proxyNoteInput?.value.trim() || "";
+  storage.set("vel-network-note", networkNote);
+  renderNetworkState();
+});
+
+proxyNoteInput?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  proxyNoteSave?.click();
 });
 
 webReloadButton?.addEventListener("click", () => {
@@ -6349,6 +6411,7 @@ if (mediaSearchInput) {
 renderMediaHub();
 showBootScreen();
 updateClock();
+renderNetworkState();
 updateNowPlayingUi();
 renderLyricsWidget();
 syncTaskbarState();
