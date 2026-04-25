@@ -203,6 +203,7 @@ async function handleYoutubeSearch(req, res, url) {
 
   const q = cleanQuery(url.searchParams.get("q"), "music");
   const pageToken = cleanQuery(url.searchParams.get("pageToken"));
+  const duration = cleanQuery(url.searchParams.get("duration")).toLowerCase();
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
@@ -212,6 +213,9 @@ async function handleYoutubeSearch(req, res, url) {
     key
   });
   if (pageToken) params.set("pageToken", pageToken);
+  if (["short", "medium", "long"].includes(duration)) {
+    params.set("videoDuration", duration);
+  }
 
   const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
   const data = await response.json().catch(() => ({}));

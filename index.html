@@ -42,6 +42,10 @@
           <span class="desktop-shortcut-badge youtube-badge">YT</span>
           <strong>YouTube</strong>
         </button>
+        <button class="desktop-shortcut" type="button" data-open-panel="shorts">
+          <span class="desktop-shortcut-badge">SH</span>
+          <strong>Shorts</strong>
+        </button>
         <button class="desktop-shortcut" type="button" data-open-panel="music">
           <span class="desktop-shortcut-badge">VF</span>
           <strong>Velofy</strong>
@@ -156,6 +160,11 @@
                 <span class="icon-title">Vel AI</span>
                 <span class="icon-meta">Assistant</span>
               </button>
+              <button class="app-icon" type="button" data-open-panel="shorts">
+                <span class="app-badge badge-text">SH</span>
+                <span class="icon-title">Shorts</span>
+                <span class="icon-meta">Short video feed</span>
+              </button>
               <button class="app-icon" type="button" data-open-web="browser">
                 <img class="app-badge" src="./assets/images/apps/web-browser.svg" alt="Web Browser" />
                 <span class="icon-title">Web Browser</span>
@@ -210,6 +219,43 @@
               <button type="button" data-ai-prompt="Help me make my website look cleaner on iPad.">iPad polish</button>
               <button type="button" data-ai-prompt="Explain how to use Velofy and YouTube in vel.os.">How vel.os works</button>
               <p class="tiny-note">Vel AI uses your server route, so the OpenAI key stays out of the browser.</p>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="drawer shorts-drawer" id="shortsDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close Shorts" data-close-panel="shorts"></button>
+        <div class="drawer-panel shorts-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Shorts</h2>
+              <p class="drawer-copy">Swipe-style short videos powered by YouTube search and official embeds.</p>
+            </div>
+            <div class="window-actions">
+              <button class="close-button" id="shortsRefreshButton" type="button">Refresh</button>
+              <button class="close-button" id="shortsOpenTabButton" type="button">Open Tab</button>
+              <button class="close-button" type="button" data-close-panel="shorts">Close</button>
+            </div>
+          </header>
+
+          <div class="shorts-toolbar">
+            <form class="url-form" id="shortsSearchForm">
+              <input class="url-input" id="shortsSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search Shorts" aria-label="Search Shorts" />
+              <button class="ghost-button is-solid" type="submit">Search</button>
+            </form>
+            <span class="shorts-status" id="shortsStatus">Ready</span>
+          </div>
+
+          <div class="shorts-app-shell">
+            <section class="shorts-feed-app" id="shortsFeed" aria-label="Short video feed"></section>
+            <aside class="shorts-info-card">
+              <p class="section-label">Scroll Feed</p>
+              <h3>Real Shorts-style results</h3>
+              <p>Scroll down, tap a card, and vel.os swaps in the official YouTube embed for that short.</p>
+              <p class="tiny-note">Only one player is loaded at a time so it stays smoother on iPad.</p>
+              <button class="ghost-button shorts-load-more" id="shortsLoadMore" type="button" hidden>Load More</button>
             </aside>
           </div>
         </div>

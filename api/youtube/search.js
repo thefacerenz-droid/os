@@ -28,6 +28,7 @@ module.exports = async function handler(req, res) {
 
   const q = cleanQuery(req.query?.q, "music");
   const pageToken = cleanQuery(req.query?.pageToken);
+  const duration = cleanQuery(req.query?.duration).toLowerCase();
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
@@ -39,6 +40,9 @@ module.exports = async function handler(req, res) {
 
   if (pageToken) {
     params.set("pageToken", pageToken);
+  }
+  if (["short", "medium", "long"].includes(duration)) {
+    params.set("videoDuration", duration);
   }
 
   try {

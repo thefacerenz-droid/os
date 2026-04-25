@@ -1308,6 +1308,13 @@ const utilityApps = {
     action: "panel",
     panel: "youtube"
   },
+  shorts: {
+    title: "Shorts",
+    label: "Shorts",
+    badgeText: "SH",
+    action: "panel",
+    panel: "shorts"
+  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1758,6 +1765,7 @@ const drawers = {
   ai: document.getElementById("aiDrawer"),
   media: document.getElementById("mediaDrawer"),
   youtube: document.getElementById("youtubeDrawer"),
+  shorts: document.getElementById("shortsDrawer"),
   web: document.getElementById("webDrawer"),
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
@@ -1862,6 +1870,15 @@ const youtubePlayerDescription = document.getElementById("youtubePlayerDescripti
 const youtubeOpenTabButton = document.getElementById("youtubeOpenTabButton");
 const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton");
 const youtubeToggleResultsButton = document.getElementById("youtubeToggleResultsButton");
+const shortsDrawer = document.getElementById("shortsDrawer");
+const shortsPanel = shortsDrawer?.querySelector(".shorts-panel");
+const shortsSearchForm = document.getElementById("shortsSearchForm");
+const shortsSearchInput = document.getElementById("shortsSearchInput");
+const shortsFeed = document.getElementById("shortsFeed");
+const shortsStatus = document.getElementById("shortsStatus");
+const shortsLoadMore = document.getElementById("shortsLoadMore");
+const shortsRefreshButton = document.getElementById("shortsRefreshButton");
+const shortsOpenTabButton = document.getElementById("shortsOpenTabButton");
 const mediaTools = document.getElementById("mediaTools");
 const mediaEmbedForm = document.getElementById("mediaEmbedForm");
 const mediaEmbedInput = document.getElementById("mediaEmbedInput");
@@ -2013,6 +2030,17 @@ let youtubeAppState = {
   resultsHidden: storage.get("vel-youtube-results-hidden", "0") === "1",
   embedHost: storage.get("vel-youtube-embed-host", "privacy")
 };
+const SHORTS_DEFAULT_QUERY = "gaming funny shorts";
+let shortsState = {
+  query: storage.get("vel-shorts-query", SHORTS_DEFAULT_QUERY),
+  results: [],
+  nextPageToken: "",
+  activeIndex: 0,
+  loading: false,
+  error: "",
+  didInitialLoad: false
+};
+let shortsFeedObserver = null;
 let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
 youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
   ? youtubeWatchHistory.filter((item) => item?.id).slice(0, YOUTUBE_HISTORY_LIMIT)
@@ -2170,6 +2198,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "shorts") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="shorts"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2243,6 +2275,10 @@ function suspendPanelPlayback(name) {
     setYouTubeFullscreen(false);
     setYouTubeVideoFullscreen(false);
   }
+
+  if (name === "shorts") {
+    pauseShortsPlayback();
+  }
 }
 
 function openPanel(name) {
@@ -2276,6 +2312,13 @@ function openPanel(name) {
 
   if (name === "youtube") {
     recordRecentApp({ type: "panel", id: "youtube" });
+  }
+
+  if (name === "shorts") {
+    recordRecentApp({ type: "panel", id: "shorts" });
+    if (!shortsState.didInitialLoad) {
+      searchShorts();
+    }
   }
 
   if (name === "settings") {
@@ -2641,9 +2684,10 @@ function mergeYouTubeTopicBuckets(buckets) {
   return merged;
 }
 
-async function fetchYouTubeSearchItems(query, pageToken = "") {
+async function fetchYouTubeSearchItems(query, pageToken = "", options = {}) {
   const params = new URLSearchParams({ q: query });
   if (pageToken) params.set("pageToken", pageToken);
+  if (options.duration) params.set("duration", options.duration);
   const response = await fetch(`/api/youtube/search?${params}`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -2945,6 +2989,220 @@ async function searchYouTubeApp({ append = false } = {}) {
 function openYouTubeApp() {
   openPanel("youtube");
   loadYouTubeHome();
+}
+
+function getShortsWatchUrl(video = shortsState.results[shortsState.activeIndex]) {
+  return video?.id
+    ? `https://www.youtube.com/shorts/${encodeURIComponent(video.id)}`
+    : "https://www.youtube.com/shorts";
+}
+
+function getShortsEmbedUrl(videoId) {
+  const params = new URLSearchParams({
+    autoplay: "1",
+    controls: "1",
+    enablejsapi: "1",
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1"
+  });
+  if (location.origin && /^https?:/i.test(location.origin)) {
+    params.set("origin", location.origin);
+  }
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params}`;
+}
+
+function pauseShortsPlayback() {
+  shortsFeed?.querySelectorAll("iframe").forEach((iframe) => {
+    if (!iframe.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage(JSON.stringify({
+        event: "command",
+        func: "pauseVideo",
+        args: []
+      }), "*");
+    } catch (error) {
+      return;
+    }
+  });
+}
+
+function setShortsStatus() {
+  if (shortsStatus) {
+    shortsStatus.textContent = shortsState.loading
+      ? "Loading"
+      : shortsState.error
+        ? "Error"
+        : `${shortsState.results.length || 0} shorts`;
+  }
+  if (shortsLoadMore) {
+    shortsLoadMore.hidden = !shortsState.nextPageToken || shortsState.loading || Boolean(shortsState.error);
+  }
+  if (shortsSearchInput && document.activeElement !== shortsSearchInput) {
+    shortsSearchInput.value = shortsState.query;
+  }
+}
+
+function renderShortsCover(video, index) {
+  return `
+    <button class="shorts-cover" type="button" data-shorts-play="${index}" aria-label="Play ${escapeHtml(video.title || "Short")}">
+      ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="" loading="lazy" />` : ""}
+      <span class="shorts-play-dot">Play</span>
+    </button>
+  `;
+}
+
+function renderShortsIframe(video) {
+  return `
+    <iframe
+      title="${escapeHtml(video.title || "YouTube Short")}"
+      src="${escapeHtml(getShortsEmbedUrl(video.id))}"
+      loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+    ></iframe>
+  `;
+}
+
+function setShortsCardMedia(index, active) {
+  const video = shortsState.results[index];
+  const card = shortsFeed?.querySelector(`[data-shorts-index="${index}"]`);
+  const slot = card?.querySelector("[data-shorts-slot]");
+  if (!video || !card || !slot) return;
+  card.classList.toggle("is-active-short", active);
+  slot.innerHTML = active ? renderShortsIframe(video) : renderShortsCover(video, index);
+}
+
+function activateShortsIndex(index, { scroll = false } = {}) {
+  const nextIndex = Number(index);
+  if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= shortsState.results.length) return;
+  if (nextIndex === shortsState.activeIndex && shortsFeed?.querySelector(".is-active-short iframe")) return;
+  pauseShortsPlayback();
+  if (shortsState.activeIndex >= 0) {
+    setShortsCardMedia(shortsState.activeIndex, false);
+  }
+  shortsState.activeIndex = nextIndex;
+  setShortsCardMedia(shortsState.activeIndex, true);
+  if (scroll) {
+    shortsFeed?.querySelector(`[data-shorts-index="${shortsState.activeIndex}"]`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+}
+
+function renderShortsFeed() {
+  if (!shortsFeed) return;
+  if (shortsFeedObserver) {
+    shortsFeedObserver.disconnect();
+    shortsFeedObserver = null;
+  }
+
+  if (shortsState.loading && !shortsState.results.length) {
+    shortsFeed.innerHTML = Array.from({ length: 4 }, (_, index) => `
+      <article class="shorts-feed-card is-loading" aria-hidden="true">
+        <div class="shorts-phone">
+          <div class="shorts-cover"></div>
+          <div class="feed-overlay">
+            <strong>${index === 0 ? "Loading Shorts" : "Loading video"}</strong>
+            <span>Building a vertical feed...</span>
+          </div>
+        </div>
+      </article>
+    `).join("");
+    setShortsStatus();
+    return;
+  }
+
+  if (shortsState.error) {
+    shortsFeed.innerHTML = `
+      <article class="shorts-state-card">
+        <strong>Shorts could not load</strong>
+        <p>${escapeHtml(getYouTubeFetchError({ message: shortsState.error }))}</p>
+        <button class="ghost-button is-solid" type="button" data-shorts-retry>Retry</button>
+      </article>
+    `;
+    setShortsStatus();
+    return;
+  }
+
+  if (!shortsState.results.length) {
+    shortsFeed.innerHTML = `
+      <article class="shorts-state-card">
+        <strong>No shorts yet</strong>
+        <p>Search something like gaming, music, edits, sports, or funny clips.</p>
+      </article>
+    `;
+    setShortsStatus();
+    return;
+  }
+
+  shortsState.activeIndex = clampNumber(shortsState.activeIndex, 0, shortsState.results.length - 1);
+  shortsFeed.innerHTML = shortsState.results.map((video, index) => {
+    const isActive = index === shortsState.activeIndex;
+    return `
+      <article class="shorts-feed-card${isActive ? " is-active-short" : ""}" data-shorts-index="${index}">
+        <div class="shorts-phone">
+          <div class="shorts-media-slot" data-shorts-slot>
+            ${isActive ? renderShortsIframe(video) : renderShortsCover(video, index)}
+          </div>
+          <div class="feed-overlay">
+            <strong>${escapeHtml(video.channel || "YouTube")}</strong>
+            <span>${escapeHtml(video.title || "YouTube Short")}</span>
+            <small>${escapeHtml(formatYouTubeDate(video.publishedAt) || "Short video")}</small>
+          </div>
+          <div class="feed-actions" aria-hidden="true">
+            <span>Like</span>
+            <span>Share</span>
+            <span>Save</span>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+  setShortsStatus();
+}
+
+async function searchShorts({ append = false } = {}) {
+  const typedQuery = (shortsSearchInput?.value || "").trim();
+  const query = typedQuery || shortsState.query || SHORTS_DEFAULT_QUERY;
+  shortsState.query = query;
+  storage.set("vel-shorts-query", query);
+  shortsState.loading = true;
+  shortsState.error = "";
+  if (!append) {
+    pauseShortsPlayback();
+    shortsState.results = [];
+    shortsState.nextPageToken = "";
+    shortsState.activeIndex = 0;
+  }
+  renderShortsFeed();
+
+  try {
+    const searchText = /\bshorts?\b/i.test(query) ? query : `${query} shorts`;
+    const data = await fetchYouTubeSearchItems(searchText, append ? shortsState.nextPageToken : "", {
+      duration: "short"
+    });
+    const seen = new Set(shortsState.results.map((item) => item.id));
+    const nextItems = data.items.filter((item) => item?.id && !seen.has(item.id));
+    shortsState.results = append
+      ? [...shortsState.results, ...nextItems]
+      : nextItems;
+    shortsState.nextPageToken = data.nextPageToken || "";
+    if (!shortsState.results.length) {
+      shortsState.error = "YouTube returned no short videos for that search.";
+    }
+  } catch (error) {
+    shortsState.error = getYouTubeFetchError(error);
+  } finally {
+    shortsState.loading = false;
+    shortsState.didInitialLoad = true;
+    renderShortsFeed();
+  }
+}
+
+function openShortsApp() {
+  openPanel("shorts");
 }
 
 function handleYouTubeAddress(value) {
@@ -4017,6 +4275,76 @@ function initDraggableDrawers() {
       saveWindowPosition(name, 0, 0);
     });
   });
+}
+
+function canScrollVertically(node) {
+  return Boolean(node && node.scrollHeight > node.clientHeight + 2);
+}
+
+function initAssistedScrollSurface(surface, scroller) {
+  if (!surface || !scroller || surface.dataset.scrollAssistReady === "1") return;
+  surface.dataset.scrollAssistReady = "1";
+
+  const ignoreSelector = "input, textarea, select, iframe, video, audio, canvas, .drawer-head, [data-no-scroll-assist]";
+  let dragScrolling = false;
+  let suppressClick = false;
+  let startY = 0;
+  let startScrollTop = 0;
+
+  surface.addEventListener("wheel", (event) => {
+    if (!canScrollVertically(scroller)) return;
+    if (event.target.closest(ignoreSelector)) return;
+    if (scroller.contains(event.target)) return;
+    scroller.scrollTop += event.deltaY;
+    event.preventDefault();
+  }, { passive: false });
+
+  const move = (event) => {
+    if (!dragScrolling) return;
+    const deltaY = event.clientY - startY;
+    if (Math.abs(deltaY) < 5) return;
+    suppressClick = true;
+    scroller.scrollTop = startScrollTop - deltaY;
+    event.preventDefault();
+  };
+
+  const stop = () => {
+    dragScrolling = false;
+    if (suppressClick) {
+      window.setTimeout(() => {
+        suppressClick = false;
+      }, 120);
+    }
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+  };
+
+  surface.addEventListener("pointerdown", (event) => {
+    if (event.button != null && event.button !== 0) return;
+    if (!canScrollVertically(scroller)) return;
+    if (event.target.closest(ignoreSelector)) return;
+    dragScrolling = true;
+    suppressClick = false;
+    startY = event.clientY;
+    startScrollTop = scroller.scrollTop;
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  });
+
+  surface.addEventListener("click", (event) => {
+    if (!suppressClick) return;
+    suppressClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+}
+
+function initScrollAssist() {
+  initAssistedScrollSurface(drawers.launcher?.querySelector(".drawer-panel"), launcherGameGrid);
+  initAssistedScrollSurface(youtubePanel, youtubeResultsGrid);
+  initAssistedScrollSurface(shortsPanel, shortsFeed);
 }
 
 function applyLyricsWidgetPosition() {
@@ -5246,6 +5574,14 @@ panelOpenButtons.forEach((button) => {
       }
       return;
     }
+    if (button.dataset.openPanel === "shorts") {
+      if (isDrawerOpen("shorts")) {
+        closePanel("shorts");
+      } else {
+        openShortsApp();
+      }
+      return;
+    }
     togglePanel(button.dataset.openPanel);
   });
 });
@@ -5384,6 +5720,35 @@ youtubeDrawer?.addEventListener("click", (event) => {
   if (!topicButton) return;
   if (youtubeSearchInput) youtubeSearchInput.value = topicButton.dataset.youtubeTopic;
   searchYouTubeApp();
+});
+
+shortsSearchForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  searchShorts();
+});
+
+shortsFeed?.addEventListener("click", (event) => {
+  const retryButton = event.target.closest("[data-shorts-retry]");
+  if (retryButton) {
+    searchShorts();
+    return;
+  }
+
+  const playButton = event.target.closest("[data-shorts-play]");
+  if (!playButton) return;
+  activateShortsIndex(Number(playButton.dataset.shortsPlay), { scroll: true });
+});
+
+shortsLoadMore?.addEventListener("click", () => {
+  searchShorts({ append: true });
+});
+
+shortsRefreshButton?.addEventListener("click", () => {
+  searchShorts();
+});
+
+shortsOpenTabButton?.addEventListener("click", () => {
+  window.open(getShortsWatchUrl(), "_blank", "noopener,noreferrer");
 });
 
 function syncYouTubeFullscreenState() {
@@ -7694,10 +8059,15 @@ applyZoom(currentZoomKey);
 if (velofySpotifySearch) {
   velofySpotifySearch.value = velofySpotifySearchQuery;
 }
+if (shortsSearchInput) {
+  shortsSearchInput.value = shortsState.query;
+}
 renderLauncherCatalog();
 renderRecentApps();
 renderAiMessages();
+renderShortsFeed();
 initDraggableDrawers();
+initScrollAssist();
 initDraggableLyricsWidget();
 setActiveLocalGame(activeLocalGame);
 if (mediaSearchInput) {
