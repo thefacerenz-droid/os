@@ -254,6 +254,7 @@
               <button type="button" data-youtube-topic="News today">News</button>
               <button type="button" data-youtube-history>History</button>
               <button type="button" data-youtube-favorites>Favorites</button>
+              <button type="button" data-youtube-global>Global</button>
             </aside>
 
             <main class="youtube-player-area">
@@ -284,6 +285,11 @@
                   <button class="youtube-clear-history" id="youtubeClearHistoryButton" type="button" hidden>Clear History</button>
                 </div>
               </div>
+              <form class="youtube-global-form" id="youtubeGlobalForm" hidden>
+                <input class="url-input" id="youtubeGlobalInput" type="search" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube link for everyone" aria-label="Paste a YouTube link for global favorites" />
+                <button class="ghost-button is-solid" type="submit">Add Global</button>
+                <p class="tiny-note" id="youtubeGlobalStatus">Shared links show up for everyone using vel.os.</p>
+              </form>
               <div class="youtube-results-grid" id="youtubeResultsGrid"></div>
               <button class="ghost-button youtube-load-more" id="youtubeLoadMore" type="button" hidden>Load More</button>
             </aside>

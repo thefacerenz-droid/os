@@ -1845,6 +1845,9 @@ const youtubeStatus = document.getElementById("youtubeStatus");
 const youtubeLoadMore = document.getElementById("youtubeLoadMore");
 const youtubeSaveAllButton = document.getElementById("youtubeSaveAllButton");
 const youtubeClearHistoryButton = document.getElementById("youtubeClearHistoryButton");
+const youtubeGlobalForm = document.getElementById("youtubeGlobalForm");
+const youtubeGlobalInput = document.getElementById("youtubeGlobalInput");
+const youtubeGlobalStatus = document.getElementById("youtubeGlobalStatus");
 const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
 const youtubePlayerChannel = document.getElementById("youtubePlayerChannel");
 const youtubePlayerTitle = document.getElementById("youtubePlayerTitle");
@@ -2030,6 +2033,7 @@ let youtubeSearchCache = readStoredJson(YOUTUBE_SEARCH_CACHE_KEY, {});
 youtubeSearchCache = youtubeSearchCache && typeof youtubeSearchCache === "object" && !Array.isArray(youtubeSearchCache)
   ? youtubeSearchCache
   : {};
+let youtubeGlobalMessage = "";
 let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
 aiMessages = Array.isArray(aiMessages)
   ? aiMessages
@@ -2721,6 +2725,15 @@ function getYouTubeDisplayResults() {
   return youtubeAppState.results;
 }
 
+function findKnownYouTubeVideo(id) {
+  return [
+    youtubeAppState.currentVideo,
+    ...youtubeAppState.results,
+    ...youtubeWatchHistory,
+    ...youtubeFavorites
+  ].filter(Boolean).find((item) => item.id === id);
+}
+
 function saveAllVisibleYouTubeVideos() {
   if (youtubeAppState.mode !== "home") return;
   const videos = getYouTubeDisplayResults().filter((video) => video?.id);
@@ -2922,6 +2935,77 @@ function showYouTubeFavorites() {
   renderYouTubeResults();
 }
 
+async function showYouTubeGlobal() {
+  youtubeAppState.mode = "global";
+  youtubeAppState.query = "Global Favs";
+  youtubeAppState.homeTopics = [];
+  youtubeAppState.results = [];
+  youtubeAppState.nextPageToken = "";
+  youtubeAppState.error = "";
+  youtubeAppState.loading = true;
+  youtubeAppState.currentVideo = null;
+  youtubeAppState.didInitialLoad = true;
+  if (youtubeSearchInput) youtubeSearchInput.value = "";
+  renderYouTubePlayer();
+  renderYouTubeResults();
+
+  try {
+    const response = await fetch("/api/youtube/global");
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Global favorites could not load.");
+    youtubeAppState.results = Array.isArray(data.items) ? data.items : [];
+    youtubeGlobalMessage = data.storage === "memory"
+      ? "Global links are shared live, but permanent Vercel storage needs KV/database setup."
+      : "Shared links show up for everyone using vel.os.";
+  } catch (error) {
+    youtubeAppState.error = error.message || "Global favorites could not load.";
+  } finally {
+    youtubeAppState.loading = false;
+    renderYouTubeResults();
+  }
+}
+
+async function addGlobalYouTubeFavorite(value) {
+  const id = extractYouTubeId(value);
+  if (!id) {
+    youtubeGlobalMessage = "Paste a real YouTube video, Shorts, youtu.be link, or video ID.";
+    renderYouTubeStatus();
+    youtubeGlobalInput?.focus({ preventScroll: true });
+    return;
+  }
+
+  const known = findKnownYouTubeVideo(id) || {};
+  youtubeGlobalMessage = "Saving global link...";
+  youtubeAppState.error = "";
+  renderYouTubeStatus();
+
+  try {
+    const response = await fetch("/api/youtube/global", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        url: value,
+        title: known.title || "Shared YouTube Video",
+        channel: known.channel || "Global Favs",
+        thumbnail: known.thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        publishedAt: known.publishedAt || "",
+        description: known.description || "Saved by someone on vel.os."
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Could not save that YouTube link.");
+    if (youtubeGlobalInput) youtubeGlobalInput.value = "";
+    youtubeGlobalMessage = "Saved to Global Favs.";
+    youtubeAppState.results = Array.isArray(data.items) ? data.items : [data.item, ...youtubeAppState.results].filter(Boolean);
+    youtubeAppState.mode = "global";
+    renderYouTubeResults();
+  } catch (error) {
+    youtubeGlobalMessage = error.message || "Could not save that YouTube link.";
+    renderYouTubeStatus();
+  }
+}
+
 async function loadYouTubeHome() {
   youtubeAppState.mode = "home";
   youtubeAppState.currentVideo = null;
@@ -2995,6 +3079,7 @@ function renderYouTubeStatus() {
   youtubeDrawer?.classList.toggle("is-youtube-home", youtubeAppState.mode === "home");
   youtubeDrawer?.classList.toggle("is-youtube-history", youtubeAppState.mode === "history");
   youtubeDrawer?.classList.toggle("is-youtube-favorites", youtubeAppState.mode === "favorites");
+  youtubeDrawer?.classList.toggle("is-youtube-global", youtubeAppState.mode === "global");
   const shouldHideResults = isWatching && youtubeAppState.resultsHidden;
   youtubeDrawer?.classList.toggle("is-youtube-results-hidden", shouldHideResults);
   if (youtubeToggleResultsButton) {
@@ -3011,6 +3096,8 @@ function renderYouTubeStatus() {
           ? `${youtubeWatchHistory.length} watched`
           : youtubeAppState.mode === "favorites"
             ? `${youtubeFavorites.length} saved`
+            : youtubeAppState.mode === "global"
+              ? `${youtubeAppState.results.length || 0} global`
             : youtubeAppState.mode === "home" && !youtubeWatchHistory.length && !youtubeFavorites.length
             ? "No history"
             : `${youtubeAppState.results.length || 0} videos`;
@@ -3022,7 +3109,15 @@ function renderYouTubeStatus() {
         ? "History"
         : youtubeAppState.mode === "favorites"
           ? "Favorites"
+          : youtubeAppState.mode === "global"
+            ? "Global Favs"
           : youtubeAppState.query || "YouTube";
+  }
+  if (youtubeGlobalForm) {
+    youtubeGlobalForm.hidden = youtubeAppState.mode !== "global";
+  }
+  if (youtubeGlobalStatus) {
+    youtubeGlobalStatus.textContent = youtubeGlobalMessage || "Shared links show up for everyone using vel.os.";
   }
   if (youtubeSaveAllButton) {
     const homeResults = youtubeAppState.mode === "home" ? youtubeAppState.results.filter((video) => video?.id) : [];
@@ -3141,6 +3236,11 @@ function renderYouTubeResults() {
             title: "No favorites yet",
             body: "Tap Save on any video, or use Save All from your For You page."
           }
+          : youtubeAppState.mode === "global"
+            ? {
+              title: "No global favorites yet",
+              body: "Paste a YouTube link above and everyone on vel.os can open it."
+            }
           : {
             title: "No videos yet",
             body: "Search something to load YouTube results."
@@ -3161,6 +3261,8 @@ function renderYouTubeResults() {
       ? `Watched ${formatYouTubeDate(video.watchedAt)}`
       : youtubeAppState.mode === "favorites"
         ? `Saved ${formatYouTubeDate(video.savedAt)}`
+        : youtubeAppState.mode === "global"
+          ? `Added ${formatYouTubeDate(video.addedAt)}`
         : formatYouTubeDate(video.publishedAt);
     return `
       <article class="youtube-video-card${youtubeAppState.currentVideo?.id === video.id ? " is-active" : ""}">
@@ -3197,7 +3299,7 @@ function selectYouTubeAppVideo(video) {
 
 async function searchYouTubeApp({ append = false } = {}) {
   const typedQuery = (youtubeSearchInput?.value || "").trim();
-  const fallbackQuery = ["home", "history", "favorites"].includes(youtubeAppState.mode)
+  const fallbackQuery = ["home", "history", "favorites", "global"].includes(youtubeAppState.mode)
     ? "music videos"
     : youtubeAppState.query || "music videos";
   const query = typedQuery || fallbackQuery;
@@ -6194,6 +6296,11 @@ youtubeSearchForm?.addEventListener("submit", (event) => {
   searchYouTubeApp();
 });
 
+youtubeGlobalForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addGlobalYouTubeFavorite(youtubeGlobalInput?.value || "");
+});
+
 youtubeAddressForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   handleYouTubeAddress(youtubeAddressInput?.value || "youtube.com");
@@ -6272,6 +6379,12 @@ youtubeDrawer?.addEventListener("click", (event) => {
   const favoritesButton = event.target.closest("[data-youtube-favorites]");
   if (favoritesButton) {
     showYouTubeFavorites();
+    return;
+  }
+
+  const globalButton = event.target.closest("[data-youtube-global]");
+  if (globalButton) {
+    showYouTubeGlobal();
     return;
   }
 

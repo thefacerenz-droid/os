@@ -7,6 +7,8 @@ loadEnv(path.join(__dirname, ".env"));
 
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = __dirname;
+const GLOBAL_YOUTUBE_LIMIT = 200;
+const GLOBAL_YOUTUBE_FILE = path.join(__dirname, "data", "global-youtube-favorites.json");
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 const sessions = new Map();
 let spotifyToken = null;
@@ -115,10 +117,64 @@ function cleanAiMessage(value) {
   return String(value || "").trim().slice(0, 1200);
 }
 
+function cleanGlobalText(value, fallback = "") {
+  return String(value || fallback).replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
 async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   return Buffer.concat(chunks).toString("utf8");
+}
+
+function extractYouTubeVideoId(value = "") {
+  const trimmed = String(value || "").trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+  try {
+    const normalized = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const url = new URL(normalized);
+    if (!/(^|\.)youtube\.com$|(^|\.)youtu\.be$/i.test(url.hostname)) return "";
+    if (/youtu\.be$/i.test(url.hostname)) {
+      const id = url.pathname.split("/").filter(Boolean)[0] || "";
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : "";
+    }
+    const watchId = url.searchParams.get("v") || "";
+    if (/^[a-zA-Z0-9_-]{11}$/.test(watchId)) return watchId;
+    const embedMatch = url.pathname.match(/\/(?:embed|shorts)\/([a-zA-Z0-9_-]{11})/);
+    return embedMatch?.[1] || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function normalizeGlobalYouTubeItem(input = {}) {
+  const id = extractYouTubeVideoId(input.url || input.id);
+  if (!id) return null;
+  return {
+    id,
+    title: cleanGlobalText(input.title, "Shared YouTube Video"),
+    channel: cleanGlobalText(input.channel, "Global Favs"),
+    thumbnail: cleanGlobalText(input.thumbnail, `https://i.ytimg.com/vi/${id}/hqdefault.jpg`),
+    publishedAt: cleanGlobalText(input.publishedAt),
+    description: cleanGlobalText(input.description, "Saved by someone on vel.os."),
+    addedAt: Date.now()
+  };
+}
+
+function readGlobalYouTubeFavorites() {
+  try {
+    const raw = fs.readFileSync(GLOBAL_YOUTUBE_FILE, "utf8");
+    const items = JSON.parse(raw);
+    return Array.isArray(items) ? items.filter((item) => item?.id).slice(0, GLOBAL_YOUTUBE_LIMIT) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function writeGlobalYouTubeFavorites(items) {
+  fs.mkdirSync(path.dirname(GLOBAL_YOUTUBE_FILE), { recursive: true });
+  fs.writeFileSync(GLOBAL_YOUTUBE_FILE, JSON.stringify(items.slice(0, GLOBAL_YOUTUBE_LIMIT), null, 2));
 }
 
 function normalizeAiMessages(value) {
@@ -161,7 +217,12 @@ async function handleAiChat(req, res) {
     });
   }
 
-  const body = JSON.parse(await readBody(req) || "{}");
+  let body = {};
+  try {
+    body = JSON.parse(await readBody(req) || "{}");
+  } catch (error) {
+    body = {};
+  }
   const messages = normalizeAiMessages(body.messages);
   if (!messages.length) {
     return sendJson(res, 400, {
@@ -251,6 +312,39 @@ async function handleYoutubeSearch(req, res, url) {
     })).filter((item) => item.id),
     nextPageToken: data.nextPageToken || ""
   });
+}
+
+async function handleYoutubeGlobal(req, res) {
+  if (req.method === "GET") {
+    return sendJson(res, 200, {
+      items: readGlobalYouTubeFavorites(),
+      storage: "file"
+    });
+  }
+
+  if (req.method !== "POST") {
+    return sendJson(res, 405, {
+      error: "method_not_allowed",
+      message: "Use GET or POST for global YouTube favorites."
+    });
+  }
+
+  const body = JSON.parse(await readBody(req) || "{}");
+  const nextItem = normalizeGlobalYouTubeItem(body);
+  if (!nextItem) {
+    return sendJson(res, 400, {
+      error: "invalid_youtube_link",
+      message: "Paste a valid YouTube video link, Shorts link, youtu.be link, or 11-character video ID."
+    });
+  }
+
+  const current = readGlobalYouTubeFavorites();
+  const items = [
+    nextItem,
+    ...current.filter((item) => item.id !== nextItem.id)
+  ].slice(0, GLOBAL_YOUTUBE_LIMIT);
+  writeGlobalYouTubeFavorites(items);
+  return sendJson(res, 201, { item: nextItem, items, storage: "file" });
 }
 
 async function getSpotifyToken() {
@@ -528,6 +622,7 @@ async function handleRequest(req, res) {
   try {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
+    if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res);
     if (req.method === "GET" && url.pathname === "/api/spotify/search") return await handleSpotifySearch(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/start") return await handleTikTokAuthStart(req, res);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/callback") return await handleTikTokCallback(req, res, url);
