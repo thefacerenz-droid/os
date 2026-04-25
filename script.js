@@ -1294,6 +1294,13 @@ const utilityApps = {
     action: "panel",
     panel: "music"
   },
+  youtube: {
+    title: "YouTube",
+    label: "YouTube",
+    badgeText: "YT",
+    action: "panel",
+    panel: "youtube"
+  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1742,6 +1749,7 @@ const mediaPlutoCatalog = [
 const drawers = {
   launcher: document.getElementById("launcherDrawer"),
   media: document.getElementById("mediaDrawer"),
+  youtube: document.getElementById("youtubeDrawer"),
   web: document.getElementById("webDrawer"),
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
@@ -1822,6 +1830,22 @@ const webHelperMirrorButton = document.getElementById("webHelperMirrorButton");
 const webHelperLocalButton = document.getElementById("webHelperLocalButton");
 const webReloadButton = document.getElementById("webReloadButton");
 const webMirrorButton = document.getElementById("webMirrorButton");
+const youtubeDrawer = document.getElementById("youtubeDrawer");
+const youtubePanel = youtubeDrawer?.querySelector(".youtube-panel");
+const youtubeAddressForm = document.getElementById("youtubeAddressForm");
+const youtubeAddressInput = document.getElementById("youtubeAddressInput");
+const youtubeSearchForm = document.getElementById("youtubeSearchForm");
+const youtubeSearchInput = document.getElementById("youtubeSearchInput");
+const youtubeResultsGrid = document.getElementById("youtubeResultsGrid");
+const youtubeResultsTitle = document.getElementById("youtubeResultsTitle");
+const youtubeStatus = document.getElementById("youtubeStatus");
+const youtubeLoadMore = document.getElementById("youtubeLoadMore");
+const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
+const youtubePlayerChannel = document.getElementById("youtubePlayerChannel");
+const youtubePlayerTitle = document.getElementById("youtubePlayerTitle");
+const youtubePlayerDescription = document.getElementById("youtubePlayerDescription");
+const youtubeOpenTabButton = document.getElementById("youtubeOpenTabButton");
+const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton");
 const mediaTools = document.getElementById("mediaTools");
 const mediaEmbedForm = document.getElementById("mediaEmbedForm");
 const mediaEmbedInput = document.getElementById("mediaEmbedInput");
@@ -1894,6 +1918,16 @@ if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
 let networkNote = storage.get("vel-network-note", "");
+let youtubeAppState = {
+  query: storage.get("vel-youtube-query", "music videos"),
+  results: [],
+  nextPageToken: "",
+  currentVideo: null,
+  loading: false,
+  error: "",
+  didInitialLoad: false,
+  fullscreen: false
+};
 let velofySearchQuery = "";
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2024,6 +2058,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="music"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "youtube") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2078,6 +2116,10 @@ function openPanel(name) {
     recordRecentApp({ type: "panel", id: "music" });
   }
 
+  if (name === "youtube") {
+    recordRecentApp({ type: "panel", id: "youtube" });
+  }
+
   if (name === "settings") {
     recordRecentApp({ type: "panel", id: "settings" });
   }
@@ -2099,6 +2141,7 @@ function closeAllPanels() {
   activePanel = "";
   pauseDynamicGames("");
   pauseAllFeedMedia();
+  setYouTubeFullscreen(false);
   youtubePlayer?.destroy?.();
   youtubePlayer = null;
   syncTaskbarState();
@@ -2113,6 +2156,9 @@ function closePanel(name) {
     pauseAllFeedMedia();
     youtubePlayer?.destroy?.();
     youtubePlayer = null;
+  }
+  if (name === "youtube") {
+    setYouTubeFullscreen(false);
   }
   if (activePanel === name) {
     activePanel = "";
@@ -2180,6 +2226,264 @@ function renderNetworkState() {
   }
   if (proxyNoteInput) {
     proxyNoteInput.value = networkNote;
+  }
+}
+
+function formatYouTubeDate(value = "") {
+  if (!value) return "";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    }).format(new Date(value));
+  } catch (error) {
+    return "";
+  }
+}
+
+function getYouTubeWatchUrl(video = youtubeAppState.currentVideo) {
+  return video?.id
+    ? `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`
+    : "https://www.youtube.com";
+}
+
+function getYouTubeEmbedUrl(videoId) {
+  const params = new URLSearchParams({
+    autoplay: "1",
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1"
+  });
+  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params}`;
+}
+
+function getYouTubeFetchError(error) {
+  const message = error?.message || "";
+  if (location.protocol === "file:") {
+    return "YouTube search needs the vel.os server. Run npm start and open http://localhost:3000 instead of opening index.html directly.";
+  }
+  if (/failed to fetch|load failed|networkerror/i.test(message)) {
+    return "YouTube search API did not respond. Make sure /api/youtube/search exists and YOUTUBE_API_KEY is set in your hosting environment.";
+  }
+  return message || "YouTube search could not load.";
+}
+
+function renderYouTubeStatus() {
+  if (youtubeStatus) {
+    youtubeStatus.textContent = youtubeAppState.loading
+      ? "Loading"
+      : youtubeAppState.error
+        ? "Error"
+        : `${youtubeAppState.results.length || 0} videos`;
+  }
+  if (youtubeResultsTitle) {
+    youtubeResultsTitle.textContent = youtubeAppState.query || "YouTube";
+  }
+  if (youtubeLoadMore) {
+    youtubeLoadMore.hidden = !youtubeAppState.nextPageToken || youtubeAppState.loading;
+  }
+  if (youtubeAddressInput) {
+    youtubeAddressInput.value = getYouTubeWatchUrl();
+  }
+}
+
+function renderYouTubePlayer() {
+  const video = youtubeAppState.currentVideo;
+  if (!youtubeFrameWrap || !youtubePlayerTitle || !youtubePlayerChannel || !youtubePlayerDescription) return;
+
+  if (!video) {
+    youtubeFrameWrap.innerHTML = `
+      <div class="youtube-empty-player">
+        <strong>YouTube Player</strong>
+        <span>Search, pick a video, and it will play here.</span>
+      </div>
+    `;
+    youtubePlayerTitle.textContent = "Search YouTube to start watching.";
+    youtubePlayerChannel.textContent = "Official YouTube Embed";
+    youtubePlayerDescription.textContent = "Results use your YouTube Data API key through the vel.os server route.";
+    renderYouTubeStatus();
+    return;
+  }
+
+  youtubeFrameWrap.innerHTML = `
+    <iframe
+      title="${escapeHtml(video.title)}"
+      src="${escapeHtml(getYouTubeEmbedUrl(video.id))}"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+    ></iframe>
+  `;
+  youtubePlayerTitle.textContent = video.title;
+  youtubePlayerChannel.textContent = `${video.channel || "YouTube"}${video.publishedAt ? ` · ${formatYouTubeDate(video.publishedAt)}` : ""}`;
+  youtubePlayerDescription.textContent = video.description || "Playing through the official YouTube embedded player.";
+  renderYouTubeStatus();
+}
+
+function renderYouTubeResults() {
+  if (!youtubeResultsGrid) return;
+
+  if (youtubeAppState.loading && !youtubeAppState.results.length) {
+    youtubeResultsGrid.innerHTML = Array.from({ length: 6 }, () => `
+      <article class="youtube-video-card">
+        <div class="youtube-video-thumb"></div>
+        <div><strong>Loading video</strong><span>Fetching YouTube results...</span></div>
+      </article>
+    `).join("");
+    renderYouTubeStatus();
+    return;
+  }
+
+  if (youtubeAppState.error) {
+    youtubeResultsGrid.innerHTML = `
+      <article class="youtube-video-card">
+        <div class="youtube-video-thumb"></div>
+        <div>
+          <strong>YouTube could not load</strong>
+          <span>${escapeHtml(youtubeAppState.error)}</span>
+        </div>
+      </article>
+    `;
+    renderYouTubeStatus();
+    return;
+  }
+
+  if (!youtubeAppState.results.length) {
+    youtubeResultsGrid.innerHTML = `
+      <article class="youtube-video-card">
+        <div class="youtube-video-thumb"></div>
+        <div><strong>No videos yet</strong><span>Search something to load YouTube results.</span></div>
+      </article>
+    `;
+    renderYouTubeStatus();
+    return;
+  }
+
+  youtubeResultsGrid.innerHTML = youtubeAppState.results.map((video) => `
+    <button class="youtube-video-card${youtubeAppState.currentVideo?.id === video.id ? " is-active" : ""}" type="button" data-youtube-app-video="${escapeHtml(video.id)}">
+      ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="" loading="lazy" />` : '<div class="youtube-video-thumb"></div>'}
+      <span>
+        <strong>${escapeHtml(video.title)}</strong>
+        <span>${escapeHtml(video.channel || "YouTube")}</span>
+        <span>${escapeHtml(formatYouTubeDate(video.publishedAt))}</span>
+      </span>
+    </button>
+  `).join("");
+  renderYouTubeStatus();
+}
+
+function selectYouTubeAppVideo(video) {
+  if (!video) return;
+  youtubeAppState.currentVideo = video;
+  storage.set("vel-youtube-last-video", video.id);
+  renderYouTubePlayer();
+  renderYouTubeResults();
+}
+
+async function searchYouTubeApp({ append = false } = {}) {
+  const query = (youtubeSearchInput?.value || youtubeAppState.query || "music videos").trim() || "music videos";
+  youtubeAppState.query = query;
+  storage.set("vel-youtube-query", query);
+  if (youtubeSearchInput) youtubeSearchInput.value = query;
+  youtubeAppState.loading = true;
+  youtubeAppState.error = "";
+  if (!append) {
+    youtubeAppState.results = [];
+    youtubeAppState.nextPageToken = "";
+  }
+  renderYouTubeResults();
+
+  try {
+    const params = new URLSearchParams({ q: query });
+    if (append && youtubeAppState.nextPageToken) {
+      params.set("pageToken", youtubeAppState.nextPageToken);
+    }
+    const response = await fetch(`/api/youtube/search?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || "YouTube search failed.");
+    }
+    const nextItems = Array.isArray(data.items) ? data.items : [];
+    youtubeAppState.results = append
+      ? [...youtubeAppState.results, ...nextItems]
+      : nextItems;
+    youtubeAppState.nextPageToken = data.nextPageToken || "";
+    if (!append && nextItems[0]) {
+      youtubeAppState.currentVideo = nextItems[0];
+      renderYouTubePlayer();
+    }
+  } catch (error) {
+    youtubeAppState.error = getYouTubeFetchError(error);
+  } finally {
+    youtubeAppState.loading = false;
+    youtubeAppState.didInitialLoad = true;
+    renderYouTubeResults();
+  }
+}
+
+function openYouTubeApp() {
+  if (youtubeSearchInput) youtubeSearchInput.value = youtubeAppState.query;
+  openPanel("youtube");
+  if (!youtubeAppState.didInitialLoad) {
+    searchYouTubeApp();
+  } else {
+    renderYouTubePlayer();
+    renderYouTubeResults();
+  }
+}
+
+function handleYouTubeAddress(value) {
+  const trimmed = value.trim();
+  const youtubeId = extractYouTubeId(trimmed);
+  if (youtubeId) {
+    const existing = youtubeAppState.results.find((video) => video.id === youtubeId);
+    selectYouTubeAppVideo(existing || {
+      id: youtubeId,
+      title: "YouTube Video",
+      channel: "Official YouTube player",
+      thumbnail: "",
+      publishedAt: "",
+      description: ""
+    });
+    return;
+  }
+
+  if (!trimmed || /youtube\.com\/?$/i.test(trimmed) || trimmed === "youtube.com") {
+    if (youtubeSearchInput) youtubeSearchInput.value = youtubeAppState.query;
+    searchYouTubeApp();
+    return;
+  }
+
+  const searchMatch = trimmed.match(/[?&]search_query=([^&]+)/);
+  if (searchMatch?.[1]) {
+    const query = decodeURIComponent(searchMatch[1].replace(/\+/g, " "));
+    if (youtubeSearchInput) youtubeSearchInput.value = query;
+    searchYouTubeApp();
+    return;
+  }
+
+  window.open(normalizeUrl(trimmed), "_blank", "noopener,noreferrer");
+}
+
+function setYouTubeFullscreen(active) {
+  youtubeAppState.fullscreen = Boolean(active);
+  youtubeDrawer?.classList.toggle("is-youtube-fullscreen", youtubeAppState.fullscreen);
+  if (youtubeFullscreenButton) {
+    youtubeFullscreenButton.textContent = youtubeAppState.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+  }
+}
+
+async function toggleYouTubeFullscreen() {
+  const next = !youtubeAppState.fullscreen;
+  setYouTubeFullscreen(next);
+  try {
+    if (next && youtubePanel?.requestFullscreen && !document.fullscreenElement) {
+      await youtubePanel.requestFullscreen();
+    } else if (!next && document.fullscreenElement === youtubePanel) {
+      await document.exitFullscreen();
+    }
+  } catch (error) {
+    return;
   }
 }
 
@@ -2834,6 +3138,16 @@ function applyWindowPosition(name) {
   panel.style.setProperty("--drag-y", `${position.y || 0}px`);
 }
 
+function getTaskbarReserve() {
+  const taskbar = document.querySelector(".taskbar");
+  return (taskbar?.getBoundingClientRect().height || 56) + 10;
+}
+
+function clampNumber(value, min, max) {
+  if (max < min) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
 function saveWindowPosition(name, x, y) {
   windowPositions[name] = { x, y };
   storage.set("vel-window-positions", JSON.stringify(windowPositions));
@@ -2861,13 +3175,12 @@ function initDraggableDrawers() {
     let originX = 0;
     let originY = 0;
     let dragging = false;
+    let dragBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
 
     const move = (event) => {
       if (!dragging) return;
-      const maxX = Math.max(0, window.innerWidth * 0.18);
-      const maxY = Math.max(0, window.innerHeight * 0.12);
-      const nextX = Math.max(-maxX, Math.min(maxX, originX + (event.clientX - startX)));
-      const nextY = Math.max(-maxY, Math.min(maxY, originY + (event.clientY - startY)));
+      const nextX = clampNumber(originX + (event.clientX - startX), dragBounds.minX, dragBounds.maxX);
+      const nextY = clampNumber(originY + (event.clientY - startY), dragBounds.minY, dragBounds.maxY);
       panel.style.setProperty("--drag-x", `${nextX}px`);
       panel.style.setProperty("--drag-y", `${nextY}px`);
     };
@@ -2891,6 +3204,18 @@ function initDraggableDrawers() {
       startY = event.clientY;
       originX = Number.parseFloat(panel.style.getPropertyValue("--drag-x")) || 0;
       originY = Number.parseFloat(panel.style.getPropertyValue("--drag-y")) || 0;
+      const rect = panel.getBoundingClientRect();
+      const baseLeft = rect.left - originX;
+      const baseRight = rect.right - originX;
+      const baseTop = rect.top - originY;
+      const baseBottom = rect.bottom - originY;
+      const edgePadding = 8;
+      dragBounds = {
+        minX: edgePadding - baseLeft,
+        maxX: window.innerWidth - edgePadding - baseRight,
+        minY: edgePadding - baseTop,
+        maxY: window.innerHeight - getTaskbarReserve() - baseBottom
+      };
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", stop);
     });
@@ -2922,13 +3247,12 @@ function initDraggableLyricsWidget() {
   let originX = 0;
   let originY = 0;
   let dragging = false;
+  let dragBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
 
   const move = (event) => {
     if (!dragging) return;
-    const maxX = Math.max(0, window.innerWidth - lyricsWidget.offsetWidth - 24);
-    const maxY = Math.max(0, window.innerHeight - lyricsWidget.offsetHeight - 120);
-    const nextX = Math.max(0, Math.min(maxX, originX + (event.clientX - startX)));
-    const nextY = Math.max(0, Math.min(maxY, originY + (event.clientY - startY)));
+    const nextX = clampNumber(originX + (event.clientX - startX), dragBounds.minX, dragBounds.maxX);
+    const nextY = clampNumber(originY + (event.clientY - startY), dragBounds.minY, dragBounds.maxY);
     lyricsWidget.style.setProperty("--drag-x", `${nextX}px`);
     lyricsWidget.style.setProperty("--drag-y", `${nextY}px`);
   };
@@ -2952,6 +3276,18 @@ function initDraggableLyricsWidget() {
     startY = event.clientY;
     originX = Number.parseFloat(lyricsWidget.style.getPropertyValue("--drag-x")) || 0;
     originY = Number.parseFloat(lyricsWidget.style.getPropertyValue("--drag-y")) || 0;
+    const rect = lyricsWidget.getBoundingClientRect();
+    const baseLeft = rect.left - originX;
+    const baseRight = rect.right - originX;
+    const baseTop = rect.top - originY;
+    const baseBottom = rect.bottom - originY;
+    const edgePadding = 8;
+    dragBounds = {
+      minX: edgePadding - baseLeft,
+      maxX: window.innerWidth - edgePadding - baseRight,
+      minY: edgePadding - baseTop,
+      maxY: window.innerHeight - getTaskbarReserve() - baseBottom
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
   });
@@ -4111,6 +4447,14 @@ openLocalGamesButton?.addEventListener("click", () => {
 
 panelOpenButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.openPanel === "youtube") {
+      if (isDrawerOpen("youtube")) {
+        closePanel("youtube");
+      } else {
+        openYouTubeApp();
+      }
+      return;
+    }
     togglePanel(button.dataset.openPanel);
   });
 });
@@ -4159,6 +4503,48 @@ gameSourceTabs?.addEventListener("click", (event) => {
   renderLauncherCatalog();
 });
 
+youtubeSearchForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  searchYouTubeApp();
+});
+
+youtubeAddressForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  handleYouTubeAddress(youtubeAddressInput?.value || "youtube.com");
+});
+
+youtubeResultsGrid?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-youtube-app-video]");
+  if (!button) return;
+  const video = youtubeAppState.results.find((item) => item.id === button.dataset.youtubeAppVideo);
+  selectYouTubeAppVideo(video);
+});
+
+youtubeLoadMore?.addEventListener("click", () => {
+  searchYouTubeApp({ append: true });
+});
+
+youtubeOpenTabButton?.addEventListener("click", () => {
+  window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
+});
+
+youtubeFullscreenButton?.addEventListener("click", () => {
+  toggleYouTubeFullscreen();
+});
+
+youtubeDrawer?.addEventListener("click", (event) => {
+  const topicButton = event.target.closest("[data-youtube-topic]");
+  if (!topicButton) return;
+  if (youtubeSearchInput) youtubeSearchInput.value = topicButton.dataset.youtubeTopic;
+  searchYouTubeApp();
+});
+
+document.addEventListener("fullscreenchange", () => {
+  if (youtubeAppState.fullscreen && document.fullscreenElement !== youtubePanel) {
+    setYouTubeFullscreen(false);
+  }
+});
+
 gameLaunchButtons.forEach((button) => {
   button.addEventListener("click", () => {
     openGame(button.dataset.launchGame);
@@ -4191,6 +4577,10 @@ recentAppsTray?.addEventListener("click", (event) => {
   const id = button.dataset.recentId;
   if (type === "web") openWebApp(id);
   if (type === "game") openGame(id);
+  if (type === "panel" && id === "youtube") {
+    openYouTubeApp();
+    return;
+  }
   if (type === "panel" && utilityApps[id]?.panel) openPanel(utilityApps[id].panel);
 });
 

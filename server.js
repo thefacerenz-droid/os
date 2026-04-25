@@ -121,7 +121,7 @@ async function handleYoutubeSearch(req, res, url) {
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
-    maxResults: "12",
+    maxResults: "18",
     safeSearch: "moderate",
     q,
     key
@@ -147,7 +147,8 @@ async function handleYoutubeSearch(req, res, url) {
         item.snippet?.thumbnails?.medium?.url ||
         item.snippet?.thumbnails?.default?.url ||
         "",
-      publishedAt: item.snippet?.publishedAt
+      publishedAt: item.snippet?.publishedAt,
+      description: item.snippet?.description || ""
     })).filter((item) => item.id),
     nextPageToken: data.nextPageToken || ""
   });

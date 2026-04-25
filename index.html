@@ -34,6 +34,10 @@
       </section>
 
       <section class="desktop-shortcuts" aria-label="Desktop shortcuts">
+        <button class="desktop-shortcut" type="button" data-open-panel="youtube">
+          <span class="desktop-shortcut-badge youtube-badge">YT</span>
+          <strong>YouTube</strong>
+        </button>
         <button class="desktop-shortcut" type="button" data-open-panel="music">
           <span class="desktop-shortcut-badge">VF</span>
           <strong>Velofy</strong>
@@ -156,6 +160,74 @@
               </button>
             </div>
           </section>
+        </div>
+      </section>
+
+      <section class="drawer youtube-drawer" id="youtubeDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close YouTube" data-close-panel="youtube"></button>
+        <div class="drawer-panel youtube-panel">
+          <header class="drawer-head youtube-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>YouTube</h2>
+              <p class="drawer-copy">Search real YouTube results and play videos inside vel.os with official embeds.</p>
+            </div>
+            <div class="window-actions">
+              <button class="close-button" id="youtubeFullscreenButton" type="button">Fullscreen</button>
+              <button class="close-button" id="youtubeOpenTabButton" type="button">Open Tab</button>
+              <button class="close-button" type="button" data-close-panel="youtube">Close</button>
+            </div>
+          </header>
+
+          <div class="youtube-toolbar">
+            <form class="url-form youtube-address-form" id="youtubeAddressForm">
+              <input class="url-input" id="youtubeAddressInput" type="search" autocomplete="off" spellcheck="false" value="youtube.com" aria-label="YouTube address" />
+              <button class="ghost-button is-solid" type="submit">Go</button>
+            </form>
+            <form class="url-form youtube-search-form" id="youtubeSearchForm">
+              <input class="url-input" id="youtubeSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search YouTube" aria-label="Search YouTube" />
+              <button class="ghost-button is-solid" type="submit">Search</button>
+            </form>
+          </div>
+
+          <div class="youtube-shell" id="youtubeShell">
+            <aside class="youtube-sidebar" aria-label="YouTube sections">
+              <strong class="youtube-logo"><span>YT</span>YouTube</strong>
+              <button type="button" data-youtube-topic="Trending music">Trending</button>
+              <button type="button" data-youtube-topic="Gaming videos">Gaming</button>
+              <button type="button" data-youtube-topic="Sports highlights">Sports</button>
+              <button type="button" data-youtube-topic="Learning videos">Learning</button>
+              <button type="button" data-youtube-topic="News today">News</button>
+            </aside>
+
+            <main class="youtube-player-area">
+              <article class="youtube-player-card" id="youtubePlayerCard">
+                <div class="youtube-frame-wrap" id="youtubeFrameWrap">
+                  <div class="youtube-empty-player">
+                    <strong>YouTube Player</strong>
+                    <span>Search, pick a video, and it will play here.</span>
+                  </div>
+                </div>
+                <div class="youtube-player-meta">
+                  <p class="section-label" id="youtubePlayerChannel">Official YouTube Embed</p>
+                  <h3 id="youtubePlayerTitle">Search YouTube to start watching.</h3>
+                  <p id="youtubePlayerDescription">Results use your YouTube Data API key through the vel.os server route.</p>
+                </div>
+              </article>
+            </main>
+
+            <aside class="youtube-results-panel">
+              <div class="youtube-results-head">
+                <div>
+                  <p class="section-label">Results</p>
+                  <h3 id="youtubeResultsTitle">YouTube</h3>
+                </div>
+                <span id="youtubeStatus">Ready</span>
+              </div>
+              <div class="youtube-results-grid" id="youtubeResultsGrid"></div>
+              <button class="ghost-button youtube-load-more" id="youtubeLoadMore" type="button" hidden>Load More</button>
+            </aside>
+          </div>
         </div>
       </section>
 
