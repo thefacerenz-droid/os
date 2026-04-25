@@ -9,6 +9,16 @@ function cleanQuery(value, fallback = "") {
   return String(value || fallback).trim().slice(0, 160);
 }
 
+function cleanProviderMessage(value = "") {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -52,7 +62,7 @@ module.exports = async function handler(req, res) {
     if (!response.ok) {
       return sendJson(res, response.status, {
         error: data.error?.errors?.[0]?.reason || "youtube_error",
-        message: data.error?.message || "YouTube search failed."
+        message: cleanProviderMessage(data.error?.message) || "YouTube search failed."
       });
     }
 

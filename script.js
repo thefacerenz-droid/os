@@ -655,17 +655,6 @@ const webApps = {
     note: "Spotify search runs through /api/spotify/search using server-side client credentials."
   },
 
-  shorts: {
-    title: "Shorts Feed",
-    tag: "Short Video",
-    description: "A TikTok-style vertical feed powered by embeddable YouTube Shorts.",
-    url: "about:blank",
-    mode: "mediaProvider",
-    provider: "shorts",
-    embedBlocked: false,
-    note: "This opens the vel.os Shorts feed because YouTube videos support official iframe embeds."
-  },
-
   tiktok: {
     title: "TikTok",
     tag: "Media Provider",
@@ -698,7 +687,7 @@ const webApps = {
   }
 };
 
-["youtube", "spotify", "shorts", "tiktok", "tubi", "pluto"].forEach((id) => {
+["youtube", "spotify", "tiktok", "tubi", "pluto"].forEach((id) => {
   delete webApps[id];
 });
 
@@ -1308,13 +1297,6 @@ const utilityApps = {
     action: "panel",
     panel: "youtube"
   },
-  shorts: {
-    title: "Shorts",
-    label: "Shorts",
-    badgeText: "SH",
-    action: "panel",
-    panel: "shorts"
-  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1765,7 +1747,6 @@ const drawers = {
   ai: document.getElementById("aiDrawer"),
   media: document.getElementById("mediaDrawer"),
   youtube: document.getElementById("youtubeDrawer"),
-  shorts: document.getElementById("shortsDrawer"),
   web: document.getElementById("webDrawer"),
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
@@ -1862,6 +1843,7 @@ const youtubeResultsGrid = document.getElementById("youtubeResultsGrid");
 const youtubeResultsTitle = document.getElementById("youtubeResultsTitle");
 const youtubeStatus = document.getElementById("youtubeStatus");
 const youtubeLoadMore = document.getElementById("youtubeLoadMore");
+const youtubeSaveAllButton = document.getElementById("youtubeSaveAllButton");
 const youtubeClearHistoryButton = document.getElementById("youtubeClearHistoryButton");
 const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
 const youtubePlayerChannel = document.getElementById("youtubePlayerChannel");
@@ -1870,16 +1852,6 @@ const youtubePlayerDescription = document.getElementById("youtubePlayerDescripti
 const youtubeOpenTabButton = document.getElementById("youtubeOpenTabButton");
 const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton");
 const youtubeToggleResultsButton = document.getElementById("youtubeToggleResultsButton");
-const shortsDrawer = document.getElementById("shortsDrawer");
-const shortsPanel = shortsDrawer?.querySelector(".shorts-panel");
-const shortsSearchForm = document.getElementById("shortsSearchForm");
-const shortsSearchInput = document.getElementById("shortsSearchInput");
-const shortsFeed = document.getElementById("shortsFeed");
-const shortsStatus = document.getElementById("shortsStatus");
-const shortsLoadMore = document.getElementById("shortsLoadMore");
-const shortsHomeButton = document.getElementById("shortsHomeButton");
-const shortsRefreshButton = document.getElementById("shortsRefreshButton");
-const shortsOpenTabButton = document.getElementById("shortsOpenTabButton");
 const mediaTools = document.getElementById("mediaTools");
 const mediaEmbedForm = document.getElementById("mediaEmbedForm");
 const mediaEmbedInput = document.getElementById("mediaEmbedInput");
@@ -1962,10 +1934,17 @@ let networkNote = storage.get("vel-network-note", "");
 const AI_HISTORY_KEY = "vel-ai-history";
 const AI_HISTORY_LIMIT = 24;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
+const YOUTUBE_FAVORITES_KEY = "vel-youtube-favorites";
 const YOUTUBE_INTEREST_KEY = "vel-youtube-interest-topics";
+const YOUTUBE_SEARCH_CACHE_KEY = "vel-youtube-search-cache-v1";
+const YOUTUBE_API_COOLDOWN_KEY = "vel-youtube-api-cooldown-until";
 const YOUTUBE_HISTORY_LIMIT = 80;
+const YOUTUBE_FAVORITES_LIMIT = 240;
 const YOUTUBE_INTEREST_LIMIT = 28;
 const YOUTUBE_HOME_TOPIC_LIMIT = 3;
+const YOUTUBE_SEARCH_CACHE_LIMIT = 70;
+const YOUTUBE_SEARCH_CACHE_TTL = 1000 * 60 * 60 * 12;
+const YOUTUBE_API_COOLDOWN_MS = 1000 * 60 * 60 * 8;
 const YOUTUBE_GENERIC_QUERIES = new Set([
   "popular videos today",
   "music videos",
@@ -2033,28 +2012,13 @@ let youtubeAppState = {
   resultsHidden: storage.get("vel-youtube-results-hidden", "0") === "1",
   embedHost: storage.get("vel-youtube-embed-host", "privacy")
 };
-const SHORTS_DEFAULT_QUERY = "gaming funny shorts";
-const SHORTS_FOR_YOU_TOPIC_LIMIT = 2;
-const SHORTS_FALLBACK_LIMIT = 80;
-let shortsState = {
-  query: storage.get("vel-shorts-query", SHORTS_DEFAULT_QUERY),
-  results: [],
-  nextPageToken: "",
-  feedTopics: [],
-  feedPageTokens: {},
-  interestSignature: "",
-  mode: "forYou",
-  activeIndex: -1,
-  loading: false,
-  error: "",
-  notice: "",
-  didInitialLoad: false
-};
-let shortsFeedObserver = null;
-let shortsAutoPlayTimer = null;
 let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
 youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
   ? youtubeWatchHistory.filter((item) => item?.id).slice(0, YOUTUBE_HISTORY_LIMIT)
+  : [];
+let youtubeFavorites = readStoredJson(YOUTUBE_FAVORITES_KEY, []);
+youtubeFavorites = Array.isArray(youtubeFavorites)
+  ? youtubeFavorites.filter((item) => item?.id).slice(0, YOUTUBE_FAVORITES_LIMIT)
   : [];
 let youtubeInterestTopics = readStoredJson(YOUTUBE_INTEREST_KEY, []);
 youtubeInterestTopics = Array.isArray(youtubeInterestTopics)
@@ -2062,6 +2026,10 @@ youtubeInterestTopics = Array.isArray(youtubeInterestTopics)
     .filter((item) => item?.topic)
     .slice(0, YOUTUBE_INTEREST_LIMIT)
   : [];
+let youtubeSearchCache = readStoredJson(YOUTUBE_SEARCH_CACHE_KEY, {});
+youtubeSearchCache = youtubeSearchCache && typeof youtubeSearchCache === "object" && !Array.isArray(youtubeSearchCache)
+  ? youtubeSearchCache
+  : {};
 let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
 aiMessages = Array.isArray(aiMessages)
   ? aiMessages
@@ -2215,10 +2183,6 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
   }
 
-  if (activePanel === "shorts") {
-    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="shorts"]')?.classList.add("is-active");
-  }
-
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2293,9 +2257,6 @@ function suspendPanelPlayback(name) {
     setYouTubeVideoFullscreen(false);
   }
 
-  if (name === "shorts") {
-    pauseShortsPlayback();
-  }
 }
 
 function openPanel(name) {
@@ -2329,14 +2290,6 @@ function openPanel(name) {
 
   if (name === "youtube") {
     recordRecentApp({ type: "panel", id: "youtube" });
-  }
-
-  if (name === "shorts") {
-    recordRecentApp({ type: "panel", id: "shorts" });
-    const signature = getShortsForYouSignature();
-    if (!shortsState.loading && (!shortsState.didInitialLoad || shortsState.mode !== "forYou" || shortsState.interestSignature !== signature)) {
-      loadShortsForYou();
-    }
   }
 
   if (name === "settings") {
@@ -2609,15 +2562,80 @@ function toggleYouTubeEmbedHost() {
   renderYouTubePlayer();
 }
 
+function cleanProviderMessage(value = "") {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isQuotaMessage(value = "") {
+  return /quota|exceeded|rate limit|daily limit/i.test(String(value || ""));
+}
+
 function getYouTubeFetchError(error) {
-  const message = error?.message || "";
+  const message = cleanProviderMessage(error?.message || "");
   if (location.protocol === "file:") {
     return "YouTube search needs the vel.os server. Run npm start and open http://localhost:3000 instead of opening index.html directly.";
   }
   if (/failed to fetch|load failed|networkerror/i.test(message)) {
     return "YouTube search API did not respond. Make sure /api/youtube/search exists and YOUTUBE_API_KEY is set in your hosting environment.";
   }
+  if (isQuotaMessage(message)) {
+    return "YouTube API quota is used up right now. Search/home lists will come back when Google resets the API quota, but videos already in history can still play.";
+  }
   return message || "YouTube search could not load.";
+}
+
+function getYouTubeSearchCacheKey(query, pageToken = "", options = {}) {
+  return [
+    normalizeYouTubeTopic(query) || String(query || "").trim().toLowerCase(),
+    pageToken || "first",
+    options.duration || "any"
+  ].join("::");
+}
+
+function getCachedYouTubeSearch(query, pageToken = "", options = {}, allowStale = false) {
+  const key = getYouTubeSearchCacheKey(query, pageToken, options);
+  const cached = youtubeSearchCache[key];
+  if (!cached?.data?.items) return null;
+  const age = Date.now() - (cached.savedAt || 0);
+  if (!allowStale && age > YOUTUBE_SEARCH_CACHE_TTL) return null;
+  return {
+    ...cached.data,
+    fromCache: true
+  };
+}
+
+function saveCachedYouTubeSearch(query, pageToken = "", options = {}, data = {}) {
+  const key = getYouTubeSearchCacheKey(query, pageToken, options);
+  youtubeSearchCache[key] = {
+    savedAt: Date.now(),
+    data: {
+      items: Array.isArray(data.items) ? data.items : [],
+      nextPageToken: data.nextPageToken || ""
+    }
+  };
+
+  const entries = Object.entries(youtubeSearchCache)
+    .sort((a, b) => (b[1]?.savedAt || 0) - (a[1]?.savedAt || 0))
+    .slice(0, YOUTUBE_SEARCH_CACHE_LIMIT);
+  youtubeSearchCache = Object.fromEntries(entries);
+  storage.set(YOUTUBE_SEARCH_CACHE_KEY, JSON.stringify(youtubeSearchCache));
+}
+
+function setYouTubeApiCooldown(reason = "") {
+  if (!isQuotaMessage(reason)) return;
+  storage.set(YOUTUBE_API_COOLDOWN_KEY, String(Date.now() + YOUTUBE_API_COOLDOWN_MS));
+}
+
+function getYouTubeApiCooldownMessage() {
+  const cooldownUntil = storage.get(YOUTUBE_API_COOLDOWN_KEY, 0);
+  if (!cooldownUntil || Date.now() > cooldownUntil) return "";
+  return "YouTube API quota is cooling down right now, so vel.os is avoiding extra API calls for a bit.";
 }
 
 function normalizeYouTubeTopic(value = "") {
@@ -2651,8 +2669,70 @@ function persistYouTubeHistory() {
   storage.set(YOUTUBE_HISTORY_KEY, JSON.stringify(youtubeWatchHistory));
 }
 
+function persistYouTubeFavorites() {
+  storage.set(YOUTUBE_FAVORITES_KEY, JSON.stringify(youtubeFavorites.slice(0, YOUTUBE_FAVORITES_LIMIT)));
+}
+
 function persistYouTubeInterests() {
   storage.set(YOUTUBE_INTEREST_KEY, JSON.stringify(youtubeInterestTopics.slice(0, YOUTUBE_INTEREST_LIMIT)));
+}
+
+function getYouTubeListItem(video = {}, extra = {}) {
+  return {
+    id: video.id,
+    title: video.title || "YouTube Video",
+    channel: video.channel || "YouTube",
+    thumbnail: video.thumbnail || "",
+    publishedAt: video.publishedAt || "",
+    description: video.description || "",
+    topic: normalizeYouTubeTopic(video.topic || video.recommendationTopic) || inferYouTubeTopic(video),
+    ...extra
+  };
+}
+
+function isYouTubeFavorite(videoId) {
+  return Boolean(videoId && youtubeFavorites.some((item) => item.id === videoId));
+}
+
+function addYouTubeFavorite(video) {
+  if (!video?.id || isYouTubeFavorite(video.id)) return false;
+  const favorite = getYouTubeListItem(video, { savedAt: Date.now() });
+  youtubeFavorites = [
+    favorite,
+    ...youtubeFavorites.filter((item) => item.id !== favorite.id)
+  ].slice(0, YOUTUBE_FAVORITES_LIMIT);
+  persistYouTubeFavorites();
+  recordYouTubeInterest(favorite.topic || favorite.title || favorite.channel, 2, "favorite");
+  return true;
+}
+
+function saveYouTubeFavorite(video) {
+  const added = addYouTubeFavorite(video);
+  if (added) {
+    renderYouTubeResults();
+  }
+  renderYouTubeStatus();
+  return added;
+}
+
+function getYouTubeDisplayResults() {
+  if (youtubeAppState.mode === "history") return youtubeWatchHistory;
+  if (youtubeAppState.mode === "favorites") return youtubeFavorites;
+  return youtubeAppState.results;
+}
+
+function saveAllVisibleYouTubeVideos() {
+  if (youtubeAppState.mode !== "home") return;
+  const videos = getYouTubeDisplayResults().filter((video) => video?.id);
+  let addedCount = 0;
+  videos.forEach((video) => {
+    if (addYouTubeFavorite(video)) addedCount += 1;
+  });
+  renderYouTubeResults();
+  renderYouTubeStatus();
+  if (youtubeStatus && addedCount) {
+    youtubeStatus.textContent = `${addedCount} saved`;
+  }
 }
 
 function recordYouTubeInterest(value, weight = 1, source = "youtube") {
@@ -2714,12 +2794,12 @@ function recordYouTubeWatch(video) {
 
 function getYouTubeHomeTopics() {
   const counts = new Map();
-  youtubeWatchHistory.forEach((item, index) => {
+  [...youtubeWatchHistory, ...youtubeFavorites].forEach((item, index) => {
     const topic = normalizeYouTubeTopic(item.topic) || inferYouTubeTopic(item);
     if (!topic) return;
     const current = counts.get(topic) || { topic, count: 0, newest: 0 };
     current.count += 1;
-    current.newest = Math.max(current.newest, item.watchedAt || Date.now() - index);
+    current.newest = Math.max(current.newest, item.watchedAt || item.savedAt || Date.now() - index);
     counts.set(topic, current);
   });
   return [...counts.values()]
@@ -2743,19 +2823,73 @@ function mergeYouTubeTopicBuckets(buckets) {
   return merged;
 }
 
+function getLocalYouTubeFallbackResults(query = "") {
+  const words = normalizeYouTubeTopic(query)
+    .split(/\s+/)
+    .filter(Boolean);
+  const sources = [
+    ...youtubeWatchHistory,
+    ...youtubeFavorites,
+    youtubeAppState.currentVideo,
+    ...youtubeAppState.results
+  ].filter(Boolean);
+  const seen = new Set();
+
+  return sources
+    .map((video, index) => {
+      const haystack = `${video.title || ""} ${video.channel || ""} ${video.topic || ""} ${video.description || ""}`.toLowerCase();
+      const score = words.reduce((total, word) => total + (haystack.includes(word) ? 1 : 0), 0);
+      return { video, index, score };
+    })
+    .filter(({ video, score }) => {
+      if (!video?.id || seen.has(video.id)) return false;
+      if (words.length && score <= 0) return false;
+      seen.add(video.id);
+      return true;
+    })
+    .sort((a, b) => (b.score - a.score) || ((b.video.watchedAt || 0) - (a.video.watchedAt || 0)) || (a.index - b.index))
+    .map(({ video }) => ({
+      id: video.id,
+      title: video.title || "YouTube Video",
+      channel: video.channel || "YouTube",
+      thumbnail: video.thumbnail || "",
+      publishedAt: video.publishedAt || "",
+      description: video.description || "",
+      topic: video.topic || inferYouTubeTopic(video),
+      watchedAt: video.watchedAt || ""
+    }))
+    .slice(0, 30);
+}
+
 async function fetchYouTubeSearchItems(query, pageToken = "", options = {}) {
+  const cached = getCachedYouTubeSearch(query, pageToken, options);
+  if (cached) return cached;
+
+  const cooldownMessage = getYouTubeApiCooldownMessage();
+  if (cooldownMessage) {
+    const stale = getCachedYouTubeSearch(query, pageToken, options, true);
+    if (stale) return stale;
+    throw new Error(cooldownMessage);
+  }
+
   const params = new URLSearchParams({ q: query });
   if (pageToken) params.set("pageToken", pageToken);
   if (options.duration) params.set("duration", options.duration);
   const response = await fetch(`/api/youtube/search?${params}`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.message || "YouTube search failed.");
+    const message = cleanProviderMessage(data.message || "YouTube search failed.");
+    setYouTubeApiCooldown(message);
+    const stale = getCachedYouTubeSearch(query, pageToken, options, true);
+    if (stale) return stale;
+    throw new Error(message);
   }
-  return {
+  const result = {
     items: Array.isArray(data.items) ? data.items : [],
     nextPageToken: data.nextPageToken || ""
   };
+  saveCachedYouTubeSearch(query, pageToken, options, result);
+  return result;
 }
 
 function showYouTubeHistory() {
@@ -2773,13 +2907,28 @@ function showYouTubeHistory() {
   renderYouTubeResults();
 }
 
+function showYouTubeFavorites() {
+  youtubeAppState.mode = "favorites";
+  youtubeAppState.query = "Favorites";
+  youtubeAppState.homeTopics = [];
+  youtubeAppState.results = [...youtubeFavorites];
+  youtubeAppState.nextPageToken = "";
+  youtubeAppState.error = "";
+  youtubeAppState.loading = false;
+  youtubeAppState.currentVideo = null;
+  youtubeAppState.didInitialLoad = true;
+  if (youtubeSearchInput) youtubeSearchInput.value = "";
+  renderYouTubePlayer();
+  renderYouTubeResults();
+}
+
 async function loadYouTubeHome() {
   youtubeAppState.mode = "home";
   youtubeAppState.currentVideo = null;
   youtubeAppState.error = "";
   youtubeAppState.nextPageToken = "";
   youtubeAppState.homeTopics = getYouTubeHomeTopics();
-  if (youtubeWatchHistory.length && !youtubeAppState.homeTopics.length) {
+  if ((youtubeWatchHistory.length || youtubeFavorites.length) && !youtubeAppState.homeTopics.length) {
     youtubeAppState.homeTopics = ["music"];
   }
   youtubeAppState.query = youtubeAppState.homeTopics.length
@@ -2787,7 +2936,7 @@ async function loadYouTubeHome() {
     : "For You";
   if (youtubeSearchInput) youtubeSearchInput.value = "";
 
-  if (!youtubeWatchHistory.length) {
+  if (!youtubeWatchHistory.length && !youtubeFavorites.length) {
     youtubeAppState.results = [];
     youtubeAppState.loading = false;
     youtubeAppState.didInitialLoad = true;
@@ -2813,10 +2962,13 @@ async function loadYouTubeHome() {
     const merged = mergeYouTubeTopicBuckets(buckets).slice(0, 30);
     const failedAll = buckets.every((bucket) => bucket.error);
     if (failedAll) throw buckets.find((bucket) => bucket.error)?.error || new Error("YouTube home failed.");
-    youtubeAppState.results = merged;
-    youtubeAppState.error = merged.length ? "" : "Your Home feed is ready, but YouTube did not return videos for this history yet.";
+    const savedFallback = [...youtubeWatchHistory, ...youtubeFavorites].slice(0, 30);
+    youtubeAppState.results = merged.length ? merged : savedFallback;
+    youtubeAppState.error = youtubeAppState.results.length ? "" : "Your Home feed is ready, but YouTube did not return videos for this history yet.";
   } catch (error) {
-    youtubeAppState.error = getYouTubeFetchError(error);
+    const fallback = [...youtubeWatchHistory, ...youtubeFavorites].slice(0, 30);
+    youtubeAppState.results = fallback;
+    youtubeAppState.error = fallback.length ? "" : getYouTubeFetchError(error);
   } finally {
     youtubeAppState.loading = false;
     youtubeAppState.didInitialLoad = true;
@@ -2842,6 +2994,7 @@ function renderYouTubeStatus() {
   youtubeDrawer?.classList.toggle("is-youtube-browsing", !isWatching);
   youtubeDrawer?.classList.toggle("is-youtube-home", youtubeAppState.mode === "home");
   youtubeDrawer?.classList.toggle("is-youtube-history", youtubeAppState.mode === "history");
+  youtubeDrawer?.classList.toggle("is-youtube-favorites", youtubeAppState.mode === "favorites");
   const shouldHideResults = isWatching && youtubeAppState.resultsHidden;
   youtubeDrawer?.classList.toggle("is-youtube-results-hidden", shouldHideResults);
   if (youtubeToggleResultsButton) {
@@ -2856,7 +3009,9 @@ function renderYouTubeStatus() {
         ? "Error"
         : youtubeAppState.mode === "history"
           ? `${youtubeWatchHistory.length} watched`
-          : youtubeAppState.mode === "home" && !youtubeWatchHistory.length
+          : youtubeAppState.mode === "favorites"
+            ? `${youtubeFavorites.length} saved`
+            : youtubeAppState.mode === "home" && !youtubeWatchHistory.length && !youtubeFavorites.length
             ? "No history"
             : `${youtubeAppState.results.length || 0} videos`;
   }
@@ -2865,7 +3020,16 @@ function renderYouTubeStatus() {
       ? "For You"
       : youtubeAppState.mode === "history"
         ? "History"
-        : youtubeAppState.query || "YouTube";
+        : youtubeAppState.mode === "favorites"
+          ? "Favorites"
+          : youtubeAppState.query || "YouTube";
+  }
+  if (youtubeSaveAllButton) {
+    const homeResults = youtubeAppState.mode === "home" ? youtubeAppState.results.filter((video) => video?.id) : [];
+    const allSaved = Boolean(homeResults.length) && homeResults.every((video) => isYouTubeFavorite(video.id));
+    youtubeSaveAllButton.hidden = youtubeAppState.mode !== "home" || !homeResults.length || youtubeAppState.loading;
+    youtubeSaveAllButton.disabled = allSaved;
+    youtubeSaveAllButton.textContent = allSaved ? "Saved All" : "Save All";
   }
   if (youtubeClearHistoryButton) {
     youtubeClearHistoryButton.hidden = youtubeAppState.mode !== "history" || !youtubeWatchHistory.length;
@@ -2934,9 +3098,7 @@ function renderYouTubePlayer() {
 
 function renderYouTubeResults() {
   if (!youtubeResultsGrid) return;
-  const displayResults = youtubeAppState.mode === "history"
-    ? youtubeWatchHistory
-    : youtubeAppState.results;
+  const displayResults = getYouTubeDisplayResults();
 
   if (youtubeAppState.loading && !displayResults.length) {
     youtubeResultsGrid.innerHTML = Array.from({ length: 15 }, (_, index) => `
@@ -2974,10 +3136,15 @@ function renderYouTubeResults() {
           title: "History is empty",
           body: "Videos you watch inside vel.os YouTube will show up here."
         }
-        : {
-          title: "No videos yet",
-          body: "Search something to load YouTube results."
-        };
+        : youtubeAppState.mode === "favorites"
+          ? {
+            title: "No favorites yet",
+            body: "Tap Save on any video, or use Save All from your For You page."
+          }
+          : {
+            title: "No videos yet",
+            body: "Search something to load YouTube results."
+          };
     youtubeResultsGrid.innerHTML = `
       <article class="youtube-video-card youtube-state-card">
         <div class="youtube-video-thumb"></div>
@@ -2988,16 +3155,34 @@ function renderYouTubeResults() {
     return;
   }
 
-  youtubeResultsGrid.innerHTML = displayResults.map((video) => `
-    <button class="youtube-video-card${youtubeAppState.currentVideo?.id === video.id ? " is-active" : ""}" type="button" data-youtube-app-video="${escapeHtml(video.id)}">
-      ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="" loading="lazy" />` : '<div class="youtube-video-thumb"></div>'}
-      <span>
-        <strong>${escapeHtml(video.title)}</strong>
-        <span>${escapeHtml(video.channel || "YouTube")}</span>
-        <span>${escapeHtml(youtubeAppState.mode === "history" ? `Watched ${formatYouTubeDate(video.watchedAt)}` : formatYouTubeDate(video.publishedAt))}</span>
-      </span>
-    </button>
-  `).join("");
+  youtubeResultsGrid.innerHTML = displayResults.map((video) => {
+    const isSaved = isYouTubeFavorite(video.id);
+    const dateLabel = youtubeAppState.mode === "history"
+      ? `Watched ${formatYouTubeDate(video.watchedAt)}`
+      : youtubeAppState.mode === "favorites"
+        ? `Saved ${formatYouTubeDate(video.savedAt)}`
+        : formatYouTubeDate(video.publishedAt);
+    return `
+      <article class="youtube-video-card${youtubeAppState.currentVideo?.id === video.id ? " is-active" : ""}">
+        <button class="youtube-video-main" type="button" data-youtube-app-video="${escapeHtml(video.id)}" aria-label="Play ${escapeHtml(video.title || "YouTube video")}">
+          ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="" loading="lazy" />` : '<div class="youtube-video-thumb"></div>'}
+          <span>
+            <strong>${escapeHtml(video.title)}</strong>
+            <span>${escapeHtml(video.channel || "YouTube")}</span>
+            <span>${escapeHtml(dateLabel)}</span>
+          </span>
+        </button>
+        <button
+          class="youtube-video-save${isSaved ? " is-saved" : ""}"
+          type="button"
+          data-youtube-save-video="${escapeHtml(video.id)}"
+          aria-pressed="${isSaved}"
+          aria-label="${isSaved ? "Saved to favorites" : `Save ${escapeHtml(video.title || "video")} to favorites`}"
+          ${isSaved ? "disabled" : ""}
+        >${isSaved ? "Saved" : "Save"}</button>
+      </article>
+    `;
+  }).join("");
   renderYouTubeStatus();
 }
 
@@ -3012,7 +3197,7 @@ function selectYouTubeAppVideo(video) {
 
 async function searchYouTubeApp({ append = false } = {}) {
   const typedQuery = (youtubeSearchInput?.value || "").trim();
-  const fallbackQuery = youtubeAppState.mode === "home" || youtubeAppState.mode === "history"
+  const fallbackQuery = ["home", "history", "favorites"].includes(youtubeAppState.mode)
     ? "music videos"
     : youtubeAppState.query || "music videos";
   const query = typedQuery || fallbackQuery;
@@ -3040,7 +3225,14 @@ async function searchYouTubeApp({ append = false } = {}) {
       : nextItems;
     youtubeAppState.nextPageToken = data.nextPageToken || "";
   } catch (error) {
-    youtubeAppState.error = getYouTubeFetchError(error);
+    const fallback = getLocalYouTubeFallbackResults(query);
+    if (!append && fallback.length) {
+      youtubeAppState.results = fallback;
+      youtubeAppState.nextPageToken = "";
+      youtubeAppState.error = "";
+    } else {
+      youtubeAppState.error = getYouTubeFetchError(error);
+    }
   } finally {
     youtubeAppState.loading = false;
     youtubeAppState.didInitialLoad = true;
@@ -3053,6 +3245,9 @@ function openYouTubeApp() {
   loadYouTubeHome();
 }
 
+/*
+ * Dedicated Shorts app removed from vel.os.
+ * Keeping the old implementation disabled here for reference while regular YouTube stays active.
 function getShortsWatchUrl(video = shortsState.results[shortsState.activeIndex]) {
   return video?.id
     ? `https://www.youtube.com/shorts/${encodeURIComponent(video.id)}`
@@ -3533,6 +3728,7 @@ async function searchShorts({ append = false } = {}) {
 function openShortsApp() {
   openPanel("shorts");
 }
+*/
 
 function handleYouTubeAddress(value) {
   const trimmed = value.trim();
@@ -4700,7 +4896,6 @@ function initAssistedScrollSurface(surface, scroller) {
 function initScrollAssist() {
   initAssistedScrollSurface(drawers.launcher?.querySelector(".drawer-panel"), launcherGameGrid);
   initAssistedScrollSurface(youtubePanel, youtubeResultsGrid);
-  initAssistedScrollSurface(shortsPanel, shortsFeed);
 }
 
 function applyLyricsWidgetPosition() {
@@ -5930,14 +6125,6 @@ panelOpenButtons.forEach((button) => {
       }
       return;
     }
-    if (button.dataset.openPanel === "shorts") {
-      if (isDrawerOpen("shorts")) {
-        closePanel("shorts");
-      } else {
-        openShortsApp();
-      }
-      return;
-    }
     togglePanel(button.dataset.openPanel);
   });
 });
@@ -6013,12 +6200,18 @@ youtubeAddressForm?.addEventListener("submit", (event) => {
 });
 
 youtubeResultsGrid?.addEventListener("click", (event) => {
+  const saveButton = event.target.closest("[data-youtube-save-video]");
+  if (saveButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const video = getYouTubeDisplayResults().find((item) => item.id === saveButton.dataset.youtubeSaveVideo);
+    saveYouTubeFavorite(video);
+    return;
+  }
+
   const button = event.target.closest("[data-youtube-app-video]");
   if (!button) return;
-  const displayResults = youtubeAppState.mode === "history"
-    ? youtubeWatchHistory
-    : youtubeAppState.results;
-  const video = displayResults.find((item) => item.id === button.dataset.youtubeAppVideo);
+  const video = getYouTubeDisplayResults().find((item) => item.id === button.dataset.youtubeAppVideo);
   selectYouTubeAppVideo(video);
 });
 
@@ -6047,6 +6240,10 @@ youtubeClearHistoryButton?.addEventListener("click", () => {
   clearYouTubeHistory();
 });
 
+youtubeSaveAllButton?.addEventListener("click", () => {
+  saveAllVisibleYouTubeVideos();
+});
+
 youtubeOpenTabButton?.addEventListener("click", () => {
   window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
 });
@@ -6072,51 +6269,16 @@ youtubeDrawer?.addEventListener("click", (event) => {
     return;
   }
 
+  const favoritesButton = event.target.closest("[data-youtube-favorites]");
+  if (favoritesButton) {
+    showYouTubeFavorites();
+    return;
+  }
+
   const topicButton = event.target.closest("[data-youtube-topic]");
   if (!topicButton) return;
   if (youtubeSearchInput) youtubeSearchInput.value = topicButton.dataset.youtubeTopic;
   searchYouTubeApp();
-});
-
-shortsSearchForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  searchShorts();
-});
-
-shortsFeed?.addEventListener("click", (event) => {
-  const retryButton = event.target.closest("[data-shorts-retry]");
-  if (retryButton) {
-    searchShorts();
-    return;
-  }
-
-  const playButton = event.target.closest("[data-shorts-play]");
-  if (!playButton) return;
-  activateShortsIndex(Number(playButton.dataset.shortsPlay), { scroll: true });
-});
-
-shortsLoadMore?.addEventListener("click", () => {
-  if (shortsState.mode === "forYou") {
-    loadShortsForYou({ append: true });
-    return;
-  }
-  searchShorts({ append: true });
-});
-
-shortsHomeButton?.addEventListener("click", () => {
-  loadShortsForYou();
-});
-
-shortsRefreshButton?.addEventListener("click", () => {
-  if (shortsState.mode === "forYou") {
-    loadShortsForYou();
-    return;
-  }
-  searchShorts();
-});
-
-shortsOpenTabButton?.addEventListener("click", () => {
-  window.open(getShortsWatchUrl(), "_blank", "noopener,noreferrer");
 });
 
 function syncYouTubeFullscreenState() {
@@ -8427,13 +8589,9 @@ applyZoom(currentZoomKey);
 if (velofySpotifySearch) {
   velofySpotifySearch.value = velofySpotifySearchQuery;
 }
-if (shortsSearchInput) {
-  shortsSearchInput.value = shortsState.query;
-}
 renderLauncherCatalog();
 renderRecentApps();
 renderAiMessages();
-renderShortsAppFeed();
 initDraggableDrawers();
 initScrollAssist();
 initDraggableLyricsWidget();

@@ -101,6 +101,16 @@ function cleanQuery(value, fallback = "") {
   return String(value || fallback).trim().slice(0, 160);
 }
 
+function cleanProviderMessage(value = "") {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function cleanAiMessage(value) {
   return String(value || "").trim().slice(0, 1200);
 }
@@ -222,7 +232,7 @@ async function handleYoutubeSearch(req, res, url) {
   if (!response.ok) {
     return sendJson(res, response.status, {
       error: data.error?.errors?.[0]?.reason || "youtube_error",
-      message: data.error?.message || "YouTube search failed."
+      message: cleanProviderMessage(data.error?.message) || "YouTube search failed."
     });
   }
 
