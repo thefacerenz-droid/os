@@ -1910,6 +1910,7 @@ let currentWebMirrorIndex = 0;
 let feedVideoObserver = null;
 let youtubePlayer = null;
 let youtubeApiReadyPromise = null;
+let youtubeAppPlayerHintTimer = null;
 let mediaSearchDebounceTimer = null;
 let launcherGameQuery = "";
 let launcherOfflineOnly = storage.get("vel-launcher-offline-only", isLikelyIpad() ? "1" : "0") === "1";
@@ -1926,7 +1927,8 @@ let youtubeAppState = {
   loading: false,
   error: "",
   didInitialLoad: false,
-  fullscreen: false
+  fullscreen: false,
+  embedHost: storage.get("vel-youtube-embed-host", "privacy")
 };
 let velofySearchQuery = "";
 let recentApps = readStoredJson("vel-recent-apps", []);
@@ -2248,14 +2250,51 @@ function getYouTubeWatchUrl(video = youtubeAppState.currentVideo) {
     : "https://www.youtube.com";
 }
 
+function getYouTubeEmbedHost() {
+  return youtubeAppState.embedHost === "standard"
+    ? "www.youtube.com"
+    : "www.youtube-nocookie.com";
+}
+
+function getYouTubeEmbedModeLabel() {
+  return youtubeAppState.embedHost === "standard" ? "standard" : "privacy";
+}
+
+function getNextYouTubeEmbedModeLabel() {
+  return youtubeAppState.embedHost === "standard" ? "privacy" : "standard";
+}
+
 function getYouTubeEmbedUrl(videoId) {
   const params = new URLSearchParams({
     autoplay: "1",
+    controls: "1",
     rel: "0",
     modestbranding: "1",
     playsinline: "1"
   });
-  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params}`;
+  if (location.origin && /^https?:/i.test(location.origin)) {
+    params.set("origin", location.origin);
+  }
+  return `https://${getYouTubeEmbedHost()}/embed/${encodeURIComponent(videoId)}?${params}`;
+}
+
+function clearYouTubePlayerHintTimer() {
+  if (!youtubeAppPlayerHintTimer) return;
+  window.clearTimeout(youtubeAppPlayerHintTimer);
+  youtubeAppPlayerHintTimer = null;
+}
+
+function showYouTubePlayerHint(delay = 3200) {
+  clearYouTubePlayerHintTimer();
+  youtubeAppPlayerHintTimer = window.setTimeout(() => {
+    youtubeFrameWrap?.querySelector("[data-youtube-player-hint]")?.classList.add("is-visible");
+  }, delay);
+}
+
+function toggleYouTubeEmbedHost() {
+  youtubeAppState.embedHost = youtubeAppState.embedHost === "standard" ? "privacy" : "standard";
+  storage.set("vel-youtube-embed-host", youtubeAppState.embedHost);
+  renderYouTubePlayer();
 }
 
 function getYouTubeFetchError(error) {
@@ -2291,6 +2330,7 @@ function renderYouTubeStatus() {
 function renderYouTubePlayer() {
   const video = youtubeAppState.currentVideo;
   if (!youtubeFrameWrap || !youtubePlayerTitle || !youtubePlayerChannel || !youtubePlayerDescription) return;
+  clearYouTubePlayerHintTimer();
 
   if (!video) {
     youtubeFrameWrap.innerHTML = `
@@ -2313,10 +2353,21 @@ function renderYouTubePlayer() {
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowfullscreen
     ></iframe>
+    <div class="youtube-player-hint" data-youtube-player-hint>
+      <div>
+        <strong>If this stays black</strong>
+        <span>This network is probably blocking YouTube playback. vel.os is using the official ${escapeHtml(getYouTubeEmbedModeLabel())} YouTube player, not a bypass.</span>
+      </div>
+      <div class="youtube-player-hint-actions">
+        <button type="button" data-youtube-retry-embed>Try ${escapeHtml(getNextYouTubeEmbedModeLabel())}</button>
+        <button type="button" data-youtube-open-current>Open Tab</button>
+      </div>
+    </div>
   `;
   youtubePlayerTitle.textContent = video.title;
-  youtubePlayerChannel.textContent = `${video.channel || "YouTube"}${video.publishedAt ? ` · ${formatYouTubeDate(video.publishedAt)}` : ""}`;
-  youtubePlayerDescription.textContent = video.description || "Playing through the official YouTube embedded player.";
+  youtubePlayerChannel.textContent = `${video.channel || "YouTube"}${video.publishedAt ? ` - ${formatYouTubeDate(video.publishedAt)}` : ""}`;
+  youtubePlayerDescription.textContent = video.description || `Playing through the official ${getYouTubeEmbedModeLabel()} YouTube embedded player.`;
+  showYouTubePlayerHint();
   renderYouTubeStatus();
 }
 
@@ -4518,6 +4569,18 @@ youtubeResultsGrid?.addEventListener("click", (event) => {
   if (!button) return;
   const video = youtubeAppState.results.find((item) => item.id === button.dataset.youtubeAppVideo);
   selectYouTubeAppVideo(video);
+});
+
+youtubeFrameWrap?.addEventListener("click", (event) => {
+  const retryButton = event.target.closest("[data-youtube-retry-embed]");
+  if (retryButton) {
+    toggleYouTubeEmbedHost();
+    return;
+  }
+  const openButton = event.target.closest("[data-youtube-open-current]");
+  if (openButton) {
+    window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
+  }
 });
 
 youtubeLoadMore?.addEventListener("click", () => {

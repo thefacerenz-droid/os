@@ -2868,6 +2868,69 @@ body.is-music-playing .desktop-wallpaper {
   border: 0;
 }
 
+.youtube-player-hint {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(5, 5, 5, 0.78);
+  color: var(--text);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  backdrop-filter: blur(14px);
+}
+
+.youtube-player-hint.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.youtube-player-hint strong,
+.youtube-player-hint span {
+  display: block;
+}
+
+.youtube-player-hint strong {
+  margin-bottom: 0.16rem;
+  font-size: 0.86rem;
+}
+
+.youtube-player-hint span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.youtube-player-hint-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.youtube-player-hint button {
+  min-height: 34px;
+  padding: 0.42rem 0.58rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .youtube-empty-player {
   display: grid;
   place-items: center;
@@ -3652,7 +3715,12 @@ body[data-density="compact"] .taskbar {
   }
 
   .youtube-results-panel {
-    min-height: 420px;
+    min-height: 320px;
+    max-height: min(42dvh, 420px);
+  }
+
+  .youtube-results-grid {
+    max-height: calc(min(42dvh, 420px) - 86px);
   }
 
   .network-hero,
@@ -3731,8 +3799,8 @@ body[data-density="compact"] .taskbar {
 
   .drawer-panel {
     width: calc(100% - 0.5rem);
-    max-height: calc(100dvh - 5.9rem);
-    margin-bottom: 5.2rem;
+    max-height: calc(100dvh - 4.6rem);
+    margin-bottom: 3.9rem;
     padding: 0.85rem;
     border-radius: 24px;
   }
@@ -3757,19 +3825,80 @@ body[data-density="compact"] .taskbar {
   }
 
   .taskbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     width: 100%;
-    gap: 0.55rem;
-    padding-inline: 0.5rem;
+    min-height: 52px;
+    gap: 0.35rem;
+    padding-inline: 0.35rem;
   }
 
   .taskbar-left,
   .taskbar-right {
-    justify-content: center;
+    min-width: 0;
+  }
+
+  .taskbar-left {
+    justify-content: flex-start;
+  }
+
+  .taskbar-right {
+    justify-content: flex-end;
+  }
+
+  .taskbar-center {
+    justify-self: stretch;
+    width: auto;
+    overflow: hidden;
+  }
+
+  .taskbar-search,
+  .taskbar-now-playing {
+    display: none !important;
   }
 
   .taskbar-media-controls {
     justify-content: center;
+  }
+
+  .youtube-panel {
+    width: calc(100% - 0.35rem);
+    padding: 0.65rem;
+  }
+
+  .youtube-head {
+    gap: 0.55rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .youtube-head .drawer-copy {
+    display: none;
+  }
+
+  .youtube-toolbar {
+    gap: 0.45rem;
+    margin: 0.55rem 0;
+  }
+
+  .youtube-shell {
+    gap: 0.55rem;
+    min-height: auto;
+  }
+
+  .youtube-frame-wrap {
+    min-height: 190px;
+  }
+
+  .youtube-player-meta {
+    padding: 0.75rem;
+  }
+
+  .youtube-results-panel {
+    max-height: min(40dvh, 360px);
+    min-height: 260px;
+  }
+
+  .youtube-results-grid {
+    max-height: calc(min(40dvh, 360px) - 82px);
   }
 
   .roulette-layout,
@@ -3859,12 +3988,52 @@ body[data-density="compact"] .taskbar {
   }
 
   .youtube-video-card {
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.42rem;
   }
 
   .youtube-video-card img,
   .youtube-video-thumb {
-    width: 96px;
+    width: 86px;
+  }
+
+  .youtube-head .window-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .youtube-head .close-button {
+    min-height: 38px;
+    padding: 0.5rem 0.45rem;
+    font-size: 0.72rem;
+  }
+
+  .youtube-toolbar .url-form {
+    grid-template-columns: 1fr auto;
+  }
+
+  .youtube-sidebar {
+    padding: 0.5rem;
+  }
+
+  .youtube-sidebar button {
+    min-height: 36px;
+    padding: 0.5rem 0.62rem;
+  }
+
+  .youtube-player-hint {
+    left: 0.45rem;
+    right: 0.45rem;
+    bottom: 0.45rem;
+    grid-template-columns: 1fr;
+    padding: 0.55rem;
+  }
+
+  .youtube-player-hint-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .proxy-note-form {
