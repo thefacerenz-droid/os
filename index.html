@@ -46,6 +46,10 @@
           <span class="desktop-shortcut-badge">VF</span>
           <strong>Velofy</strong>
         </button>
+        <button class="desktop-shortcut" type="button" data-open-panel="ai">
+          <span class="desktop-shortcut-badge">AI</span>
+          <strong>Vel AI</strong>
+        </button>
         <button class="desktop-shortcut" type="button" data-open-panel="settings">
           <span class="desktop-shortcut-badge">ST</span>
           <strong>Settings</strong>
@@ -147,6 +151,11 @@
                 <span class="icon-title">Velofy</span>
                 <span class="icon-meta">Music</span>
               </button>
+              <button class="app-icon" type="button" data-open-panel="ai">
+                <span class="app-badge badge-text">AI</span>
+                <span class="icon-title">Vel AI</span>
+                <span class="icon-meta">Assistant</span>
+              </button>
               <button class="app-icon" type="button" data-open-web="browser">
                 <img class="app-badge" src="./assets/images/apps/web-browser.svg" alt="Web Browser" />
                 <span class="icon-title">Web Browser</span>
@@ -164,6 +173,45 @@
               </button>
             </div>
           </section>
+        </div>
+      </section>
+
+      <section class="drawer ai-drawer" id="aiDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close Vel AI" data-close-panel="ai"></button>
+        <div class="drawer-panel ai-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Vel AI</h2>
+              <p class="drawer-copy">A private server-powered assistant built into the desktop.</p>
+            </div>
+            <div class="window-actions">
+              <button class="close-button" id="aiClearButton" type="button">Clear</button>
+              <button class="close-button" type="button" data-close-panel="ai">Close</button>
+            </div>
+          </header>
+
+          <div class="ai-layout">
+            <section class="ai-chat-card">
+              <div class="ai-status-row">
+                <p class="section-label">Chat</p>
+                <span id="aiStatus">Ready</span>
+              </div>
+              <div class="ai-messages" id="aiMessages" aria-live="polite"></div>
+              <form class="ai-form" id="aiChatForm">
+                <textarea id="aiInput" rows="2" maxlength="1200" placeholder="Ask Vel AI something..." aria-label="Ask Vel AI"></textarea>
+                <button class="ghost-button is-solid" type="submit">Send</button>
+              </form>
+            </section>
+
+            <aside class="ai-side-card">
+              <p class="section-label">Try These</p>
+              <button type="button" data-ai-prompt="Give me 5 game ideas I can add to vel.os.">Game ideas</button>
+              <button type="button" data-ai-prompt="Help me make my website look cleaner on iPad.">iPad polish</button>
+              <button type="button" data-ai-prompt="Explain how to use Velofy and YouTube in vel.os.">How vel.os works</button>
+              <p class="tiny-note">Vel AI uses your server route, so the OpenAI key stays out of the browser.</p>
+            </aside>
+          </div>
         </div>
       </section>
 

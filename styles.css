@@ -463,6 +463,10 @@ body.is-music-playing .desktop-wallpaper {
   width: min(1120px, calc(100% - 1rem));
 }
 
+.ai-panel {
+  width: min(1040px, calc(100% - 1rem));
+}
+
 .game-panel {
   width: min(1360px, calc(100% - 0.9rem));
 }
@@ -1176,6 +1180,145 @@ body.is-music-playing .desktop-wallpaper {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.8rem;
+}
+
+.ai-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.ai-chat-card,
+.ai-side-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.09), transparent 32%),
+    linear-gradient(180deg, rgba(22, 22, 22, 0.95), rgba(5, 5, 5, 0.96));
+}
+
+.ai-chat-card {
+  display: grid;
+  grid-template-rows: auto minmax(320px, 56dvh) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ai-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ai-status-row span {
+  padding: 0.42rem 0.62rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ai-messages {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.ai-message {
+  width: min(82%, 680px);
+  padding: 0.82rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.2);
+}
+
+.ai-message.is-user {
+  justify-self: end;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ai-message strong,
+.ai-message p {
+  margin: 0;
+}
+
+.ai-message strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ai-message p {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.ai-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.ai-form textarea {
+  width: 100%;
+  min-height: 52px;
+  max-height: 150px;
+  resize: vertical;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  outline: none;
+}
+
+.ai-form textarea:focus {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.ai-form.is-loading {
+  opacity: 0.72;
+}
+
+.ai-side-card {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  padding: 0.9rem;
+}
+
+.ai-side-card button {
+  min-height: 42px;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+  font-weight: 800;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.ai-side-card button:hover,
+.ai-side-card button:focus-visible {
+  transform: translateX(3px);
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .media-hero {
@@ -4117,6 +4260,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   .music-layout,
   .settings-layout,
   .network-layout,
+  .ai-layout,
   .media-hero,
   .youtube-toolbar,
   .youtube-shell {
@@ -4213,6 +4357,10 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   .media-search,
   .media-stats {
     grid-template-columns: 1fr;
+  }
+
+  .ai-chat-card {
+    grid-template-rows: auto minmax(300px, 52dvh) auto;
   }
 
   .tiktok-feed-card {
@@ -4417,6 +4565,14 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
     gap: 0.7rem;
   }
 
+  body[data-zoom="ipad"] .ai-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 250px);
+  }
+
+  body[data-zoom="ipad"] .ai-chat-card {
+    grid-template-rows: auto minmax(300px, 60dvh) auto;
+  }
+
   body[data-zoom="ipad"] .settings-card,
   body[data-zoom="ipad"] .music-player-card,
   body[data-zoom="ipad"] .side-card,
@@ -4539,6 +4695,14 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .wallpaper-picker {
     grid-template-columns: 1fr;
+  }
+
+  .ai-form {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-message {
+    width: 100%;
   }
 
   .memory-grid,

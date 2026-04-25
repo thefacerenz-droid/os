@@ -1294,6 +1294,13 @@ const utilityApps = {
     action: "panel",
     panel: "music"
   },
+  ai: {
+    title: "Vel AI",
+    label: "Vel AI",
+    badgeText: "AI",
+    action: "panel",
+    panel: "ai"
+  },
   youtube: {
     title: "YouTube",
     label: "YouTube",
@@ -1748,6 +1755,7 @@ const mediaPlutoCatalog = [
 
 const drawers = {
   launcher: document.getElementById("launcherDrawer"),
+  ai: document.getElementById("aiDrawer"),
   media: document.getElementById("mediaDrawer"),
   youtube: document.getElementById("youtubeDrawer"),
   web: document.getElementById("webDrawer"),
@@ -1830,6 +1838,12 @@ const webHelperMirrorButton = document.getElementById("webHelperMirrorButton");
 const webHelperLocalButton = document.getElementById("webHelperLocalButton");
 const webReloadButton = document.getElementById("webReloadButton");
 const webMirrorButton = document.getElementById("webMirrorButton");
+const aiMessagesEl = document.getElementById("aiMessages");
+const aiChatForm = document.getElementById("aiChatForm");
+const aiInput = document.getElementById("aiInput");
+const aiStatus = document.getElementById("aiStatus");
+const aiClearButton = document.getElementById("aiClearButton");
+const aiPromptButtons = [...document.querySelectorAll("[data-ai-prompt]")];
 const youtubeDrawer = document.getElementById("youtubeDrawer");
 const youtubePanel = youtubeDrawer?.querySelector(".youtube-panel");
 const youtubeAddressForm = document.getElementById("youtubeAddressForm");
@@ -1927,6 +1941,8 @@ if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
 let networkNote = storage.get("vel-network-note", "");
+const AI_HISTORY_KEY = "vel-ai-history";
+const AI_HISTORY_LIMIT = 24;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
 const YOUTUBE_HISTORY_LIMIT = 80;
 const YOUTUBE_HOME_TOPIC_LIMIT = 3;
@@ -2001,6 +2017,13 @@ let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
 youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
   ? youtubeWatchHistory.filter((item) => item?.id).slice(0, YOUTUBE_HISTORY_LIMIT)
   : [];
+let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
+aiMessages = Array.isArray(aiMessages)
+  ? aiMessages
+    .filter((item) => ["user", "assistant"].includes(item?.role) && item.content)
+    .slice(-AI_HISTORY_LIMIT)
+  : [];
+let aiLoading = false;
 let velofySearchQuery = "";
 let velofySpotifySearchQuery = storage.get("velofy-spotify-query", "Ken Carson");
 let velofySpotifySearchResults = [];
@@ -2139,6 +2162,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="music"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "ai") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="ai"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "youtube") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
   }
@@ -2240,6 +2267,11 @@ function openPanel(name) {
 
   if (name === "music") {
     recordRecentApp({ type: "panel", id: "music" });
+  }
+
+  if (name === "ai") {
+    recordRecentApp({ type: "panel", id: "ai" });
+    window.requestAnimationFrame(() => aiInput?.focus({ preventScroll: true }));
   }
 
   if (name === "youtube") {
@@ -2344,6 +2376,95 @@ function renderNetworkState() {
   if (proxyNoteInput) {
     proxyNoteInput.value = networkNote;
   }
+}
+
+function saveAiMessages() {
+  storage.set(AI_HISTORY_KEY, JSON.stringify(aiMessages.slice(-AI_HISTORY_LIMIT)));
+}
+
+function renderAiMessages() {
+  if (!aiMessagesEl) return;
+  if (!aiMessages.length) {
+    aiMessagesEl.innerHTML = `
+      <article class="ai-message is-assistant">
+        <strong>Vel AI</strong>
+        <p>Ask me anything. I can help with vel.os ideas, homework-style explanations, code, writing, or planning.</p>
+      </article>
+    `;
+  } else {
+    aiMessagesEl.innerHTML = aiMessages.map((message) => `
+      <article class="ai-message ${message.role === "user" ? "is-user" : "is-assistant"}">
+        <strong>${message.role === "user" ? "You" : "Vel AI"}</strong>
+        <p>${escapeHtml(message.content)}</p>
+      </article>
+    `).join("");
+  }
+  aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
+  if (aiStatus) {
+    aiStatus.textContent = aiLoading ? "Thinking" : `${aiMessages.filter((item) => item.role === "user").length} prompts`;
+  }
+  if (aiChatForm) {
+    aiChatForm.classList.toggle("is-loading", aiLoading);
+  }
+  if (aiInput) {
+    aiInput.disabled = aiLoading;
+  }
+  aiChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", aiLoading);
+}
+
+function setAiError(message) {
+  aiMessages = [
+    ...aiMessages,
+    {
+      role: "assistant",
+      content: message || "Vel AI could not reply right now."
+    }
+  ].slice(-AI_HISTORY_LIMIT);
+  saveAiMessages();
+  renderAiMessages();
+}
+
+async function sendAiMessage(text) {
+  const message = text.trim();
+  if (!message || aiLoading) return;
+
+  aiMessages = [
+    ...aiMessages,
+    { role: "user", content: message }
+  ].slice(-AI_HISTORY_LIMIT);
+  saveAiMessages();
+  aiLoading = true;
+  renderAiMessages();
+
+  try {
+    const response = await fetch("/api/ai/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: aiMessages.slice(-12) })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || "Vel AI is not available right now.");
+    }
+    aiMessages = [
+      ...aiMessages,
+      { role: "assistant", content: data.reply || "I could not generate a reply." }
+    ].slice(-AI_HISTORY_LIMIT);
+    saveAiMessages();
+  } catch (error) {
+    setAiError(error.message);
+  } finally {
+    aiLoading = false;
+    if (aiInput) aiInput.value = "";
+    renderAiMessages();
+  }
+}
+
+function clearAiChat() {
+  aiMessages = [];
+  saveAiMessages();
+  renderAiMessages();
+  aiInput?.focus({ preventScroll: true });
 }
 
 function formatYouTubeDate(value = "") {
@@ -5135,6 +5256,22 @@ closePanelButtons.forEach((button) => {
   });
 });
 
+aiChatForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendAiMessage(aiInput?.value || "");
+});
+
+aiClearButton?.addEventListener("click", () => {
+  clearAiChat();
+});
+
+aiPromptButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (aiInput) aiInput.value = button.dataset.aiPrompt || "";
+    sendAiMessage(button.dataset.aiPrompt || "");
+  });
+});
+
 launcherGameSearch?.addEventListener("input", () => {
   launcherGameQuery = launcherGameSearch.value;
   renderLauncherCatalog();
@@ -7559,6 +7696,7 @@ if (velofySpotifySearch) {
 }
 renderLauncherCatalog();
 renderRecentApps();
+renderAiMessages();
 initDraggableDrawers();
 initDraggableLyricsWidget();
 setActiveLocalGame(activeLocalGame);
