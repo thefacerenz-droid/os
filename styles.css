@@ -3246,9 +3246,13 @@ body.is-music-playing .desktop-wallpaper {
   margin: 0.25rem 0 0;
 }
 
-.youtube-drawer.is-youtube-browsing .youtube-results-head h3::before {
-  content: "Home - ";
-  color: #fff;
+.youtube-results-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
 .youtube-results-head span {
@@ -3261,6 +3265,27 @@ body.is-music-playing .desktop-wallpaper {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.youtube-clear-history {
+  min-height: 30px;
+  padding: 0.4rem 0.62rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.youtube-clear-history:hover,
+.youtube-clear-history:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .youtube-results-grid {

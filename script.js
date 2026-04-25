@@ -1840,6 +1840,7 @@ const youtubeResultsGrid = document.getElementById("youtubeResultsGrid");
 const youtubeResultsTitle = document.getElementById("youtubeResultsTitle");
 const youtubeStatus = document.getElementById("youtubeStatus");
 const youtubeLoadMore = document.getElementById("youtubeLoadMore");
+const youtubeClearHistoryButton = document.getElementById("youtubeClearHistoryButton");
 const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
 const youtubePlayerChannel = document.getElementById("youtubePlayerChannel");
 const youtubePlayerTitle = document.getElementById("youtubePlayerTitle");
@@ -1926,6 +1927,61 @@ if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
 let networkNote = storage.get("vel-network-note", "");
+const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
+const YOUTUBE_HISTORY_LIMIT = 80;
+const YOUTUBE_HOME_TOPIC_LIMIT = 3;
+const YOUTUBE_GENERIC_QUERIES = new Set([
+  "popular videos today",
+  "music videos",
+  "gaming videos",
+  "trending music",
+  "sports highlights",
+  "learning videos",
+  "news today"
+]);
+const YOUTUBE_INTEREST_TERMS = [
+  "fortnite",
+  "roblox",
+  "minecraft",
+  "valorant",
+  "call of duty",
+  "gta",
+  "basketball",
+  "football",
+  "soccer",
+  "ufc",
+  "anime",
+  "music",
+  "ken carson",
+  "travis scott",
+  "kendrick lamar",
+  "yeat",
+  "sza",
+  "the weeknd"
+];
+const YOUTUBE_TOPIC_STOP_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "from",
+  "you",
+  "this",
+  "that",
+  "video",
+  "videos",
+  "official",
+  "highlights",
+  "today",
+  "full",
+  "new",
+  "best",
+  "live",
+  "shorts",
+  "clips",
+  "watch",
+  "youtube"
+]);
 let youtubeAppState = {
   query: storage.get("vel-youtube-query", "popular videos today"),
   results: [],
@@ -1934,11 +1990,17 @@ let youtubeAppState = {
   loading: false,
   error: "",
   didInitialLoad: false,
+  mode: "home",
+  homeTopics: [],
   fullscreen: false,
   videoFullscreen: false,
   resultsHidden: storage.get("vel-youtube-results-hidden", "0") === "1",
   embedHost: storage.get("vel-youtube-embed-host", "privacy")
 };
+let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
+youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
+  ? youtubeWatchHistory.filter((item) => item?.id).slice(0, YOUTUBE_HISTORY_LIMIT)
+  : [];
 let velofySearchQuery = "";
 let velofySpotifySearchQuery = storage.get("velofy-spotify-query", "Ken Carson");
 let velofySpotifySearchResults = [];
@@ -2327,10 +2389,184 @@ function getYouTubeFetchError(error) {
   return message || "YouTube search could not load.";
 }
 
+function normalizeYouTubeTopic(value = "") {
+  return String(value)
+    .toLowerCase()
+    .replace(/&amp;/g, "and")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && !YOUTUBE_TOPIC_STOP_WORDS.has(word))
+    .slice(0, 3)
+    .join(" ")
+    .trim();
+}
+
+function titleCaseYouTubeTopic(topic = "") {
+  return topic.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+function inferYouTubeTopic(video = {}) {
+  const queryTopic = normalizeYouTubeTopic(youtubeAppState.query);
+  if (youtubeAppState.mode === "search" && queryTopic && !YOUTUBE_GENERIC_QUERIES.has(queryTopic)) return queryTopic;
+
+  const text = `${video.topic || ""} ${video.title || ""} ${video.description || ""} ${video.channel || ""}`.toLowerCase();
+  const knownTopic = YOUTUBE_INTEREST_TERMS.find((term) => text.includes(term));
+  if (knownTopic) return knownTopic;
+
+  return normalizeYouTubeTopic(video.title || video.channel || "youtube");
+}
+
+function persistYouTubeHistory() {
+  storage.set(YOUTUBE_HISTORY_KEY, JSON.stringify(youtubeWatchHistory));
+}
+
+function recordYouTubeWatch(video) {
+  if (!video?.id) return;
+  const topic = normalizeYouTubeTopic(video.topic || video.recommendationTopic) || inferYouTubeTopic(video);
+  const historyItem = {
+    id: video.id,
+    title: video.title || "YouTube Video",
+    channel: video.channel || "YouTube",
+    thumbnail: video.thumbnail || "",
+    publishedAt: video.publishedAt || "",
+    description: video.description || "",
+    topic,
+    watchedAt: Date.now()
+  };
+  youtubeWatchHistory = [
+    historyItem,
+    ...youtubeWatchHistory.filter((item) => item.id !== historyItem.id)
+  ].slice(0, YOUTUBE_HISTORY_LIMIT);
+  persistYouTubeHistory();
+}
+
+function getYouTubeHomeTopics() {
+  const counts = new Map();
+  youtubeWatchHistory.forEach((item, index) => {
+    const topic = normalizeYouTubeTopic(item.topic) || inferYouTubeTopic(item);
+    if (!topic) return;
+    const current = counts.get(topic) || { topic, count: 0, newest: 0 };
+    current.count += 1;
+    current.newest = Math.max(current.newest, item.watchedAt || Date.now() - index);
+    counts.set(topic, current);
+  });
+  return [...counts.values()]
+    .sort((a, b) => (b.count - a.count) || (b.newest - a.newest))
+    .slice(0, YOUTUBE_HOME_TOPIC_LIMIT)
+    .map((item) => item.topic);
+}
+
+function mergeYouTubeTopicBuckets(buckets) {
+  const seen = new Set();
+  const merged = [];
+  const maxLength = Math.max(0, ...buckets.map((bucket) => bucket.items.length));
+  for (let index = 0; index < maxLength; index += 1) {
+    buckets.forEach((bucket) => {
+      const video = bucket.items[index];
+      if (!video?.id || seen.has(video.id)) return;
+      seen.add(video.id);
+      merged.push({ ...video, topic: bucket.topic });
+    });
+  }
+  return merged;
+}
+
+async function fetchYouTubeSearchItems(query, pageToken = "") {
+  const params = new URLSearchParams({ q: query });
+  if (pageToken) params.set("pageToken", pageToken);
+  const response = await fetch(`/api/youtube/search?${params}`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || "YouTube search failed.");
+  }
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    nextPageToken: data.nextPageToken || ""
+  };
+}
+
+function showYouTubeHistory() {
+  youtubeAppState.mode = "history";
+  youtubeAppState.query = "History";
+  youtubeAppState.homeTopics = [];
+  youtubeAppState.results = [...youtubeWatchHistory];
+  youtubeAppState.nextPageToken = "";
+  youtubeAppState.error = "";
+  youtubeAppState.loading = false;
+  youtubeAppState.currentVideo = null;
+  youtubeAppState.didInitialLoad = true;
+  if (youtubeSearchInput) youtubeSearchInput.value = "";
+  renderYouTubePlayer();
+  renderYouTubeResults();
+}
+
+async function loadYouTubeHome() {
+  youtubeAppState.mode = "home";
+  youtubeAppState.currentVideo = null;
+  youtubeAppState.error = "";
+  youtubeAppState.nextPageToken = "";
+  youtubeAppState.homeTopics = getYouTubeHomeTopics();
+  if (youtubeWatchHistory.length && !youtubeAppState.homeTopics.length) {
+    youtubeAppState.homeTopics = ["music"];
+  }
+  youtubeAppState.query = youtubeAppState.homeTopics.length
+    ? youtubeAppState.homeTopics.map(titleCaseYouTubeTopic).join(" + ")
+    : "For You";
+  if (youtubeSearchInput) youtubeSearchInput.value = "";
+
+  if (!youtubeWatchHistory.length) {
+    youtubeAppState.results = [];
+    youtubeAppState.loading = false;
+    youtubeAppState.didInitialLoad = true;
+    renderYouTubePlayer();
+    renderYouTubeResults();
+    return;
+  }
+
+  youtubeAppState.results = [];
+  youtubeAppState.loading = true;
+  renderYouTubePlayer();
+  renderYouTubeResults();
+
+  try {
+    const buckets = await Promise.all(youtubeAppState.homeTopics.map(async (topic) => {
+      try {
+        const data = await fetchYouTubeSearchItems(topic);
+        return { topic, items: data.items };
+      } catch (error) {
+        return { topic, items: [], error };
+      }
+    }));
+    const merged = mergeYouTubeTopicBuckets(buckets).slice(0, 30);
+    const failedAll = buckets.every((bucket) => bucket.error);
+    if (failedAll) throw buckets.find((bucket) => bucket.error)?.error || new Error("YouTube home failed.");
+    youtubeAppState.results = merged;
+    youtubeAppState.error = merged.length ? "" : "Your Home feed is ready, but YouTube did not return videos for this history yet.";
+  } catch (error) {
+    youtubeAppState.error = getYouTubeFetchError(error);
+  } finally {
+    youtubeAppState.loading = false;
+    youtubeAppState.didInitialLoad = true;
+    renderYouTubeResults();
+  }
+}
+
+function clearYouTubeHistory() {
+  youtubeWatchHistory = [];
+  persistYouTubeHistory();
+  if (youtubeAppState.mode === "history") {
+    showYouTubeHistory();
+    return;
+  }
+  loadYouTubeHome();
+}
+
 function renderYouTubeStatus() {
   const isWatching = Boolean(youtubeAppState.currentVideo);
   youtubeDrawer?.classList.toggle("is-youtube-watching", isWatching);
   youtubeDrawer?.classList.toggle("is-youtube-browsing", !isWatching);
+  youtubeDrawer?.classList.toggle("is-youtube-home", youtubeAppState.mode === "home");
+  youtubeDrawer?.classList.toggle("is-youtube-history", youtubeAppState.mode === "history");
   const shouldHideResults = isWatching && youtubeAppState.resultsHidden;
   youtubeDrawer?.classList.toggle("is-youtube-results-hidden", shouldHideResults);
   if (youtubeToggleResultsButton) {
@@ -2343,13 +2579,24 @@ function renderYouTubeStatus() {
       ? "Loading"
       : youtubeAppState.error
         ? "Error"
-        : `${youtubeAppState.results.length || 0} videos`;
+        : youtubeAppState.mode === "history"
+          ? `${youtubeWatchHistory.length} watched`
+          : youtubeAppState.mode === "home" && !youtubeWatchHistory.length
+            ? "No history"
+            : `${youtubeAppState.results.length || 0} videos`;
   }
   if (youtubeResultsTitle) {
-    youtubeResultsTitle.textContent = youtubeAppState.query || "YouTube";
+    youtubeResultsTitle.textContent = youtubeAppState.mode === "home"
+      ? "For You"
+      : youtubeAppState.mode === "history"
+        ? "History"
+        : youtubeAppState.query || "YouTube";
+  }
+  if (youtubeClearHistoryButton) {
+    youtubeClearHistoryButton.hidden = youtubeAppState.mode !== "history" || !youtubeWatchHistory.length;
   }
   if (youtubeLoadMore) {
-    youtubeLoadMore.hidden = !youtubeAppState.nextPageToken || youtubeAppState.loading;
+    youtubeLoadMore.hidden = youtubeAppState.mode !== "search" || !youtubeAppState.nextPageToken || youtubeAppState.loading;
   }
   if (youtubeAddressInput) {
     youtubeAddressInput.value = getYouTubeWatchUrl();
@@ -2412,12 +2659,15 @@ function renderYouTubePlayer() {
 
 function renderYouTubeResults() {
   if (!youtubeResultsGrid) return;
+  const displayResults = youtubeAppState.mode === "history"
+    ? youtubeWatchHistory
+    : youtubeAppState.results;
 
-  if (youtubeAppState.loading && !youtubeAppState.results.length) {
+  if (youtubeAppState.loading && !displayResults.length) {
     youtubeResultsGrid.innerHTML = Array.from({ length: 15 }, (_, index) => `
       <article class="youtube-video-card is-loading" aria-hidden="true">
         <div class="youtube-video-thumb"></div>
-        <div><strong>${index === 0 ? "Loading YouTube" : "Loading video"}</strong><span>Building your feed...</span></div>
+        <div><strong>${index === 0 ? "Loading YouTube" : "Loading video"}</strong><span>${youtubeAppState.mode === "home" ? "Building your For You feed..." : "Building your feed..."}</span></div>
       </article>
     `).join("");
     renderYouTubeStatus();
@@ -2438,24 +2688,38 @@ function renderYouTubeResults() {
     return;
   }
 
-  if (!youtubeAppState.results.length) {
+  if (!displayResults.length) {
+    const emptyCopy = youtubeAppState.mode === "home"
+      ? {
+        title: "No history yet",
+        body: "Watch a video to get started. After that, Home learns what to show next."
+      }
+      : youtubeAppState.mode === "history"
+        ? {
+          title: "History is empty",
+          body: "Videos you watch inside vel.os YouTube will show up here."
+        }
+        : {
+          title: "No videos yet",
+          body: "Search something to load YouTube results."
+        };
     youtubeResultsGrid.innerHTML = `
       <article class="youtube-video-card youtube-state-card">
         <div class="youtube-video-thumb"></div>
-        <div><strong>No videos yet</strong><span>Search something to load YouTube results.</span></div>
+        <div><strong>${emptyCopy.title}</strong><span>${emptyCopy.body}</span></div>
       </article>
     `;
     renderYouTubeStatus();
     return;
   }
 
-  youtubeResultsGrid.innerHTML = youtubeAppState.results.map((video) => `
+  youtubeResultsGrid.innerHTML = displayResults.map((video) => `
     <button class="youtube-video-card${youtubeAppState.currentVideo?.id === video.id ? " is-active" : ""}" type="button" data-youtube-app-video="${escapeHtml(video.id)}">
       ${video.thumbnail ? `<img src="${escapeHtml(video.thumbnail)}" alt="" loading="lazy" />` : '<div class="youtube-video-thumb"></div>'}
       <span>
         <strong>${escapeHtml(video.title)}</strong>
         <span>${escapeHtml(video.channel || "YouTube")}</span>
-        <span>${escapeHtml(formatYouTubeDate(video.publishedAt))}</span>
+        <span>${escapeHtml(youtubeAppState.mode === "history" ? `Watched ${formatYouTubeDate(video.watchedAt)}` : formatYouTubeDate(video.publishedAt))}</span>
       </span>
     </button>
   `).join("");
@@ -2466,13 +2730,20 @@ function selectYouTubeAppVideo(video) {
   if (!video) return;
   youtubeAppState.currentVideo = video;
   storage.set("vel-youtube-last-video", video.id);
+  recordYouTubeWatch(video);
   renderYouTubePlayer();
   renderYouTubeResults();
 }
 
 async function searchYouTubeApp({ append = false } = {}) {
-  const query = (youtubeSearchInput?.value || youtubeAppState.query || "music videos").trim() || "music videos";
+  const typedQuery = (youtubeSearchInput?.value || "").trim();
+  const fallbackQuery = youtubeAppState.mode === "home" || youtubeAppState.mode === "history"
+    ? "music videos"
+    : youtubeAppState.query || "music videos";
+  const query = typedQuery || fallbackQuery;
+  youtubeAppState.mode = "search";
   youtubeAppState.query = query;
+  youtubeAppState.homeTopics = [];
   storage.set("vel-youtube-query", query);
   if (youtubeSearchInput) youtubeSearchInput.value = query;
   youtubeAppState.loading = true;
@@ -2486,16 +2757,8 @@ async function searchYouTubeApp({ append = false } = {}) {
   renderYouTubeResults();
 
   try {
-    const params = new URLSearchParams({ q: query });
-    if (append && youtubeAppState.nextPageToken) {
-      params.set("pageToken", youtubeAppState.nextPageToken);
-    }
-    const response = await fetch(`/api/youtube/search?${params}`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || "YouTube search failed.");
-    }
-    const nextItems = Array.isArray(data.items) ? data.items : [];
+    const data = await fetchYouTubeSearchItems(query, append ? youtubeAppState.nextPageToken : "");
+    const nextItems = data.items;
     youtubeAppState.results = append
       ? [...youtubeAppState.results, ...nextItems]
       : nextItems;
@@ -2510,14 +2773,8 @@ async function searchYouTubeApp({ append = false } = {}) {
 }
 
 function openYouTubeApp() {
-  if (youtubeSearchInput) youtubeSearchInput.value = youtubeAppState.query;
   openPanel("youtube");
-  if (!youtubeAppState.didInitialLoad) {
-    searchYouTubeApp();
-  } else {
-    renderYouTubePlayer();
-    renderYouTubeResults();
-  }
+  loadYouTubeHome();
 }
 
 function handleYouTubeAddress(value) {
@@ -2537,8 +2794,7 @@ function handleYouTubeAddress(value) {
   }
 
   if (!trimmed || /youtube\.com\/?$/i.test(trimmed) || trimmed === "youtube.com") {
-    if (youtubeSearchInput) youtubeSearchInput.value = youtubeAppState.query;
-    searchYouTubeApp();
+    loadYouTubeHome();
     return;
   }
 
@@ -4881,7 +5137,10 @@ youtubeAddressForm?.addEventListener("submit", (event) => {
 youtubeResultsGrid?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-youtube-app-video]");
   if (!button) return;
-  const video = youtubeAppState.results.find((item) => item.id === button.dataset.youtubeAppVideo);
+  const displayResults = youtubeAppState.mode === "history"
+    ? youtubeWatchHistory
+    : youtubeAppState.results;
+  const video = displayResults.find((item) => item.id === button.dataset.youtubeAppVideo);
   selectYouTubeAppVideo(video);
 });
 
@@ -4906,6 +5165,10 @@ youtubeLoadMore?.addEventListener("click", () => {
   searchYouTubeApp({ append: true });
 });
 
+youtubeClearHistoryButton?.addEventListener("click", () => {
+  clearYouTubeHistory();
+});
+
 youtubeOpenTabButton?.addEventListener("click", () => {
   window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
 });
@@ -4919,6 +5182,18 @@ youtubeToggleResultsButton?.addEventListener("click", () => {
 });
 
 youtubeDrawer?.addEventListener("click", (event) => {
+  const homeButton = event.target.closest("[data-youtube-home]");
+  if (homeButton) {
+    loadYouTubeHome();
+    return;
+  }
+
+  const historyButton = event.target.closest("[data-youtube-history]");
+  if (historyButton) {
+    showYouTubeHistory();
+    return;
+  }
+
   const topicButton = event.target.closest("[data-youtube-topic]");
   if (!topicButton) return;
   if (youtubeSearchInput) youtubeSearchInput.value = topicButton.dataset.youtubeTopic;
