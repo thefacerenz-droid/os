@@ -13,6 +13,20 @@ function cleanGlobalText(value, fallback = "") {
   return String(value || fallback).replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
+function decodeXml(value = "") {
+  return String(value || "")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function extractYouTubeVideoId(value = "") {
   const trimmed = String(value || "").trim();
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
@@ -32,6 +46,91 @@ function extractYouTubeVideoId(value = "") {
   } catch (error) {
     return "";
   }
+}
+
+function isYouTubeUrl(value = "") {
+  try {
+    const normalized = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(String(value || "").trim())
+      ? String(value || "").trim()
+      : `https://${String(value || "").trim()}`;
+    const url = new URL(normalized);
+    return /(^|\.)youtube\.com$|(^|\.)youtu\.be$/i.test(url.hostname);
+  } catch (error) {
+    return false;
+  }
+}
+
+function getXmlTag(block = "", tagName = "") {
+  const match = block.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i"));
+  return decodeXml(match?.[1] || "");
+}
+
+function getXmlAttribute(block = "", tagName = "", attribute = "") {
+  const match = block.match(new RegExp(`<${tagName}[^>]*\\s${attribute}=["']([^"']+)["'][^>]*>`, "i"));
+  return decodeXml(match?.[1] || "");
+}
+
+function parseYouTubeFeedItems(xml = "") {
+  const channel = getXmlTag(xml, "title") || "YouTube Channel";
+  return [...String(xml || "").matchAll(/<entry>([\s\S]*?)<\/entry>/gi)]
+    .map((match) => {
+      const block = match[1];
+      const id = getXmlTag(block, "yt:videoId");
+      if (!id) return null;
+      const description = getXmlTag(block, "media:description") || `Shared from ${channel}.`;
+      return {
+        id,
+        title: cleanGlobalText(getXmlTag(block, "title"), "Shared YouTube Video"),
+        channel: cleanGlobalText(getXmlTag(block, "name"), channel),
+        thumbnail: cleanGlobalText(getXmlAttribute(block, "media:thumbnail", "url"), `https://i.ytimg.com/vi/${id}/hqdefault.jpg`),
+        publishedAt: cleanGlobalText(getXmlTag(block, "published")),
+        description: cleanGlobalText(description, `Shared from ${channel}.`),
+        addedAt: Date.now()
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 25);
+}
+
+async function resolveYouTubeFeedUrl(value = "") {
+  if (!isYouTubeUrl(value)) return "";
+  const normalized = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(String(value || "").trim())
+    ? String(value || "").trim()
+    : `https://${String(value || "").trim()}`;
+  const url = new URL(normalized);
+
+  if (url.pathname.includes("/feeds/videos.xml") && url.searchParams.get("channel_id")) {
+    return `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(url.searchParams.get("channel_id"))}`;
+  }
+
+  const channelMatch = url.pathname.match(/\/channel\/([^/?#]+)/i);
+  if (channelMatch?.[1]) {
+    return `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelMatch[1])}`;
+  }
+
+  if (!/^\/(@|c\/|user\/)/i.test(url.pathname)) return "";
+  const pageResponse = await fetch(normalized, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 vel.os Global Favs channel importer"
+    }
+  });
+  const html = await pageResponse.text();
+  if (!pageResponse.ok) return "";
+  const rssMatch = html.match(/https:\/\/www\.youtube\.com\/feeds\/videos\.xml\?channel_id=[^"&<]+/i);
+  return rssMatch?.[0]?.replace(/\\u0026/g, "&") || "";
+}
+
+async function getChannelImportItems(value = "") {
+  const feedUrl = await resolveYouTubeFeedUrl(value);
+  if (!feedUrl) return [];
+  const response = await fetch(feedUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 vel.os Global Favs channel importer"
+    }
+  });
+  const xml = await response.text();
+  if (!response.ok) return [];
+  return parseYouTubeFeedItems(xml);
 }
 
 function getKvConfig() {
@@ -221,11 +320,13 @@ module.exports = async function handler(req, res) {
       body = {};
     }
 
-    const nextItem = normalizeGlobalYouTubeItem(body);
-    if (!nextItem) {
+    const importType = String(body.importType || "video").toLowerCase();
+    const nextItem = importType === "channel" ? null : normalizeGlobalYouTubeItem(body);
+    const channelItems = nextItem ? [] : await getChannelImportItems(body.url || body.id);
+    if (!nextItem && !channelItems.length) {
       return sendJson(res, 400, {
         error: "invalid_youtube_link",
-        message: "Paste a valid YouTube video link, Shorts link, youtu.be link, or 11-character video ID."
+        message: "Paste a valid YouTube video link, Shorts link, youtu.be link, video ID, or YouTube channel videos URL."
       });
     }
 
@@ -236,12 +337,19 @@ module.exports = async function handler(req, res) {
         message: store.message
       });
     }
+    const nextItems = nextItem ? [nextItem] : channelItems;
+    const nextIds = new Set(nextItems.map((item) => item.id));
     const items = [
-      nextItem,
-      ...store.items.filter((item) => item.id !== nextItem.id)
+      ...nextItems,
+      ...store.items.filter((item) => !nextIds.has(item.id))
     ].slice(0, GLOBAL_YOUTUBE_LIMIT);
     const storage = await writeGlobalStore(items);
-    return sendJson(res, 201, { item: nextItem, items, storage });
+    return sendJson(res, 201, {
+      item: nextItem || nextItems[0],
+      items,
+      storage,
+      importedCount: nextItems.length
+    });
   } catch (error) {
     return sendJson(res, error.code === "missing_storage" ? 503 : 500, {
       error: error.code || "global_favs_error",

@@ -1846,6 +1846,7 @@ const youtubeLoadMore = document.getElementById("youtubeLoadMore");
 const youtubeSaveAllButton = document.getElementById("youtubeSaveAllButton");
 const youtubeClearHistoryButton = document.getElementById("youtubeClearHistoryButton");
 const youtubeGlobalForm = document.getElementById("youtubeGlobalForm");
+const youtubeGlobalImportType = document.getElementById("youtubeGlobalImportType");
 const youtubeGlobalInput = document.getElementById("youtubeGlobalInput");
 const youtubeGlobalStatus = document.getElementById("youtubeGlobalStatus");
 const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
@@ -2734,6 +2735,20 @@ function findKnownYouTubeVideo(id) {
   ].filter(Boolean).find((item) => item.id === id);
 }
 
+function updateYouTubeGlobalImportUi() {
+  if (!youtubeGlobalInput) return;
+  const mode = youtubeGlobalImportType?.value || "video";
+  youtubeGlobalInput.placeholder = mode === "channel"
+    ? "Paste a channel link, like youtube.com/@CboysTV/videos"
+    : "Paste a YouTube video link for everyone";
+  youtubeGlobalInput.setAttribute(
+    "aria-label",
+    mode === "channel"
+      ? "Paste a YouTube channel link to import recent long-form uploads"
+      : "Paste a YouTube link for global favorites"
+  );
+}
+
 function saveAllVisibleYouTubeVideos() {
   if (youtubeAppState.mode !== "home") return;
   const videos = getYouTubeDisplayResults().filter((video) => video?.id);
@@ -2966,6 +2981,12 @@ async function showYouTubeGlobal() {
 }
 
 async function addGlobalYouTubeFavorite(value) {
+  const importType = youtubeGlobalImportType?.value || "video";
+  if (importType === "channel") {
+    await addGlobalYouTubeChannel(value);
+    return;
+  }
+
   const id = extractYouTubeId(value);
   if (!id) {
     youtubeGlobalMessage = "Paste a real YouTube video, Shorts, youtu.be link, or video ID.";
@@ -2990,7 +3011,8 @@ async function addGlobalYouTubeFavorite(value) {
         channel: known.channel || "Global Favs",
         thumbnail: known.thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
         publishedAt: known.publishedAt || "",
-        description: known.description || "Saved by someone on vel.os."
+        description: known.description || "Saved by someone on vel.os.",
+        importType
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -2999,14 +3021,59 @@ async function addGlobalYouTubeFavorite(value) {
       throw new Error(`${detail} (${response.status})`);
     }
     if (youtubeGlobalInput) youtubeGlobalInput.value = "";
-    youtubeGlobalMessage = data.storage === "kv"
-      ? "Saved to Global Favs forever."
-      : "Saved to Global Favs.";
+    const importedCount = Number(data.importedCount || 1);
+    const savedText = importedCount > 1
+      ? `Imported ${importedCount} videos to Global Favs`
+      : "Saved to Global Favs";
+    youtubeGlobalMessage = ["kv", "redis"].includes(data.storage)
+      ? `${savedText} forever.`
+      : `${savedText}.`;
     youtubeAppState.results = Array.isArray(data.items) ? data.items : [data.item, ...youtubeAppState.results].filter(Boolean);
     youtubeAppState.mode = "global";
     renderYouTubeResults();
   } catch (error) {
     youtubeGlobalMessage = error.message || "Could not save that YouTube link.";
+    renderYouTubeStatus();
+  }
+}
+
+async function addGlobalYouTubeChannel(value) {
+  const channelUrl = String(value || "").trim();
+  if (!channelUrl) {
+    youtubeGlobalMessage = "Paste a YouTube channel link like youtube.com/@CboysTV/videos.";
+    renderYouTubeStatus();
+    youtubeGlobalInput?.focus({ preventScroll: true });
+    return;
+  }
+
+  youtubeGlobalMessage = "Importing recent channel uploads...";
+  youtubeAppState.error = "";
+  renderYouTubeStatus();
+
+  try {
+    const response = await fetch("/api/youtube/global", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: channelUrl,
+        importType: "channel"
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = data.message || data.error || "Could not import that YouTube channel.";
+      throw new Error(`${detail} (${response.status})`);
+    }
+    if (youtubeGlobalInput) youtubeGlobalInput.value = "";
+    const importedCount = Number(data.importedCount || 0);
+    youtubeGlobalMessage = importedCount
+      ? `Imported ${importedCount} recent channel uploads to Global Favs forever.`
+      : "No channel uploads were imported.";
+    youtubeAppState.results = Array.isArray(data.items) ? data.items : youtubeAppState.results;
+    youtubeAppState.mode = "global";
+    renderYouTubeResults();
+  } catch (error) {
+    youtubeGlobalMessage = error.message || "Could not import that YouTube channel.";
     renderYouTubeStatus();
   }
 }
@@ -6306,6 +6373,10 @@ youtubeGlobalForm?.addEventListener("submit", (event) => {
   addGlobalYouTubeFavorite(youtubeGlobalInput?.value || "");
 });
 
+youtubeGlobalImportType?.addEventListener("change", () => {
+  updateYouTubeGlobalImportUi();
+});
+
 youtubeAddressForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   handleYouTubeAddress(youtubeAddressInput?.value || "youtube.com");
@@ -8710,6 +8781,7 @@ if (velofySpotifySearch) {
 renderLauncherCatalog();
 renderRecentApps();
 renderAiMessages();
+updateYouTubeGlobalImportUi();
 initDraggableDrawers();
 initScrollAssist();
 initDraggableLyricsWidget();

@@ -286,6 +286,10 @@
                 </div>
               </div>
               <form class="youtube-global-form" id="youtubeGlobalForm" hidden>
+                <select class="youtube-global-select" id="youtubeGlobalImportType" aria-label="Global favorite import type">
+                  <option value="video">Single video</option>
+                  <option value="channel">Channel long-form</option>
+                </select>
                 <input class="url-input" id="youtubeGlobalInput" type="search" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube link for everyone" aria-label="Paste a YouTube link for global favorites" />
                 <button class="ghost-button is-solid" type="submit">Add Global</button>
                 <p class="tiny-note" id="youtubeGlobalStatus">Shared links show up for everyone using vel.os.</p>
