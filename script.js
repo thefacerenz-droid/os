@@ -1846,7 +1846,8 @@ const youtubeLoadMore = document.getElementById("youtubeLoadMore");
 const youtubeSaveAllButton = document.getElementById("youtubeSaveAllButton");
 const youtubeClearHistoryButton = document.getElementById("youtubeClearHistoryButton");
 const youtubeGlobalForm = document.getElementById("youtubeGlobalForm");
-const youtubeGlobalImportType = document.getElementById("youtubeGlobalImportType");
+const youtubeGlobalMode = document.getElementById("youtubeGlobalMode");
+const youtubeGlobalModeButtons = [...document.querySelectorAll("[data-youtube-global-type]")];
 const youtubeGlobalInput = document.getElementById("youtubeGlobalInput");
 const youtubeGlobalStatus = document.getElementById("youtubeGlobalStatus");
 const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
@@ -2035,6 +2036,7 @@ youtubeSearchCache = youtubeSearchCache && typeof youtubeSearchCache === "object
   ? youtubeSearchCache
   : {};
 let youtubeGlobalMessage = "";
+let youtubeGlobalImportType = "video";
 let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
 aiMessages = Array.isArray(aiMessages)
   ? aiMessages
@@ -2736,8 +2738,13 @@ function findKnownYouTubeVideo(id) {
 }
 
 function updateYouTubeGlobalImportUi() {
+  const mode = youtubeGlobalImportType || "video";
+  youtubeGlobalModeButtons.forEach((button) => {
+    const active = button.dataset.youtubeGlobalType === mode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
   if (!youtubeGlobalInput) return;
-  const mode = youtubeGlobalImportType?.value || "video";
   youtubeGlobalInput.placeholder = mode === "channel"
     ? "Paste a channel link, like youtube.com/@CboysTV/videos"
     : "Paste a YouTube video link for everyone";
@@ -2981,7 +2988,7 @@ async function showYouTubeGlobal() {
 }
 
 async function addGlobalYouTubeFavorite(value) {
-  const importType = youtubeGlobalImportType?.value || "video";
+  const importType = youtubeGlobalImportType || "video";
   if (importType === "channel") {
     await addGlobalYouTubeChannel(value);
     return;
@@ -6373,8 +6380,12 @@ youtubeGlobalForm?.addEventListener("submit", (event) => {
   addGlobalYouTubeFavorite(youtubeGlobalInput?.value || "");
 });
 
-youtubeGlobalImportType?.addEventListener("change", () => {
+youtubeGlobalMode?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-youtube-global-type]");
+  if (!button) return;
+  youtubeGlobalImportType = button.dataset.youtubeGlobalType === "channel" ? "channel" : "video";
   updateYouTubeGlobalImportUi();
+  youtubeGlobalInput?.focus({ preventScroll: true });
 });
 
 youtubeAddressForm?.addEventListener("submit", (event) => {
