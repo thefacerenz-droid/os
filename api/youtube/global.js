@@ -47,7 +47,32 @@ function restKvConfigured() {
 }
 
 function redisUrlConfigured() {
-  return Boolean(process.env.REDIS_URL);
+  return Boolean(getRedisUrl());
+}
+
+function getRedisUrl() {
+  let value = String(process.env.REDIS_URL || "").trim();
+  if (!value) return "";
+
+  // Vercel quickstarts show REDIS_URL="..."; if that whole line is pasted as
+  // the env var value, clean it up instead of failing with ERR_INVALID_URL.
+  value = value.replace(/^REDIS_URL\s*=\s*/i, "").trim();
+  value = value.replace(/^["']|["']$/g, "").trim();
+  return value;
+}
+
+function validateRedisUrl(value) {
+  try {
+    const parsed = new URL(value);
+    if (!["redis:", "rediss:"].includes(parsed.protocol)) {
+      throw new Error("Redis URL must start with redis:// or rediss://.");
+    }
+    return value;
+  } catch (error) {
+    const invalid = new Error("REDIS_URL is invalid. In Vercel, set the key to REDIS_URL and paste only the connection string value, starting with redis:// or rediss://.");
+    invalid.code = "invalid_redis_url";
+    throw invalid;
+  }
 }
 
 async function kvCommand(command) {
@@ -71,16 +96,18 @@ async function kvCommand(command) {
 }
 
 async function getRedisClient() {
-  if (!process.env.REDIS_URL) return null;
+  const redisUrl = getRedisUrl();
+  if (!redisUrl) return null;
   if (!globalThis[REDIS_CLIENT_KEY]) {
     globalThis[REDIS_CLIENT_KEY] = (async () => {
+      const validRedisUrl = validateRedisUrl(redisUrl);
       let createClient;
       try {
         ({ createClient } = require("redis"));
       } catch (error) {
         throw new Error("The redis package is missing. Run npm install, commit package.json, and redeploy.");
       }
-      const client = createClient({ url: process.env.REDIS_URL });
+      const client = createClient({ url: validRedisUrl });
       client.on("error", (error) => {
         console.error("vel.os Redis error:", error.message);
       });
