@@ -168,50 +168,58 @@ function normalizeGlobalYouTubeItem(input = {}) {
 }
 
 module.exports = async function handler(req, res) {
-  if (req.method === "GET") {
-    const store = await readGlobalStore();
-    return sendJson(res, 200, {
-      items: store.items,
-      storage: store.storage,
-      persistent: store.persistent,
-      message: store.message
-    });
-  }
-
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "GET, POST");
-    return sendJson(res, 405, {
-      error: "method_not_allowed",
-      message: "Use GET or POST for global YouTube favorites."
-    });
-  }
-
-  let body = {};
   try {
-    body = typeof req.body === "object" && req.body ? req.body : JSON.parse(req.body || "{}");
+    if (req.method === "GET") {
+      const store = await readGlobalStore();
+      return sendJson(res, 200, {
+        items: store.items,
+        storage: store.storage,
+        persistent: store.persistent,
+        message: store.message
+      });
+    }
+
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      return sendJson(res, 405, {
+        error: "method_not_allowed",
+        message: "Use GET or POST for global YouTube favorites."
+      });
+    }
+
+    let body = {};
+    try {
+      body = typeof req.body === "object" && req.body ? req.body : JSON.parse(req.body || "{}");
+    } catch (error) {
+      body = {};
+    }
+
+    const nextItem = normalizeGlobalYouTubeItem(body);
+    if (!nextItem) {
+      return sendJson(res, 400, {
+        error: "invalid_youtube_link",
+        message: "Paste a valid YouTube video link, Shorts link, youtu.be link, or 11-character video ID."
+      });
+    }
+
+    const store = await readGlobalStore();
+    if (!store.persistent) {
+      return sendJson(res, 503, {
+        error: "missing_storage",
+        message: store.message
+      });
+    }
+    const items = [
+      nextItem,
+      ...store.items.filter((item) => item.id !== nextItem.id)
+    ].slice(0, GLOBAL_YOUTUBE_LIMIT);
+    const storage = await writeGlobalStore(items);
+    return sendJson(res, 201, { item: nextItem, items, storage });
   } catch (error) {
-    body = {};
-  }
-
-  const nextItem = normalizeGlobalYouTubeItem(body);
-  if (!nextItem) {
-    return sendJson(res, 400, {
-      error: "invalid_youtube_link",
-      message: "Paste a valid YouTube video link, Shorts link, youtu.be link, or 11-character video ID."
+    return sendJson(res, error.code === "missing_storage" ? 503 : 500, {
+      error: error.code || "global_favs_error",
+      message: error.message || "Global Favs storage failed.",
+      storage: restKvConfigured() ? "kv" : redisUrlConfigured() ? "redis" : "missing"
     });
   }
-
-  const store = await readGlobalStore();
-  if (!store.persistent) {
-    return sendJson(res, 503, {
-      error: "missing_storage",
-      message: store.message
-    });
-  }
-  const items = [
-    nextItem,
-    ...store.items.filter((item) => item.id !== nextItem.id)
-  ].slice(0, GLOBAL_YOUTUBE_LIMIT);
-  const storage = await writeGlobalStore(items);
-  return sendJson(res, 201, { item: nextItem, items, storage });
 };

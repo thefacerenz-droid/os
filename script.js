@@ -2994,7 +2994,10 @@ async function addGlobalYouTubeFavorite(value) {
       })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || "Could not save that YouTube link.");
+    if (!response.ok) {
+      const detail = data.message || data.error || "Could not save that YouTube link.";
+      throw new Error(`${detail} (${response.status})`);
+    }
     if (youtubeGlobalInput) youtubeGlobalInput.value = "";
     youtubeGlobalMessage = data.storage === "kv"
       ? "Saved to Global Favs forever."
