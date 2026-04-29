@@ -791,36 +791,35 @@ const gameCatalog = [
   },
   {
     id: "clashofclans",
-    title: "Clash of Clans",
+    title: "Clan Siege",
     category: "Strategy",
-    badgeText: "COC",
-    source: "other",
-    url: "https://supercell.com/en/games/clashofclans/",
+    badgeText: "CS",
+    source: "gamepix",
+    url: "https://www.gamepix.com/play/battle-for-the-galaxy",
     mirrors: [
-      "https://store.supercell.com/en/clashofclans",
-      "https://supercell.com/en/news/clash-games-live-on-pc/"
+      "https://www.crazygames.com/embed/battle-for-the-galaxy"
     ],
-    note: "Official Supercell links for Clash of Clans. It is not a browser-playable iframe game; PC play is through Google Play Games."
+    note: "Playable base-building strategy alternative. The real Clash of Clans does not have an official browser-playable version."
   },
   {
     id: "clashroyale",
-    title: "Clash Royale",
+    title: "Royal Tactics",
     category: "Strategy",
-    badgeText: "CR",
-    source: "other",
-    url: "https://supercell.com/en/games/clashroyale/",
-    mirrors: ["https://store.supercell.com/en/clashroyale"],
-    note: "Official Supercell links for Clash Royale. Added as a safe launcher shortcut, not a cloned browser version."
+    badgeText: "RT",
+    source: "gamepix",
+    url: "https://www.gamepix.com/play/merge-battle-tactics",
+    mirrors: ["https://www.gamepix.com/play/battle-simulator-sandbox"],
+    note: "Playable troop/tactics alternative that stays in the browser instead of opening an app-store page."
   },
   {
     id: "brawlstars",
-    title: "Brawl Stars",
+    title: "Rocket Brawl",
     category: "Action",
-    badgeText: "BS",
-    source: "other",
-    url: "https://supercell.com/en/games/brawlstars/",
-    mirrors: ["https://store.supercell.com/en/brawlstars"],
-    note: "Official Supercell links for Brawl Stars inside the More Sites tab."
+    badgeText: "RB",
+    source: "crazygames",
+    url: "https://www.crazygames.com/embed/rocket-bot-royale",
+    mirrors: ["https://www.gamepix.com/play/rocket-bot-royale"],
+    note: "Playable arena/brawler-style web game with a GamePix mirror."
   }
 ];
 

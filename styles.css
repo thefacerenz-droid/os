@@ -287,6 +287,7 @@ body.is-music-playing .desktop-wallpaper {
   color: #050505;
 }
 
+.web-game-badge,
 .supercell-badge {
   background:
     radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.36), transparent 34%),
