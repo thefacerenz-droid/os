@@ -788,6 +788,39 @@ const gameCatalog = [
     url: "https://stickmanhook.io/",
     mirrors: ["https://stickmanhookgame.com/"],
     note: "Stickman Hook with direct mirrors."
+  },
+  {
+    id: "clashofclans",
+    title: "Clash of Clans",
+    category: "Strategy",
+    badgeText: "COC",
+    source: "other",
+    url: "https://supercell.com/en/games/clashofclans/",
+    mirrors: [
+      "https://store.supercell.com/en/clashofclans",
+      "https://supercell.com/en/news/clash-games-live-on-pc/"
+    ],
+    note: "Official Supercell links for Clash of Clans. It is not a browser-playable iframe game; PC play is through Google Play Games."
+  },
+  {
+    id: "clashroyale",
+    title: "Clash Royale",
+    category: "Strategy",
+    badgeText: "CR",
+    source: "other",
+    url: "https://supercell.com/en/games/clashroyale/",
+    mirrors: ["https://store.supercell.com/en/clashroyale"],
+    note: "Official Supercell links for Clash Royale. Added as a safe launcher shortcut, not a cloned browser version."
+  },
+  {
+    id: "brawlstars",
+    title: "Brawl Stars",
+    category: "Action",
+    badgeText: "BS",
+    source: "other",
+    url: "https://supercell.com/en/games/brawlstars/",
+    mirrors: ["https://store.supercell.com/en/brawlstars"],
+    note: "Official Supercell links for Brawl Stars inside the More Sites tab."
   }
 ];
 
@@ -2015,7 +2048,8 @@ let youtubeAppState = {
   fullscreen: false,
   videoFullscreen: false,
   resultsHidden: storage.get("vel-youtube-results-hidden", "0") === "1",
-  embedHost: storage.get("vel-youtube-embed-host", "privacy")
+  embedHost: storage.get("vel-youtube-embed-host", "privacy"),
+  hintDismissed: false
 };
 let youtubeWatchHistory = readStoredJson(YOUTUBE_HISTORY_KEY, []);
 youtubeWatchHistory = Array.isArray(youtubeWatchHistory)
@@ -2558,14 +2592,23 @@ function clearYouTubePlayerHintTimer() {
 
 function showYouTubePlayerHint(delay = 3200) {
   clearYouTubePlayerHintTimer();
+  if (youtubeAppState.hintDismissed) return;
   youtubeAppPlayerHintTimer = window.setTimeout(() => {
+    if (youtubeAppState.hintDismissed) return;
     youtubeFrameWrap?.querySelector("[data-youtube-player-hint]")?.classList.add("is-visible");
   }, delay);
+}
+
+function dismissYouTubePlayerHint() {
+  youtubeAppState.hintDismissed = true;
+  clearYouTubePlayerHintTimer();
+  youtubeFrameWrap?.querySelector("[data-youtube-player-hint]")?.classList.remove("is-visible");
 }
 
 function toggleYouTubeEmbedHost() {
   youtubeAppState.embedHost = youtubeAppState.embedHost === "standard" ? "privacy" : "standard";
   storage.set("vel-youtube-embed-host", youtubeAppState.embedHost);
+  youtubeAppState.hintDismissed = false;
   renderYouTubePlayer();
 }
 
@@ -3253,12 +3296,14 @@ function renderYouTubePlayer() {
       Fullscreen
     </button>
     <div class="youtube-player-hint" data-youtube-player-hint>
-      <div>
+      <button class="youtube-player-hint-close" type="button" data-youtube-dismiss-hint aria-label="Close YouTube player notice">x</button>
+      <div class="youtube-player-hint-copy">
         <strong>If this stays black</strong>
-        <span>This network is probably blocking YouTube playback. vel.os is using the official ${escapeHtml(getYouTubeEmbedModeLabel())} YouTube player, not a bypass.</span>
+        <span>Mode: ${escapeHtml(getYouTubeEmbedModeLabel())}. vel.os is using official YouTube embeds. Try the other mode, copy the link, or open it in a normal tab.</span>
       </div>
       <div class="youtube-player-hint-actions">
         <button type="button" data-youtube-retry-embed>Try ${escapeHtml(getNextYouTubeEmbedModeLabel())}</button>
+        <button type="button" data-youtube-copy-current>Copy Link</button>
         <button type="button" data-youtube-open-current>Open Tab</button>
       </div>
     </div>
@@ -3370,6 +3415,7 @@ function renderYouTubeResults() {
 function selectYouTubeAppVideo(video) {
   if (!video) return;
   youtubeAppState.currentVideo = video;
+  youtubeAppState.hintDismissed = false;
   storage.set("vel-youtube-last-video", video.id);
   recordYouTubeWatch(video);
   renderYouTubePlayer();
@@ -6410,6 +6456,12 @@ youtubeResultsGrid?.addEventListener("click", (event) => {
 });
 
 youtubeFrameWrap?.addEventListener("click", (event) => {
+  const dismissButton = event.target.closest("[data-youtube-dismiss-hint]");
+  if (dismissButton) {
+    dismissYouTubePlayerHint();
+    return;
+  }
+
   const fullscreenButton = event.target.closest("[data-youtube-video-fullscreen]");
   if (fullscreenButton) {
     toggleYouTubeVideoFullscreen();
@@ -6423,6 +6475,18 @@ youtubeFrameWrap?.addEventListener("click", (event) => {
   const openButton = event.target.closest("[data-youtube-open-current]");
   if (openButton) {
     window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-youtube-copy-current]");
+  if (copyButton) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(getYouTubeWatchUrl()).catch(() => {});
+    }
+    copyButton.textContent = "Copied";
+    window.setTimeout(() => {
+      copyButton.textContent = "Copy Link";
+    }, 1100);
   }
 });
 

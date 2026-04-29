@@ -287,6 +287,14 @@ body.is-music-playing .desktop-wallpaper {
   color: #050505;
 }
 
+.supercell-badge {
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.36), transparent 34%),
+    linear-gradient(145deg, #f9f9f9 0%, #d8d8d8 24%, #232323 25%, #050505 100%);
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
 .desktop-shortcut strong {
   max-width: 88px;
   font-size: 0.78rem;
@@ -3545,7 +3553,7 @@ body.is-music-playing .desktop-wallpaper {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.65rem;
+  padding: 0.68rem 2.25rem 0.68rem 0.72rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   background: rgba(5, 5, 5, 0.78);
@@ -3556,6 +3564,33 @@ body.is-music-playing .desktop-wallpaper {
   transform: translateY(8px);
   transition: opacity 180ms ease, transform 180ms ease;
   backdrop-filter: blur(14px);
+}
+
+.youtube-player-hint-copy {
+  min-width: 0;
+}
+
+.youtube-player-hint-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.42rem;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.youtube-player-hint-close:hover,
+.youtube-player-hint-close:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .youtube-player-hint.is-visible {
@@ -3596,6 +3631,14 @@ body.is-music-playing .desktop-wallpaper {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.youtube-player-hint .youtube-player-hint-close {
+  min-height: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.84rem;
+  letter-spacing: 0;
 }
 
 .youtube-empty-player {
@@ -5258,12 +5301,12 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
     right: 0.45rem;
     bottom: 0.45rem;
     grid-template-columns: 1fr;
-    padding: 0.55rem;
+    padding: 0.6rem 2.2rem 0.6rem 0.6rem;
   }
 
   .youtube-player-hint-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
   }
 
   .youtube-video-fullscreen {
