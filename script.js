@@ -788,38 +788,6 @@ const gameCatalog = [
     url: "https://stickmanhook.io/",
     mirrors: ["https://stickmanhookgame.com/"],
     note: "Stickman Hook with direct mirrors."
-  },
-  {
-    id: "clashofclans",
-    title: "Clan Siege",
-    category: "Strategy",
-    badgeText: "CS",
-    source: "gamepix",
-    url: "https://www.gamepix.com/play/battle-for-the-galaxy",
-    mirrors: [
-      "https://www.crazygames.com/embed/battle-for-the-galaxy"
-    ],
-    note: "Playable base-building strategy alternative. The real Clash of Clans does not have an official browser-playable version."
-  },
-  {
-    id: "clashroyale",
-    title: "Royal Tactics",
-    category: "Strategy",
-    badgeText: "RT",
-    source: "gamepix",
-    url: "https://www.gamepix.com/play/merge-battle-tactics",
-    mirrors: ["https://www.gamepix.com/play/battle-simulator-sandbox"],
-    note: "Playable troop/tactics alternative that stays in the browser instead of opening an app-store page."
-  },
-  {
-    id: "brawlstars",
-    title: "Rocket Brawl",
-    category: "Action",
-    badgeText: "RB",
-    source: "crazygames",
-    url: "https://www.crazygames.com/embed/rocket-bot-royale",
-    mirrors: ["https://www.gamepix.com/play/rocket-bot-royale"],
-    note: "Playable arena/brawler-style web game with a GamePix mirror."
   }
 ];
 

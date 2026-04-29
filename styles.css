@@ -287,15 +287,6 @@ body.is-music-playing .desktop-wallpaper {
   color: #050505;
 }
 
-.web-game-badge,
-.supercell-badge {
-  background:
-    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.36), transparent 34%),
-    linear-gradient(145deg, #f9f9f9 0%, #d8d8d8 24%, #232323 25%, #050505 100%);
-  color: #fff;
-  letter-spacing: 0.04em;
-}
-
 .desktop-shortcut strong {
   max-width: 88px;
   font-size: 0.78rem;
