@@ -348,7 +348,9 @@ body.is-music-playing .desktop-wallpaper {
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  touch-action: pan-y;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.44) rgba(255, 255, 255, 0.06);
   border: 1px solid var(--line);
   border-radius: 18px;
   background:
@@ -358,6 +360,49 @@ body.is-music-playing .desktop-wallpaper {
   transition:
     opacity 240ms ease,
     transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.drawer-panel::-webkit-scrollbar,
+#launcherGameGrid::-webkit-scrollbar,
+.playlist-list::-webkit-scrollbar,
+.spotify-result-list::-webkit-scrollbar,
+.ai-messages::-webkit-scrollbar,
+.youtube-sidebar::-webkit-scrollbar {
+  width: 13px;
+  height: 13px;
+}
+
+.drawer-panel::-webkit-scrollbar-track,
+#launcherGameGrid::-webkit-scrollbar-track,
+.playlist-list::-webkit-scrollbar-track,
+.spotify-result-list::-webkit-scrollbar-track,
+.ai-messages::-webkit-scrollbar-track,
+.youtube-sidebar::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.drawer-panel::-webkit-scrollbar-thumb,
+#launcherGameGrid::-webkit-scrollbar-thumb,
+.playlist-list::-webkit-scrollbar-thumb,
+.spotify-result-list::-webkit-scrollbar-thumb,
+.ai-messages::-webkit-scrollbar-thumb,
+.youtube-sidebar::-webkit-scrollbar-thumb {
+  min-height: 54px;
+  border: 3px solid rgba(10, 10, 10, 0.88);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(160, 160, 160, 0.54));
+}
+
+.drawer-panel::-webkit-scrollbar-thumb:hover,
+#launcherGameGrid::-webkit-scrollbar-thumb:hover,
+.playlist-list::-webkit-scrollbar-thumb:hover,
+.spotify-result-list::-webkit-scrollbar-thumb:hover,
+.ai-messages::-webkit-scrollbar-thumb:hover,
+.youtube-sidebar::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, #fff, rgba(210, 210, 210, 0.72));
 }
 
 .launcher-panel {
@@ -956,9 +1001,11 @@ body.is-music-playing .desktop-wallpaper {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding-right: 0.25rem;
   scroll-padding: 0.8rem;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.44) rgba(255, 255, 255, 0.06);
 }
 
 .app-icon {
@@ -1244,6 +1291,11 @@ body.is-music-playing .desktop-wallpaper {
   align-content: start;
   gap: 0.75rem;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.44) rgba(255, 255, 255, 0.06);
   padding: 1rem;
 }
 
@@ -2300,6 +2352,10 @@ body.is-music-playing .desktop-wallpaper {
   overflow-y: auto;
   padding-right: 0.25rem;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.44) rgba(255, 255, 255, 0.06);
 }
 
 .playlist-group-label {
@@ -2318,6 +2374,11 @@ body.is-music-playing .desktop-wallpaper {
   min-height: 0;
   margin-top: 0.72rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.44) rgba(255, 255, 255, 0.06);
   padding-right: 0.25rem;
 }
 
@@ -3914,11 +3975,20 @@ body.is-music-playing .desktop-wallpaper {
   padding-inline: 0.15rem;
 }
 
-.youtube-video-save {
+.youtube-video-actions {
   position: absolute;
   top: 0.42rem;
   right: 0.42rem;
   z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.32rem;
+  max-width: calc(100% - 0.84rem);
+}
+
+.youtube-video-save,
+.youtube-video-global {
   min-height: 28px;
   padding: 0.34rem 0.52rem;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -3935,18 +4005,32 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .youtube-video-save:hover,
-.youtube-video-save:focus-visible {
+.youtube-video-save:focus-visible,
+.youtube-video-global:hover,
+.youtube-video-global:focus-visible {
   transform: translateY(-1px) scale(1.03);
   background: rgba(255, 255, 255, 0.92);
   color: #050505;
 }
 
-.youtube-video-save.is-saved {
+.youtube-video-save.is-saved,
+.youtube-video-global.is-saved {
   background: rgba(255, 255, 255, 0.92);
   color: #050505;
 }
 
-.youtube-video-save:disabled {
+.youtube-video-global {
+  border-color: rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.62));
+}
+
+.youtube-video-global.is-saving {
+  opacity: 0.78;
+}
+
+.youtube-video-save:disabled,
+.youtube-video-global:disabled {
   cursor: default;
 }
 
@@ -3980,6 +4064,13 @@ body.is-music-playing .desktop-wallpaper {
 .youtube-drawer.is-youtube-watching .youtube-video-main {
   grid-template-columns: 118px minmax(0, 1fr);
   gap: 0.68rem;
+}
+
+.youtube-drawer.is-youtube-watching .youtube-video-actions {
+  top: 0.82rem;
+  right: auto;
+  left: 0.82rem;
+  max-width: 118px;
 }
 
 .youtube-drawer.is-youtube-watching .youtube-video-card img,
@@ -5247,6 +5338,19 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .youtube-drawer.is-youtube-watching .youtube-video-main {
     grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .youtube-drawer.is-youtube-watching .youtube-video-actions {
+    top: 0.68rem;
+    left: 0.68rem;
+    max-width: 86px;
+  }
+
+  .youtube-video-save,
+  .youtube-video-global {
+    min-height: 26px;
+    padding: 0.3rem 0.42rem;
+    font-size: 0.56rem;
   }
 
   .youtube-drawer.is-youtube-watching .youtube-video-card img,

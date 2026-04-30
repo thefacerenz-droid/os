@@ -2038,6 +2038,8 @@ youtubeSearchCache = youtubeSearchCache && typeof youtubeSearchCache === "object
   : {};
 let youtubeGlobalMessage = "";
 let youtubeGlobalImportType = "video";
+let youtubeGlobalIds = new Set();
+let youtubeGlobalSavingIds = new Set();
 let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
 aiMessages = Array.isArray(aiMessages)
   ? aiMessages
@@ -2711,6 +2713,10 @@ function isYouTubeFavorite(videoId) {
   return Boolean(videoId && youtubeFavorites.some((item) => item.id === videoId));
 }
 
+function isYouTubeGlobalFavorite(videoId) {
+  return Boolean(videoId && (youtubeAppState.mode === "global" || youtubeGlobalIds.has(videoId)));
+}
+
 function addYouTubeFavorite(video) {
   if (!video?.id || isYouTubeFavorite(video.id)) return false;
   const favorite = getYouTubeListItem(video, { savedAt: Date.now() });
@@ -2730,6 +2736,65 @@ function saveYouTubeFavorite(video) {
   }
   renderYouTubeStatus();
   return added;
+}
+
+async function saveYouTubeVideoToGlobal(video, options = {}) {
+  const id = video?.id || extractYouTubeId(options.value || "");
+  if (!id || youtubeGlobalSavingIds.has(id) || isYouTubeGlobalFavorite(id)) return false;
+
+  const known = findKnownYouTubeVideo(id) || video || {};
+  const url = options.value || `https://www.youtube.com/watch?v=${id}`;
+  youtubeGlobalSavingIds.add(id);
+  youtubeGlobalMessage = "Saving video to Global Favs...";
+  renderYouTubeStatus();
+  renderYouTubeResults();
+
+  try {
+    const response = await fetch("/api/youtube/global", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        url,
+        title: known.title || "Shared YouTube Video",
+        channel: known.channel || "Global Favs",
+        thumbnail: known.thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        publishedAt: known.publishedAt || "",
+        description: known.description || "Saved by someone on vel.os.",
+        importType: "video"
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = data.message || data.error || "Could not save that YouTube link.";
+      throw new Error(`${detail} (${response.status})`);
+    }
+
+    const items = Array.isArray(data.items) ? data.items : [data.item].filter(Boolean);
+    items.forEach((item) => {
+      if (item?.id) youtubeGlobalIds.add(item.id);
+    });
+    youtubeGlobalIds.add(id);
+    youtubeGlobalMessage = ["kv", "redis"].includes(data.storage)
+      ? "Saved to Global Favs forever."
+      : "Saved to Global Favs.";
+
+    if (options.switchToGlobal) {
+      if (youtubeGlobalInput) youtubeGlobalInput.value = "";
+      youtubeAppState.results = items.length ? items : [data.item, ...youtubeAppState.results].filter(Boolean);
+      youtubeAppState.mode = "global";
+    } else if (youtubeAppState.mode === "global" && items.length) {
+      youtubeAppState.results = items;
+    }
+    return true;
+  } catch (error) {
+    youtubeGlobalMessage = error.message || "Could not save that YouTube link.";
+    return false;
+  } finally {
+    youtubeGlobalSavingIds.delete(id);
+    renderYouTubeStatus();
+    renderYouTubeResults();
+  }
 }
 
 function getYouTubeDisplayResults() {
@@ -2986,6 +3051,7 @@ async function showYouTubeGlobal() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Global favorites could not load.");
     youtubeAppState.results = Array.isArray(data.items) ? data.items : [];
+    youtubeGlobalIds = new Set(youtubeAppState.results.map((item) => item?.id).filter(Boolean));
     youtubeGlobalMessage = data.message || (data.persistent
       ? "Permanent Global Favs storage is connected."
       : "Permanent Global Favs storage is not connected yet.");
@@ -3012,46 +3078,10 @@ async function addGlobalYouTubeFavorite(value) {
     return;
   }
 
-  const known = findKnownYouTubeVideo(id) || {};
-  youtubeGlobalMessage = "Saving global link...";
-  youtubeAppState.error = "";
-  renderYouTubeStatus();
-
-  try {
-    const response = await fetch("/api/youtube/global", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        url: value,
-        title: known.title || "Shared YouTube Video",
-        channel: known.channel || "Global Favs",
-        thumbnail: known.thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-        publishedAt: known.publishedAt || "",
-        description: known.description || "Saved by someone on vel.os.",
-        importType
-      })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const detail = data.message || data.error || "Could not save that YouTube link.";
-      throw new Error(`${detail} (${response.status})`);
-    }
-    if (youtubeGlobalInput) youtubeGlobalInput.value = "";
-    const importedCount = Number(data.importedCount || 1);
-    const savedText = importedCount > 1
-      ? `Imported ${importedCount} videos to Global Favs`
-      : "Saved to Global Favs";
-    youtubeGlobalMessage = ["kv", "redis"].includes(data.storage)
-      ? `${savedText} forever.`
-      : `${savedText}.`;
-    youtubeAppState.results = Array.isArray(data.items) ? data.items : [data.item, ...youtubeAppState.results].filter(Boolean);
-    youtubeAppState.mode = "global";
-    renderYouTubeResults();
-  } catch (error) {
-    youtubeGlobalMessage = error.message || "Could not save that YouTube link.";
-    renderYouTubeStatus();
-  }
+  await saveYouTubeVideoToGlobal(findKnownYouTubeVideo(id) || { id }, {
+    value,
+    switchToGlobal: true
+  });
 }
 
 async function addGlobalYouTubeChannel(value) {
@@ -3087,6 +3117,7 @@ async function addGlobalYouTubeChannel(value) {
       ? `Imported ${importedCount} recent channel uploads to Global Favs forever.`
       : "No channel uploads were imported.";
     youtubeAppState.results = Array.isArray(data.items) ? data.items : youtubeAppState.results;
+    youtubeGlobalIds = new Set(youtubeAppState.results.map((item) => item?.id).filter(Boolean));
     youtubeAppState.mode = "global";
     renderYouTubeResults();
   } catch (error) {
@@ -3177,7 +3208,16 @@ function renderYouTubeStatus() {
     youtubeToggleResultsButton.setAttribute("aria-pressed", String(shouldHideResults));
   }
   if (youtubeStatus) {
-    youtubeStatus.textContent = youtubeAppState.loading
+    const globalStatus = youtubeGlobalSavingIds.size
+      ? "Saving Global"
+      : /^Saved to Global/i.test(youtubeGlobalMessage)
+        ? "Saved Global"
+        : /^Could not|missing|invalid/i.test(youtubeGlobalMessage)
+          ? "Global Error"
+          : "";
+    youtubeStatus.textContent = globalStatus && youtubeAppState.mode !== "global"
+      ? globalStatus
+      : youtubeAppState.loading
       ? "Loading"
       : youtubeAppState.error
         ? "Error"
@@ -3348,6 +3388,8 @@ function renderYouTubeResults() {
 
   youtubeResultsGrid.innerHTML = displayResults.map((video) => {
     const isSaved = isYouTubeFavorite(video.id);
+    const isGlobalSaved = isYouTubeGlobalFavorite(video.id);
+    const isGlobalSaving = youtubeGlobalSavingIds.has(video.id);
     const dateLabel = youtubeAppState.mode === "history"
       ? `Watched ${formatYouTubeDate(video.watchedAt)}`
       : youtubeAppState.mode === "favorites"
@@ -3365,14 +3407,24 @@ function renderYouTubeResults() {
             <span>${escapeHtml(dateLabel)}</span>
           </span>
         </button>
-        <button
-          class="youtube-video-save${isSaved ? " is-saved" : ""}"
-          type="button"
-          data-youtube-save-video="${escapeHtml(video.id)}"
-          aria-pressed="${isSaved}"
-          aria-label="${isSaved ? "Saved to favorites" : `Save ${escapeHtml(video.title || "video")} to favorites`}"
-          ${isSaved ? "disabled" : ""}
-        >${isSaved ? "Saved" : "Save"}</button>
+        <div class="youtube-video-actions">
+          <button
+            class="youtube-video-save${isSaved ? " is-saved" : ""}"
+            type="button"
+            data-youtube-save-video="${escapeHtml(video.id)}"
+            aria-pressed="${isSaved}"
+            aria-label="${isSaved ? "Saved to favorites" : `Save ${escapeHtml(video.title || "video")} to favorites`}"
+            ${isSaved ? "disabled" : ""}
+          >${isSaved ? "Saved" : "Favs"}</button>
+          <button
+            class="youtube-video-global${isGlobalSaved ? " is-saved" : ""}${isGlobalSaving ? " is-saving" : ""}"
+            type="button"
+            data-youtube-global-video="${escapeHtml(video.id)}"
+            aria-pressed="${isGlobalSaved}"
+            aria-label="${isGlobalSaved ? "Saved to Global Favs" : `Save ${escapeHtml(video.title || "video")} to Global Favs`}"
+            ${isGlobalSaved || isGlobalSaving ? "disabled" : ""}
+          >${isGlobalSaving ? "Saving" : isGlobalSaved ? "Global" : "Global"}</button>
+        </div>
       </article>
     `;
   }).join("");
@@ -5090,6 +5142,10 @@ function initAssistedScrollSurface(surface, scroller) {
 function initScrollAssist() {
   initAssistedScrollSurface(drawers.launcher?.querySelector(".drawer-panel"), launcherGameGrid);
   initAssistedScrollSurface(youtubePanel, youtubeResultsGrid);
+  initAssistedScrollSurface(drawers.music?.querySelector(".drawer-panel"), velofyPlaylist);
+  initAssistedScrollSurface(drawers.ai?.querySelector(".drawer-panel"), aiMessagesEl);
+  initAssistedScrollSurface(drawers.settings?.querySelector(".drawer-panel"), drawers.settings?.querySelector(".settings-layout"));
+  initAssistedScrollSurface(drawers.web?.querySelector(".drawer-panel"), webFrameHelper);
 }
 
 function applyLyricsWidgetPosition() {
@@ -6413,6 +6469,16 @@ youtubeResultsGrid?.addEventListener("click", (event) => {
     event.stopPropagation();
     const video = getYouTubeDisplayResults().find((item) => item.id === saveButton.dataset.youtubeSaveVideo);
     saveYouTubeFavorite(video);
+    return;
+  }
+
+  const globalSaveButton = event.target.closest("[data-youtube-global-video]");
+  if (globalSaveButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const videoId = globalSaveButton.dataset.youtubeGlobalVideo;
+    const video = getYouTubeDisplayResults().find((item) => item.id === videoId) || findKnownYouTubeVideo(videoId);
+    saveYouTubeVideoToGlobal(video || { id: videoId });
     return;
   }
 
