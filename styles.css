@@ -341,10 +341,10 @@ body.is-music-playing .desktop-wallpaper {
   z-index: 1;
   --drag-x: 0px;
   --drag-y: 0px;
-  width: min(1420px, calc(100% - 1.4rem));
-  max-height: calc(100dvh - 4.8rem);
-  margin: 0 auto 4rem;
-  padding: 0.72rem;
+  width: min(1040px, calc(100% - 2.6rem));
+  max-height: calc(100dvh - 7rem);
+  margin: 0 auto 5.2rem;
+  padding: 0.64rem;
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -407,24 +407,24 @@ body.is-music-playing .desktop-wallpaper {
 
 .launcher-panel {
   transform-origin: center bottom;
-  width: min(1540px, calc(100% - 0.9rem));
+  width: min(1120px, calc(100% - 2.3rem));
 }
 
 .music-panel {
-  width: min(1220px, calc(100% - 0.9rem));
+  width: min(980px, calc(100% - 2.3rem));
 }
 
 .brand-panel {
-  width: min(1080px, calc(100% - 1rem));
+  width: min(900px, calc(100% - 2.3rem));
 }
 
 .web-panel {
-  width: min(1560px, calc(100% - 0.9rem));
+  width: min(1180px, calc(100% - 2.3rem));
 }
 
 .youtube-panel {
-  width: min(1740px, calc(100% - 0.6rem));
-  max-height: calc(100dvh - 3.6rem);
+  width: min(1220px, calc(100% - 2.2rem));
+  max-height: calc(100dvh - 6.4rem);
 }
 
 .youtube-drawer.is-youtube-fullscreen {
@@ -504,19 +504,19 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .settings-panel {
-  width: min(1080px, calc(100% - 1rem));
+  width: min(880px, calc(100% - 2.3rem));
 }
 
 .network-panel {
-  width: min(1120px, calc(100% - 1rem));
+  width: min(920px, calc(100% - 2.3rem));
 }
 
 .ai-panel {
-  width: min(1040px, calc(100% - 1rem));
+  width: min(860px, calc(100% - 2.3rem));
 }
 
 .game-panel {
-  width: min(1360px, calc(100% - 0.9rem));
+  width: min(1040px, calc(100% - 2.3rem));
 }
 
 .drawer-head,
@@ -997,7 +997,7 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 #launcherGameGrid {
-  max-height: min(54dvh, 620px);
+  max-height: min(42dvh, 500px);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -1205,7 +1205,7 @@ body.is-music-playing .desktop-wallpaper {
 
 .web-frame {
   width: 100%;
-  min-height: min(72dvh, 900px);
+  min-height: min(54dvh, 620px);
   border: 1px solid var(--line);
   border-radius: 28px;
   background: #0a0a0a;
@@ -1261,7 +1261,7 @@ body.is-music-playing .desktop-wallpaper {
 
 .ai-chat-card {
   display: grid;
-  grid-template-rows: auto minmax(320px, 56dvh) auto;
+  grid-template-rows: auto minmax(240px, 44dvh) auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -2223,8 +2223,8 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .music-layout {
-  height: min(68dvh, 690px);
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  height: min(56dvh, 580px);
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 310px);
   align-items: stretch;
 }
 
@@ -3412,17 +3412,17 @@ body.is-music-playing .desktop-wallpaper {
 
 .youtube-toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 0.74fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(220px, 0.72fr) minmax(280px, 1fr);
   gap: 0.65rem;
-  margin: 0.85rem 0;
+  margin: 0.68rem 0;
 }
 
 .youtube-shell {
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: 162px minmax(0, 1fr);
   grid-template-areas: "sidebar results";
-  gap: 0.75rem;
-  min-height: min(72dvh, 790px);
+  gap: 0.66rem;
+  min-height: min(60dvh, 640px);
 }
 
 .youtube-sidebar {
@@ -3439,12 +3439,12 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .youtube-drawer.is-youtube-watching .youtube-shell {
-  grid-template-columns: 190px minmax(0, 1fr) minmax(300px, 410px);
+  grid-template-columns: 160px minmax(0, 1fr) minmax(250px, 340px);
   grid-template-areas: "sidebar player results";
 }
 
 .youtube-drawer.is-youtube-watching.is-youtube-results-hidden .youtube-shell {
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: 160px minmax(0, 1fr);
   grid-template-areas: "sidebar player";
 }
 
@@ -4603,7 +4603,7 @@ body.is-booting {
 }
 
 body[data-density="compact"] .drawer-panel {
-  width: min(1220px, calc(100% - 0.9rem));
+  width: min(960px, calc(100% - 2.4rem));
 }
 
 body[data-density="compact"] .icon-grid {
@@ -4628,20 +4628,21 @@ body[data-density="compact"] .taskbar {
 }
 
 body[data-zoom="out"] .drawer-panel {
-  max-height: calc(100dvh - 3.8rem);
+  max-height: calc(100dvh - 6rem);
 }
 
 body[data-zoom="out"] .youtube-panel {
-  width: min(1600px, calc(100% - 0.5rem));
+  width: min(1120px, calc(100% - 2rem));
 }
 
 body[data-zoom="mini"] .drawer-panel {
-  max-height: calc(100dvh - 3.2rem);
-  padding: 0.62rem;
+  width: min(920px, calc(100% - 2rem));
+  max-height: calc(100dvh - 5.4rem);
+  padding: 0.56rem;
 }
 
 body[data-zoom="mini"] .youtube-panel {
-  width: min(1680px, calc(100% - 0.35rem));
+  width: min(1040px, calc(100% - 1.8rem));
 }
 
 body[data-zoom="mini"] .taskbar {
@@ -4649,16 +4650,16 @@ body[data-zoom="mini"] .taskbar {
 }
 
 body[data-zoom="ipad"] .drawer-panel {
-  width: min(1540px, calc(100% - 0.4rem));
-  max-height: calc(100dvh - 3.1rem);
-  margin-bottom: 3rem;
+  width: min(980px, calc(100% - 1.4rem));
+  max-height: calc(100dvh - 5.2rem);
+  margin-bottom: 4.25rem;
   padding: 0.58rem;
   border-radius: 20px;
 }
 
 body[data-zoom="ipad"] .settings-panel,
 body[data-zoom="ipad"] .network-panel {
-  width: min(1280px, calc(100% - 0.4rem));
+  width: min(900px, calc(100% - 1.4rem));
 }
 
 body[data-zoom="ipad"] .icon-grid {
@@ -4909,7 +4910,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .ai-chat-card {
-    grid-template-rows: auto minmax(300px, 52dvh) auto;
+    grid-template-rows: auto minmax(220px, 40dvh) auto;
   }
 
   .tiktok-feed-card {
@@ -4960,11 +4961,11 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .drawer-panel {
-    width: calc(100% - 0.5rem);
-    max-height: calc(100dvh - 4.6rem);
-    margin-bottom: 3.9rem;
-    padding: 0.85rem;
-    border-radius: 24px;
+    width: calc(100% - 1.2rem);
+    max-height: calc(100dvh - 6.2rem);
+    margin-bottom: 4.8rem;
+    padding: 0.7rem;
+    border-radius: 20px;
   }
 
   .drawer-head,
@@ -5023,8 +5024,8 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .youtube-panel {
-    width: calc(100% - 0.35rem);
-    padding: 0.65rem;
+    width: calc(100% - 1.1rem);
+    padding: 0.58rem;
   }
 
   .youtube-head {
@@ -5096,9 +5097,9 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   body[data-zoom="ipad"] .drawer-panel {
-    width: calc(100% - 0.35rem);
-    max-height: calc(100dvh - 2.85rem);
-    margin-bottom: 2.75rem;
+    width: calc(100% - 1.35rem);
+    max-height: calc(100dvh - 5.05rem);
+    margin-bottom: 4.2rem;
     padding: 0.54rem;
   }
 
@@ -5125,7 +5126,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   body[data-zoom="ipad"] .ai-chat-card {
-    grid-template-rows: auto minmax(300px, 60dvh) auto;
+    grid-template-rows: auto minmax(220px, 42dvh) auto;
   }
 
   body[data-zoom="ipad"] .settings-card,
@@ -5221,7 +5222,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   body[data-zoom="ipad"] .music-layout {
     grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr);
-    height: min(72dvh, 720px);
+    height: min(56dvh, 590px);
   }
 
   body[data-zoom="ipad"] .playlist-list {
@@ -5229,7 +5230,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   body[data-zoom="ipad"] .web-frame {
-    min-height: min(70dvh, 760px);
+    min-height: min(54dvh, 620px);
   }
 
   body[data-zoom="ipad"] .play-meta {
@@ -5430,7 +5431,7 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .web-frame {
-    min-height: min(62dvh, 720px);
+    min-height: min(50dvh, 560px);
     border-radius: 22px;
   }
 
