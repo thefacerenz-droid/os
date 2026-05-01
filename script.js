@@ -1297,6 +1297,13 @@ const utilityApps = {
     action: "panel",
     panel: "youtube"
   },
+  velhub: {
+    title: "Vel Hub",
+    label: "Movies",
+    badgeText: "VH",
+    action: "panel",
+    panel: "velhub"
+  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1782,6 +1789,7 @@ const drawers = {
   ai: document.getElementById("aiDrawer"),
   media: document.getElementById("mediaDrawer"),
   youtube: document.getElementById("youtubeDrawer"),
+  velhub: document.getElementById("velHubDrawer"),
   web: document.getElementById("webDrawer"),
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
@@ -1897,6 +1905,25 @@ const youtubePlayerDescription = document.getElementById("youtubePlayerDescripti
 const youtubeOpenTabButton = document.getElementById("youtubeOpenTabButton");
 const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton");
 const youtubeToggleResultsButton = document.getElementById("youtubeToggleResultsButton");
+const velHubDrawer = document.getElementById("velHubDrawer");
+const velHubLaunch = document.getElementById("velHubLaunch");
+const velHubRefreshButton = document.getElementById("velHubRefreshButton");
+const velHubHeroCount = document.getElementById("velHubHeroCount");
+const velHubPlayer = document.getElementById("velHubPlayer");
+const velHubFrameWrap = document.getElementById("velHubFrameWrap");
+const velHubPlayerSource = document.getElementById("velHubPlayerSource");
+const velHubPlayerTitle = document.getElementById("velHubPlayerTitle");
+const velHubPlayerDescription = document.getElementById("velHubPlayerDescription");
+const velHubFullscreenButton = document.getElementById("velHubFullscreenButton");
+const velHubOpenTabButton = document.getElementById("velHubOpenTabButton");
+const velHubClosePlayerButton = document.getElementById("velHubClosePlayerButton");
+const velHubSearchForm = document.getElementById("velHubSearchForm");
+const velHubSearchInput = document.getElementById("velHubSearchInput");
+const velHubStatus = document.getElementById("velHubStatus");
+const velHubCategoryRow = document.getElementById("velHubCategoryRow");
+const velHubCategoryButtons = [...document.querySelectorAll("[data-velhub-category]")];
+const velHubGrid = document.getElementById("velHubGrid");
+const velHubLoadMoreButton = document.getElementById("velHubLoadMoreButton");
 const mediaTools = document.getElementById("mediaTools");
 const mediaEmbedForm = document.getElementById("mediaEmbedForm");
 const mediaEmbedInput = document.getElementById("mediaEmbedInput");
@@ -1978,7 +2005,7 @@ let youtubeAppPlayerHintTimer = null;
 let mediaSearchDebounceTimer = null;
 let launcherGameQuery = "";
 let launcherStoreCategory = storage.get("vel-launcher-store-category", "games");
-if (!["games", "local", "tools", "music", "youtube"].includes(launcherStoreCategory)) {
+if (!["games", "local", "tools", "music", "movies", "youtube"].includes(launcherStoreCategory)) {
   launcherStoreCategory = "games";
 }
 let launcherOfflineOnly = storage.get("vel-launcher-offline-only", isLikelyIpad() ? "1" : "0") === "1";
@@ -2118,13 +2145,19 @@ let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir"]);
 unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", ...unlockedThemePacks])] : ["noir"];
 let installedApps = readStoredJson("vel-installed-apps", [
   "panel:youtube",
+  "panel:velhub",
   "panel:music",
   "panel:ai",
   "panel:settings"
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:music", "panel:ai", "panel:settings"];
+  : ["panel:youtube", "panel:velhub", "panel:music", "panel:ai", "panel:settings"];
+if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
+  installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v2", "1");
+}
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
 let lyricsLibrary = readStoredJson("vel-lyrics-library", {});
@@ -2155,6 +2188,42 @@ let mediaState = {
   tiktokAuthRequired: true,
   loading: false
 };
+
+const VEL_HUB_PAGE_SIZE = 84;
+const VEL_HUB_CATEGORY_QUERIES = {
+  popular: "",
+  action: "subject:(action)",
+  comedy: "subject:(comedy)",
+  scifi: "(subject:(science fiction) OR subject:(sci-fi) OR title:(science fiction))",
+  horror: "subject:(horror)",
+  animation: "(subject:(animation) OR subject:(cartoons) OR subject:(animated))",
+  documentary: "(subject:(documentary) OR subject:(educational))",
+  family: "(subject:(family) OR subject:(children) OR subject:(kids))"
+};
+const VEL_HUB_BLOCKED_TERMS = [
+  "sex",
+  "nudity",
+  "nude",
+  "erotic",
+  "adult",
+  "stag",
+  "exploitation",
+  "burlesque"
+];
+let velHubState = {
+  category: storage.get("velhub-category", "popular"),
+  query: storage.get("velhub-query", ""),
+  page: 1,
+  movies: [],
+  total: 0,
+  loading: false,
+  error: "",
+  currentMovie: null,
+  launchTimer: null
+};
+if (!VEL_HUB_CATEGORY_QUERIES[velHubState.category]) {
+  velHubState.category = "popular";
+}
 
 function setDrawerState(name, isOpen) {
   const drawer = drawers[name];
@@ -2252,6 +2321,10 @@ function openAppRef(ref) {
   if (type === "panel") {
     if (id === "youtube") {
       openYouTubeApp();
+      return;
+    }
+    if (id === "velhub") {
+      openVelHubApp();
       return;
     }
     openPanel(id);
@@ -2376,6 +2449,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "velhub") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="velhub"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2450,6 +2527,10 @@ function suspendPanelPlayback(name) {
     setYouTubeVideoFullscreen(false);
   }
 
+  if (name === "velhub") {
+    stopVelHubPlayback();
+  }
+
 }
 
 function openPanel(name) {
@@ -2483,6 +2564,10 @@ function openPanel(name) {
 
   if (name === "youtube") {
     recordRecentApp({ type: "panel", id: "youtube" });
+  }
+
+  if (name === "velhub") {
+    recordRecentApp({ type: "panel", id: "velhub" });
   }
 
   if (name === "settings") {
@@ -5276,6 +5361,7 @@ function renderLauncherCatalog() {
     local: ["Local Arcade", "Offline games that run directly inside vel.os."],
     tools: ["System Tools", "Utilities, settings, network status, AI, and browser tools."],
     music: ["Music", "Velofy and music tools in one clean section."],
+    movies: ["Movies", "Install Vel Hub for a huge in-app cinema catalog."],
     youtube: ["YouTube", "YouTube search, player, favorites, and Global Favs."]
   };
   const [sectionLabel, sectionNote] = categoryMeta[launcherStoreCategory] || categoryMeta.games;
@@ -5293,6 +5379,7 @@ function renderLauncherCatalog() {
     const utilitySections = {
       tools: ["browser", "ai", "settings", "network"],
       music: ["music"],
+      movies: ["velhub"],
       youtube: ["youtube"]
     };
     const localItems = launcherStoreCategory === "local"
@@ -5767,6 +5854,252 @@ function escapeHtml(value = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function stripHtml(value = "") {
+  return String(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeArchiveField(value) {
+  if (Array.isArray(value)) return value.filter(Boolean).join(", ");
+  return value || "";
+}
+
+function sanitizeArchiveSearch(value) {
+  return String(value || "")
+    .replace(/[^\w\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
+function hasBlockedVelHubTerms(movie) {
+  const haystack = [
+    movie.title,
+    movie.description,
+    movie.subject,
+    movie.creator
+  ].join(" ").toLowerCase();
+  return VEL_HUB_BLOCKED_TERMS.some((term) => haystack.includes(term));
+}
+
+function getVelHubApiUrl(page = 1) {
+  const baseQuery = [
+    "collection:(feature_films)",
+    "mediatype:(movies)",
+    "NOT subject:(adult)",
+    "NOT subject:(exploitation)",
+    "NOT title:(sex)",
+    "NOT title:(nudity)"
+  ];
+  const categoryQuery = VEL_HUB_CATEGORY_QUERIES[velHubState.category];
+  if (categoryQuery) baseQuery.push(categoryQuery);
+  const search = sanitizeArchiveSearch(velHubState.query);
+  if (search) baseQuery.push(`(${search})`);
+
+  const params = new URLSearchParams();
+  params.set("q", baseQuery.join(" AND "));
+  ["identifier", "title", "description", "creator", "date", "subject", "downloads", "publicdate"].forEach((field) => {
+    params.append("fl[]", field);
+  });
+  params.append("sort[]", search ? "downloads desc" : "downloads desc");
+  params.set("rows", String(VEL_HUB_PAGE_SIZE));
+  params.set("page", String(page));
+  params.set("output", "json");
+  return `https://archive.org/advancedsearch.php?${params.toString()}`;
+}
+
+function normalizeVelHubMovie(doc) {
+  const identifier = doc?.identifier || "";
+  const title = stripHtml(normalizeArchiveField(doc?.title)) || identifier;
+  const description = stripHtml(normalizeArchiveField(doc?.description));
+  const subject = stripHtml(normalizeArchiveField(doc?.subject));
+  const creator = stripHtml(normalizeArchiveField(doc?.creator));
+  const yearMatch = String(doc?.date || doc?.publicdate || "").match(/\d{4}/);
+  return {
+    id: identifier,
+    title,
+    description: description || "Free archive film with official embedded playback.",
+    subject,
+    creator,
+    year: yearMatch ? yearMatch[0] : "Archive",
+    downloads: Number(doc?.downloads || 0),
+    poster: `https://archive.org/services/img/${encodeURIComponent(identifier)}`,
+    embedUrl: `https://archive.org/embed/${encodeURIComponent(identifier)}`,
+    sourceUrl: `https://archive.org/details/${encodeURIComponent(identifier)}`
+  };
+}
+
+function renderVelHubSkeleton(count = 12) {
+  if (!velHubGrid) return;
+  velHubGrid.innerHTML = Array.from({ length: count }, () => `
+    <article class="velhub-card is-loading">
+      <span class="velhub-poster"></span>
+      <strong></strong>
+      <p></p>
+    </article>
+  `).join("");
+}
+
+function renderVelHub() {
+  if (velHubSearchInput && document.activeElement !== velHubSearchInput) {
+    velHubSearchInput.value = velHubState.query;
+  }
+
+  velHubCategoryButtons.forEach((button) => {
+    const active = button.dataset.velhubCategory === velHubState.category;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+
+  if (velHubHeroCount) {
+    velHubHeroCount.textContent = String(velHubState.movies.length);
+  }
+
+  if (velHubStatus) {
+    velHubStatus.textContent = velHubState.loading
+      ? "Loading"
+      : velHubState.error
+        ? "Error"
+        : `${velHubState.movies.length}${velHubState.total ? ` / ${velHubState.total}` : ""}`;
+  }
+
+  if (velHubLoadMoreButton) {
+    velHubLoadMoreButton.hidden = velHubState.loading || !velHubState.movies.length || velHubState.movies.length >= velHubState.total;
+  }
+
+  if (!velHubGrid) return;
+  if (velHubState.loading && !velHubState.movies.length) {
+    renderVelHubSkeleton();
+    return;
+  }
+
+  if (velHubState.error) {
+    velHubGrid.innerHTML = `
+      <article class="velhub-empty">
+        <strong>Vel Hub could not load movies.</strong>
+        <p>${escapeHtml(velHubState.error)}</p>
+        <button class="ghost-button is-solid" type="button" data-velhub-retry>Retry</button>
+      </article>
+    `;
+    return;
+  }
+
+  if (!velHubState.movies.length) {
+    velHubGrid.innerHTML = `
+      <article class="velhub-empty">
+        <strong>No movies found.</strong>
+        <p>Try another search or switch categories.</p>
+      </article>
+    `;
+    return;
+  }
+
+  velHubGrid.innerHTML = velHubState.movies.map((movie, index) => `
+    <button class="velhub-card" type="button" data-velhub-movie="${escapeHtml(movie.id)}" style="--delay:${Math.min(index, 24) * 24}ms">
+      <span class="velhub-poster">
+        <img src="${escapeHtml(movie.poster)}" alt="${escapeHtml(movie.title)} poster" loading="lazy" />
+        <em>Play</em>
+      </span>
+      <strong>${escapeHtml(movie.title)}</strong>
+      <p>${escapeHtml([movie.year, movie.subject || movie.creator || "Archive Film"].filter(Boolean).join(" - "))}</p>
+    </button>
+  `).join("");
+}
+
+async function loadVelHubMovies({ append = false } = {}) {
+  if (velHubState.loading) return;
+  velHubState.loading = true;
+  velHubState.error = "";
+  if (!append) {
+    velHubState.page = 1;
+    velHubState.movies = [];
+  }
+  renderVelHub();
+
+  try {
+    const response = await fetch(getVelHubApiUrl(velHubState.page));
+    if (!response.ok) throw new Error(`Archive search failed (${response.status})`);
+    const data = await response.json();
+    const docs = Array.isArray(data?.response?.docs) ? data.response.docs : [];
+    const nextMovies = docs
+      .map(normalizeVelHubMovie)
+      .filter((movie) => movie.id && !hasBlockedVelHubTerms(movie));
+    const knownIds = new Set(velHubState.movies.map((movie) => movie.id));
+    velHubState.movies = [
+      ...velHubState.movies,
+      ...nextMovies.filter((movie) => !knownIds.has(movie.id))
+    ];
+    velHubState.total = Number(data?.response?.numFound || velHubState.movies.length);
+    velHubState.page += 1;
+    storage.set("velhub-query", velHubState.query);
+    storage.set("velhub-category", velHubState.category);
+  } catch (error) {
+    velHubState.error = error?.message || "Movie data is unavailable right now.";
+  } finally {
+    velHubState.loading = false;
+    renderVelHub();
+  }
+}
+
+function showVelHubLaunch() {
+  if (!velHubLaunch) return;
+  window.clearTimeout(velHubState.launchTimer);
+  velHubLaunch.classList.remove("is-hiding");
+  velHubLaunch.hidden = false;
+  velHubLaunch.setAttribute("aria-hidden", "false");
+  velHubState.launchTimer = window.setTimeout(() => {
+    velHubLaunch.classList.add("is-hiding");
+    window.setTimeout(() => {
+      velHubLaunch.hidden = true;
+      velHubLaunch.setAttribute("aria-hidden", "true");
+    }, 520);
+  }, 1650);
+}
+
+function openVelHubApp() {
+  openPanel("velhub");
+  showVelHubLaunch();
+  if (!velHubState.movies.length && !velHubState.loading) {
+    loadVelHubMovies();
+  } else {
+    renderVelHub();
+  }
+}
+
+function closeVelHubPlayer() {
+  if (velHubFrameWrap) velHubFrameWrap.innerHTML = "";
+  if (velHubPlayer) velHubPlayer.hidden = true;
+  velHubState.currentMovie = null;
+}
+
+function stopVelHubPlayback() {
+  closeVelHubPlayer();
+}
+
+function openVelHubMovie(movie) {
+  if (!movie || !velHubFrameWrap) return;
+  velHubState.currentMovie = movie;
+  velHubFrameWrap.innerHTML = `
+    <iframe
+      src="${escapeHtml(movie.embedUrl)}"
+      title="${escapeHtml(movie.title)}"
+      allow="autoplay; fullscreen; picture-in-picture"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+  `;
+  if (velHubPlayer) velHubPlayer.hidden = false;
+  if (velHubPlayerSource) velHubPlayerSource.textContent = `${movie.year} - Internet Archive`;
+  if (velHubPlayerTitle) velHubPlayerTitle.textContent = movie.title;
+  if (velHubPlayerDescription) {
+    velHubPlayerDescription.textContent = movie.description.slice(0, 420);
+  }
+  velHubPlayer?.scrollIntoView({ behavior: "smooth", block: "start" });
+  recordRecentApp({ type: "panel", id: "velhub" });
 }
 
 function makeBlockedFrame(app, url) {
@@ -6868,6 +7201,14 @@ panelOpenButtons.forEach((button) => {
       }
       return;
     }
+    if (button.dataset.openPanel === "velhub") {
+      if (isDrawerOpen("velhub")) {
+        closePanel("velhub");
+      } else {
+        openVelHubApp();
+      }
+      return;
+    }
     togglePanel(button.dataset.openPanel);
   });
 });
@@ -6903,7 +7244,7 @@ appStoreTabs?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-store-category]");
   if (!button) return;
   launcherStoreCategory = button.dataset.storeCategory;
-  if (!["games", "local", "tools", "music", "youtube"].includes(launcherStoreCategory)) {
+  if (!["games", "local", "tools", "music", "movies", "youtube"].includes(launcherStoreCategory)) {
     launcherStoreCategory = "games";
   }
   storage.set("vel-launcher-store-category", launcherStoreCategory);
@@ -7136,6 +7477,8 @@ launcherGameGrid?.addEventListener("click", (event) => {
   if (panelButton) {
     if (panelButton.dataset.openPanel === "youtube") {
       openYouTubeApp();
+    } else if (panelButton.dataset.openPanel === "velhub") {
+      openVelHubApp();
     } else {
       openPanel(panelButton.dataset.openPanel);
     }
@@ -7157,6 +7500,10 @@ recentAppsTray?.addEventListener("click", (event) => {
   if (type === "game") openGame(id);
   if (type === "panel" && id === "youtube") {
     openYouTubeApp();
+    return;
+  }
+  if (type === "panel" && id === "velhub") {
+    openVelHubApp();
     return;
   }
   if (type === "panel" && utilityApps[id]?.panel) openPanel(utilityApps[id].panel);
@@ -7229,6 +7576,65 @@ mediaGrid?.addEventListener("keydown", (event) => {
 
 mediaLoadMore?.addEventListener("click", () => {
   searchYouTube({ append: true });
+});
+
+velHubSearchForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  velHubState.query = velHubSearchInput?.value || "";
+  loadVelHubMovies();
+});
+
+velHubCategoryRow?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-velhub-category]");
+  if (!button) return;
+  velHubState.category = button.dataset.velhubCategory || "popular";
+  if (!VEL_HUB_CATEGORY_QUERIES[velHubState.category]) velHubState.category = "popular";
+  loadVelHubMovies();
+});
+
+velHubGrid?.addEventListener("click", (event) => {
+  const retryButton = event.target.closest("[data-velhub-retry]");
+  if (retryButton) {
+    loadVelHubMovies();
+    return;
+  }
+  const movieButton = event.target.closest("[data-velhub-movie]");
+  if (!movieButton) return;
+  const movie = velHubState.movies.find((item) => item.id === movieButton.dataset.velhubMovie);
+  openVelHubMovie(movie);
+});
+
+velHubLoadMoreButton?.addEventListener("click", () => {
+  loadVelHubMovies({ append: true });
+});
+
+velHubRefreshButton?.addEventListener("click", () => {
+  loadVelHubMovies();
+});
+
+velHubClosePlayerButton?.addEventListener("click", () => {
+  closeVelHubPlayer();
+});
+
+velHubOpenTabButton?.addEventListener("click", () => {
+  if (velHubState.currentMovie?.sourceUrl) {
+    window.open(velHubState.currentMovie.sourceUrl, "_blank", "noopener,noreferrer");
+  }
+});
+
+velHubFullscreenButton?.addEventListener("click", async () => {
+  const target = velHubFrameWrap || velHubPlayer;
+  if (!target) return;
+  const requestFullscreen = target.requestFullscreen
+    || target.webkitRequestFullscreen
+    || target.msRequestFullscreen;
+  try {
+    if (requestFullscreen && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      await requestFullscreen.call(target);
+    }
+  } catch (error) {
+    // Some iPad browsers limit fullscreen from custom elements. The iframe still plays normally.
+  }
 });
 
 mediaPlayerClose?.addEventListener("click", () => {
@@ -9460,6 +9866,10 @@ if (mediaSearchInput) {
   mediaSearchInput.value = mediaState.query;
 }
 renderMediaHub();
+if (velHubSearchInput) {
+  velHubSearchInput.value = velHubState.query;
+}
+renderVelHub();
 renderVelofySpotifyResults();
 showBootScreen();
 updateClock();

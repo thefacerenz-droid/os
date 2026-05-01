@@ -127,6 +127,7 @@
               <button class="app-store-tab" type="button" data-store-category="local" role="tab" aria-selected="false">Local</button>
               <button class="app-store-tab" type="button" data-store-category="tools" role="tab" aria-selected="false">Tools</button>
               <button class="app-store-tab" type="button" data-store-category="music" role="tab" aria-selected="false">Music</button>
+              <button class="app-store-tab" type="button" data-store-category="movies" role="tab" aria-selected="false">Movies</button>
               <button class="app-store-tab" type="button" data-store-category="youtube" role="tab" aria-selected="false">YouTube</button>
             </div>
             <div class="catalog-tools">
@@ -305,6 +306,79 @@
               <button class="ghost-button youtube-load-more" id="youtubeLoadMore" type="button" hidden>Load More</button>
             </aside>
           </div>
+        </div>
+      </section>
+
+      <section class="drawer velhub-drawer" id="velHubDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close Vel Hub" data-close-panel="velhub"></button>
+        <div class="drawer-panel velhub-panel">
+          <div class="velhub-launch" id="velHubLaunch" aria-hidden="true">
+            <div class="velhub-launch-mark">
+              <span>V</span><span>E</span><span>L</span>
+              <strong>HUB</strong>
+            </div>
+            <p>Loading cinema mode</p>
+          </div>
+
+          <header class="drawer-head velhub-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Vel Hub</h2>
+              <p class="drawer-copy">A cinematic movie library powered by free, embeddable archive films.</p>
+            </div>
+            <div class="window-actions">
+              <button class="close-button" id="velHubRefreshButton" type="button">Refresh</button>
+              <button class="close-button" type="button" data-close-panel="velhub">Close</button>
+            </div>
+          </header>
+
+          <section class="velhub-hero">
+            <div>
+              <p class="section-label">Now Streaming</p>
+              <h3>Hundreds of free movies inside vel.os.</h3>
+              <p>Search classics, sci-fi, comedy, horror, animation, documentaries, and more. Pick a poster and it plays right here.</p>
+            </div>
+            <div class="velhub-hero-count">
+              <strong id="velHubHeroCount">0</strong>
+              <span>movies loaded</span>
+            </div>
+          </section>
+
+          <section class="velhub-player" id="velHubPlayer" hidden>
+            <div class="velhub-frame-wrap" id="velHubFrameWrap"></div>
+            <div class="velhub-player-meta">
+              <p class="section-label" id="velHubPlayerSource">Internet Archive</p>
+              <h3 id="velHubPlayerTitle">Choose a movie</h3>
+              <p id="velHubPlayerDescription">Movies open with the official Internet Archive embed player.</p>
+              <div class="velhub-player-actions">
+                <button class="ghost-button is-solid" id="velHubFullscreenButton" type="button">Fullscreen</button>
+                <button class="ghost-button" id="velHubOpenTabButton" type="button">Open Source</button>
+                <button class="ghost-button" id="velHubClosePlayerButton" type="button">Close Player</button>
+              </div>
+            </div>
+          </section>
+
+          <div class="velhub-toolbar">
+            <form class="url-form velhub-search-form" id="velHubSearchForm">
+              <input class="url-input" id="velHubSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search movies" aria-label="Search Vel Hub movies" />
+              <button class="ghost-button is-solid" type="submit">Search</button>
+            </form>
+            <span class="velhub-status" id="velHubStatus">Ready</span>
+          </div>
+
+          <div class="velhub-category-row" id="velHubCategoryRow" role="tablist" aria-label="Vel Hub categories">
+            <button class="is-active" type="button" data-velhub-category="popular" role="tab" aria-selected="true">Popular</button>
+            <button type="button" data-velhub-category="action" role="tab" aria-selected="false">Action</button>
+            <button type="button" data-velhub-category="comedy" role="tab" aria-selected="false">Comedy</button>
+            <button type="button" data-velhub-category="scifi" role="tab" aria-selected="false">Sci-Fi</button>
+            <button type="button" data-velhub-category="horror" role="tab" aria-selected="false">Horror</button>
+            <button type="button" data-velhub-category="animation" role="tab" aria-selected="false">Animation</button>
+            <button type="button" data-velhub-category="documentary" role="tab" aria-selected="false">Docs</button>
+            <button type="button" data-velhub-category="family" role="tab" aria-selected="false">Family</button>
+          </div>
+
+          <div class="velhub-grid" id="velHubGrid" aria-live="polite"></div>
+          <button class="ghost-button velhub-load-more" id="velHubLoadMoreButton" type="button" hidden>Load More Movies</button>
         </div>
       </section>
 
