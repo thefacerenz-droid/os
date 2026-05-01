@@ -1337,6 +1337,41 @@ const wallpaperOptions = {
   }
 };
 
+const themePacks = {
+  noir: {
+    title: "Noir Core",
+    cost: 0,
+    wallpaper: "vel",
+    taskbar: "glass",
+    icon: "mono",
+    boot: "classic"
+  },
+  frost: {
+    title: "Frost Byte",
+    cost: 120,
+    wallpaper: "snow",
+    taskbar: "frost",
+    icon: "frost",
+    boot: "flash"
+  },
+  violet: {
+    title: "Moon Bloom",
+    cost: 160,
+    wallpaper: "moon",
+    taskbar: "violet",
+    icon: "soft",
+    boot: "dream"
+  },
+  terminal: {
+    title: "Terminal Ghost",
+    cost: 220,
+    wallpaper: "vel",
+    taskbar: "terminal",
+    icon: "terminal",
+    boot: "scan"
+  }
+};
+
 const velofyTracks = [
   {
     title: "Rock N Roll",
@@ -1760,9 +1795,13 @@ const clockDate = document.getElementById("clockDate");
 const bootScreen = document.getElementById("bootScreen");
 const launcherGameSearch = document.getElementById("launcherGameSearch");
 const launcherOfflineToggle = document.getElementById("launcherOfflineToggle");
+const appStoreTabs = document.getElementById("appStoreTabs");
+const appStoreButtons = [...document.querySelectorAll("[data-store-category]")];
 const gameSourceTabs = document.getElementById("gameSourceTabs");
 const gameSourceButtons = [...document.querySelectorAll("[data-game-source]")];
 const launcherGameGrid = document.getElementById("launcherGameGrid");
+const launcherSectionLabel = document.getElementById("launcherSectionLabel");
+const launcherSectionNote = document.getElementById("launcherSectionNote");
 const catalogCount = document.getElementById("catalogCount");
 const recentAppsTray = document.getElementById("recentAppsTray");
 const taskbarTime = document.getElementById("taskbarTime");
@@ -1895,7 +1934,11 @@ const velofyPrev = document.getElementById("velofyPrev");
 const velofyPlay = document.getElementById("velofyPlay");
 const velofyNext = document.getElementById("velofyNext");
 const velofySearch = document.getElementById("velofySearch");
+const velofyPlaylistSelect = document.getElementById("velofyPlaylistSelect");
+const velofyNewPlaylistButton = document.getElementById("velofyNewPlaylistButton");
+const velofyShuffleButton = document.getElementById("velofyShuffleButton");
 const velofyPlaylist = document.getElementById("velofyPlaylist");
+const velofyPlaylistNote = document.getElementById("velofyPlaylistNote");
 const velofyImportButton = document.getElementById("velofyImportButton");
 const velofyImportInput = document.getElementById("velofyImportInput");
 const velofySpotifyPlayer = document.getElementById("velofySpotifyPlayer");
@@ -1907,6 +1950,8 @@ const settingsWallpaperButtons = [...document.querySelectorAll("[data-wallpaper-
 const settingsFontButtons = [...document.querySelectorAll("[data-font-option]")];
 const settingsDensityButtons = [...document.querySelectorAll("[data-density-option]")];
 const settingsZoomButtons = [...document.querySelectorAll("[data-zoom-option]")];
+const themePackButtons = [...document.querySelectorAll("[data-theme-pack]")];
+const themeCreditBalance = document.getElementById("themeCreditBalance");
 const resetWindowsButton = document.querySelector("[data-reset-windows]");
 const desktopNetworkStatus = document.getElementById("desktopNetworkStatus");
 const networkVpnButton = document.getElementById("networkVpnButton");
@@ -1922,6 +1967,7 @@ let currentWallpaperKey = storage.get("vel-wallpaper", "vel");
 let currentFontKey = storage.get("vel-font", "system");
 let currentDensityKey = storage.get("vel-density", "roomy");
 let currentZoomKey = storage.get("vel-zoom", "normal");
+let currentThemePackKey = storage.get("vel-theme-pack", "noir");
 let currentWebUrl = "https://rocketgoal.io/";
 let currentWebMirrorIndex = 0;
 let feedVideoObserver = null;
@@ -1930,6 +1976,10 @@ let youtubeApiReadyPromise = null;
 let youtubeAppPlayerHintTimer = null;
 let mediaSearchDebounceTimer = null;
 let launcherGameQuery = "";
+let launcherStoreCategory = storage.get("vel-launcher-store-category", "games");
+if (!["games", "local", "tools", "music", "youtube"].includes(launcherStoreCategory)) {
+  launcherStoreCategory = "games";
+}
 let launcherOfflineOnly = storage.get("vel-launcher-offline-only", isLikelyIpad() ? "1" : "0") === "1";
 let launcherGameSource = storage.get("vel-launcher-game-source", "all");
 if (!gameSourceLabels[launcherGameSource]) {
@@ -2048,6 +2098,12 @@ aiMessages = Array.isArray(aiMessages)
   : [];
 let aiLoading = false;
 let velofySearchQuery = "";
+let velofyPlaylistMode = storage.get("velofy-playlist-mode", "all");
+let velofyShuffleEnabled = storage.get("velofy-shuffle", "0") === "1";
+let velofyCustomPlaylists = readStoredJson("velofy-custom-playlists", []);
+velofyCustomPlaylists = Array.isArray(velofyCustomPlaylists) ? velofyCustomPlaylists : [];
+let velofyRecentTrackRefs = readStoredJson("velofy-recent-tracks", []);
+velofyRecentTrackRefs = Array.isArray(velofyRecentTrackRefs) ? velofyRecentTrackRefs : [];
 let velofySpotifySearchQuery = storage.get("velofy-spotify-query", "Ken Carson");
 let velofySpotifySearchResults = [];
 let velofySpotifyLoading = false;
@@ -2056,6 +2112,9 @@ let savedSpotifyTracks = readStoredJson("velofy-spotify-tracks", []);
 let currentVelofyMode = "local";
 let currentSpotifyTrackId = "";
 let currentSpotifyTrack = null;
+let velCredits = Number.parseInt(storage.get("vel-theme-credits", "80"), 10) || 80;
+let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir"]);
+unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", ...unlockedThemePacks])] : ["noir"];
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
 let lyricsLibrary = readStoredJson("vel-lyrics-library", {});
@@ -2137,10 +2196,12 @@ function renderBadge(meta, className = "taskbar-icon") {
 }
 
 function recordRecentApp(entry) {
+  const isNewRecent = !recentApps.some((item) => item.type === entry.type && item.id === entry.id);
   recentApps = [
     entry,
     ...recentApps.filter((item) => !(item.type === entry.type && item.id === entry.id))
   ].slice(0, 7);
+  if (isNewRecent) awardVelCredits(entry.type === "game" ? 8 : 5);
   saveRecentApps();
   renderRecentApps();
   syncTaskbarState();
@@ -4068,6 +4129,39 @@ async function toggleYouTubeVideoFullscreen() {
   }
 }
 
+function persistThemeUnlocks() {
+  storage.set("vel-theme-unlocks", JSON.stringify(unlockedThemePacks));
+}
+
+function renderThemeStore() {
+  if (themeCreditBalance) {
+    themeCreditBalance.textContent = `${velCredits} VC`;
+  }
+  themePackButtons.forEach((button) => {
+    const key = button.dataset.themePack;
+    const pack = themePacks[key];
+    const unlocked = unlockedThemePacks.includes(key);
+    const active = key === currentThemePackKey;
+    button.classList.toggle("is-active", active);
+    button.classList.toggle("is-locked", !unlocked);
+    button.setAttribute("aria-pressed", String(active));
+    const price = button.querySelector("em");
+    if (price && pack) {
+      price.textContent = active
+        ? "Active"
+        : unlocked
+          ? "Owned"
+          : `${pack.cost} VC`;
+    }
+  });
+}
+
+function awardVelCredits(amount = 4) {
+  velCredits = Math.min(9999, velCredits + amount);
+  storage.set("vel-theme-credits", String(velCredits));
+  renderThemeStore();
+}
+
 function applyWallpaper(key) {
   const nextKey = wallpaperOptions[key] ? key : "vel";
   const choice = wallpaperOptions[nextKey];
@@ -4088,6 +4182,41 @@ function applyWallpaper(key) {
   });
 
   storage.set("vel-wallpaper", nextKey);
+}
+
+function applyThemePack(key, shouldApplyWallpaper = true) {
+  const nextKey = themePacks[key] ? key : "noir";
+  const pack = themePacks[nextKey];
+  currentThemePackKey = nextKey;
+  document.body.dataset.themePack = nextKey;
+  document.body.dataset.taskbarStyle = pack.taskbar;
+  document.body.dataset.iconPack = pack.icon;
+  document.body.dataset.bootStyle = pack.boot;
+  if (shouldApplyWallpaper) {
+    applyWallpaper(pack.wallpaper);
+  }
+  storage.set("vel-theme-pack", nextKey);
+  renderThemeStore();
+}
+
+function unlockOrApplyThemePack(key) {
+  const pack = themePacks[key];
+  if (!pack) return;
+  const unlocked = unlockedThemePacks.includes(key);
+  if (!unlocked) {
+    if (velCredits < pack.cost) {
+      if (themeCreditBalance) {
+        themeCreditBalance.textContent = `Need ${pack.cost - velCredits} VC`;
+        window.setTimeout(renderThemeStore, 1100);
+      }
+      return;
+    }
+    velCredits -= pack.cost;
+    unlockedThemePacks = [...new Set([...unlockedThemePacks, key])];
+    storage.set("vel-theme-credits", String(velCredits));
+    persistThemeUnlocks();
+  }
+  applyThemePack(key);
 }
 
 function applyFont(key) {
@@ -4647,6 +4776,7 @@ function openVelofySpotifyTrack(item, { save = false } = {}) {
   if (track.image) {
     velofyArtwork.src = track.image;
     velofyArtwork.alt = `${track.title} artwork`;
+    setVelofyArtworkBackground(track.image);
   }
   if (velofySpotifyPlayer) {
     velofySpotifyPlayer.hidden = false;
@@ -4659,6 +4789,7 @@ function openVelofySpotifyTrack(item, { save = false } = {}) {
       </iframe>
     `;
   }
+  recordVelofyRecent(getVelofySpotifyRef(track.id));
   updateNowPlayingUi();
   renderPlaylist();
 }
@@ -4753,6 +4884,145 @@ function isLikelyIpad() {
     || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+function persistVelofyPlaylists() {
+  storage.set("velofy-custom-playlists", JSON.stringify(velofyCustomPlaylists.slice(0, 24)));
+}
+
+function persistVelofyRecentTracks() {
+  storage.set("velofy-recent-tracks", JSON.stringify(velofyRecentTrackRefs.slice(0, 40)));
+}
+
+function getVelofyLocalRef(index) {
+  return `local:${index}`;
+}
+
+function getVelofySpotifyRef(id) {
+  return `spotify:${id}`;
+}
+
+function getVelofyTrackByRef(ref = "") {
+  if (ref.startsWith("local:")) {
+    const index = Number.parseInt(ref.slice(6), 10);
+    const track = velofyTracks[index];
+    return track ? { ref, type: "local", index, title: track.title, subtitle: track.artist, track } : null;
+  }
+  if (ref.startsWith("spotify:")) {
+    const id = ref.slice(8);
+    const track = savedSpotifyTracks.find((item) => item.id === id);
+    return track ? { ref, type: "spotify", id, title: track.title, subtitle: `${track.subtitle || "Spotify"} - Spotify`, track } : null;
+  }
+  return null;
+}
+
+function getVelofyAllRefs() {
+  return [
+    ...velofyTracks.map((track, index) => getVelofyLocalRef(index)),
+    ...savedSpotifyTracks.map((track) => getVelofySpotifyRef(track.id))
+  ];
+}
+
+function getActiveVelofyPlaylist() {
+  if (!velofyPlaylistMode.startsWith("custom:")) return null;
+  const id = velofyPlaylistMode.slice(7);
+  return velofyCustomPlaylists.find((playlist) => playlist.id === id) || null;
+}
+
+function getVelofyDisplayRefs() {
+  if (velofyPlaylistMode === "recent") return velofyRecentTrackRefs;
+  const custom = getActiveVelofyPlaylist();
+  if (custom) return custom.refs || [];
+  return getVelofyAllRefs();
+}
+
+function renderVelofyPlaylistSelect() {
+  if (!velofyPlaylistSelect) return;
+  const options = [
+    '<option value="all">All Songs</option>',
+    '<option value="recent">Recently Played</option>',
+    ...velofyCustomPlaylists.map((playlist) => `<option value="custom:${escapeHtml(playlist.id)}">${escapeHtml(playlist.name)}</option>`)
+  ];
+  velofyPlaylistSelect.innerHTML = options.join("");
+  if (![...velofyPlaylistSelect.options].some((option) => option.value === velofyPlaylistMode)) {
+    velofyPlaylistMode = "all";
+  }
+  velofyPlaylistSelect.value = velofyPlaylistMode;
+  if (velofyShuffleButton) {
+    velofyShuffleButton.classList.toggle("is-active", velofyShuffleEnabled);
+    velofyShuffleButton.setAttribute("aria-pressed", String(velofyShuffleEnabled));
+  }
+}
+
+function getTargetVelofyPlaylist() {
+  let playlist = getActiveVelofyPlaylist() || velofyCustomPlaylists[0];
+  if (!playlist) {
+    playlist = { id: `mix-${Date.now()}`, name: "My Mix", refs: [] };
+    velofyCustomPlaylists.unshift(playlist);
+    persistVelofyPlaylists();
+    renderVelofyPlaylistSelect();
+  }
+  return playlist;
+}
+
+function addVelofyRefToPlaylist(ref) {
+  const item = getVelofyTrackByRef(ref);
+  if (!item) return;
+  const playlist = getTargetVelofyPlaylist();
+  playlist.refs = [...new Set([...(playlist.refs || []), ref])].slice(0, 200);
+  persistVelofyPlaylists();
+  renderVelofyPlaylistSelect();
+  renderPlaylist();
+  if (velofyPlaylistNote) velofyPlaylistNote.textContent = `Saved "${item.title}" to ${playlist.name}.`;
+}
+
+function recordVelofyRecent(ref, shouldAward = true) {
+  if (!getVelofyTrackByRef(ref)) return;
+  const isNewRecent = !velofyRecentTrackRefs.includes(ref);
+  velofyRecentTrackRefs = [
+    ref,
+    ...velofyRecentTrackRefs.filter((item) => item !== ref)
+  ].slice(0, 40);
+  persistVelofyRecentTracks();
+  if (shouldAward && isNewRecent) awardVelCredits(2);
+}
+
+function playVelofyRef(ref, shouldPlay = true) {
+  const item = getVelofyTrackByRef(ref);
+  if (!item) return;
+  if (item.type === "spotify") {
+    openVelofySpotifyTrack(item.track);
+    return;
+  }
+  loadTrack(item.index, shouldPlay);
+}
+
+function getCurrentVelofyRef() {
+  return currentVelofyMode === "spotify"
+    ? getVelofySpotifyRef(currentSpotifyTrackId)
+    : getVelofyLocalRef(currentTrackIndex);
+}
+
+function createVelofyPlaylist() {
+  const name = window.prompt("Name the new Velofy playlist:", "New Mix");
+  const cleanName = String(name || "").trim().slice(0, 32);
+  if (!cleanName) return;
+  const playlist = {
+    id: `mix-${Date.now()}`,
+    name: cleanName,
+    refs: []
+  };
+  velofyCustomPlaylists.unshift(playlist);
+  velofyPlaylistMode = `custom:${playlist.id}`;
+  storage.set("velofy-playlist-mode", velofyPlaylistMode);
+  persistVelofyPlaylists();
+  renderVelofyPlaylistSelect();
+  renderPlaylist();
+}
+
+function setVelofyArtworkBackground(url) {
+  const safeUrl = url || (wallpaperOptions[currentWallpaperKey] || wallpaperOptions.vel).path;
+  drawers.music?.querySelector(".music-player-card")?.style.setProperty("--velofy-artwork-image", `url("${safeUrl}")`);
+}
+
 function loadTrack(index, shouldPlay = false) {
   showLocalVelofyPlayer();
   currentTrackIndex = (index + velofyTracks.length) % velofyTracks.length;
@@ -4760,6 +5030,7 @@ function loadTrack(index, shouldPlay = false) {
   const wallpaper = wallpaperOptions[currentWallpaperKey] || wallpaperOptions.vel;
   velofyArtwork.src = wallpaper.path;
   velofyArtwork.alt = `${wallpaper.label} wallpaper`;
+  setVelofyArtworkBackground(wallpaper.path);
   audioElement.src = track.src;
   velofyTitle.textContent = track.title;
   velofyArtist.textContent = track.artist;
@@ -4778,67 +5049,91 @@ function loadTrack(index, shouldPlay = false) {
     audioElement.load();
     updateNowPlayingUi();
   }
+  recordVelofyRecent(getVelofyLocalRef(currentTrackIndex), shouldPlay);
   renderLyricsWidget();
 }
 
 function renderPlaylist() {
   velofyPlaylist.innerHTML = "";
+  renderVelofyPlaylistSelect();
 
-  const visibleTracks = velofyTracks
-    .map((track, index) => ({ track, index }))
-    .filter(({ track }) => matchesSearchQuery([track.title, track.artist], velofySearchQuery));
-  const visibleSpotifyTracks = savedSpotifyTracks
-    .filter((track) => matchesSearchQuery([track.title, track.subtitle, "spotify"], velofySearchQuery));
+  const activeCustom = getActiveVelofyPlaylist();
+  const targetPlaylist = activeCustom || velofyCustomPlaylists[0] || null;
+  const visibleItems = getVelofyDisplayRefs()
+    .map(getVelofyTrackByRef)
+    .filter(Boolean)
+    .filter((item) => matchesSearchQuery([item.title, item.subtitle, item.type], velofySearchQuery));
 
-  if (!visibleTracks.length && !visibleSpotifyTracks.length) {
-    velofyPlaylist.innerHTML = '<p class="playlist-empty">No songs found.</p>';
+  if (!visibleItems.length) {
+    const emptyCopy = velofyPlaylistMode === "recent"
+      ? "Play a few songs and they will show up here."
+      : activeCustom
+        ? "Use All Songs, then press + to add tracks to this playlist."
+        : "No songs found.";
+    velofyPlaylist.innerHTML = `<p class="playlist-empty">${emptyCopy}</p>`;
+    if (velofyPlaylistNote) {
+      velofyPlaylistNote.textContent = activeCustom
+        ? `${activeCustom.name} has ${activeCustom.refs?.length || 0} saved track${(activeCustom.refs?.length || 0) === 1 ? "" : "s"}.`
+        : "Local MP3s play with full Velofy controls. Save tracks into custom playlists with the + button.";
+    }
     return;
   }
 
-  if (visibleTracks.length) {
-    const localLabel = document.createElement("p");
-    localLabel.className = "playlist-group-label";
-    localLabel.textContent = "Local MP3s";
-    velofyPlaylist.appendChild(localLabel);
-  }
+  const label = document.createElement("p");
+  label.className = "playlist-group-label";
+  label.textContent = velofyPlaylistMode === "recent"
+    ? "Recently Played"
+    : activeCustom
+      ? activeCustom.name
+      : "All Songs";
+  velofyPlaylist.appendChild(label);
 
-  visibleTracks.forEach(({ track, index }) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `track-button${currentVelofyMode === "local" && index === currentTrackIndex ? " is-active" : ""}`;
-    button.dataset.trackIndex = String(index);
-    button.innerHTML = `
-      <strong>${track.title}</strong>
-      <span>${track.artist}</span>
+  visibleItems.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "track-row";
+    const active = currentVelofyMode === item.type
+      && (item.type === "local" ? item.index === currentTrackIndex : item.id === currentSpotifyTrackId);
+    const alreadyInTarget = Boolean(targetPlaylist?.refs?.includes(item.ref));
+    row.innerHTML = `
+      <button
+        type="button"
+        class="track-button${item.type === "spotify" ? " spotify-track-button" : ""}${active ? " is-active" : ""}"
+        ${item.type === "local" ? `data-track-index="${item.index}"` : `data-spotify-track-id="${escapeHtml(item.id)}"`}
+      >
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>${escapeHtml(item.subtitle || (item.type === "spotify" ? "Spotify" : "Local MP3"))}</span>
+      </button>
+      <button
+        class="track-add-button${alreadyInTarget ? " is-added" : ""}"
+        type="button"
+        data-velofy-add-ref="${escapeHtml(item.ref)}"
+        aria-label="Add ${escapeHtml(item.title)} to a Velofy playlist"
+      >${alreadyInTarget ? "In" : "+"}</button>
     `;
-    velofyPlaylist.appendChild(button);
+    velofyPlaylist.appendChild(row);
   });
 
-  if (visibleSpotifyTracks.length) {
-    const spotifyLabel = document.createElement("p");
-    spotifyLabel.className = "playlist-group-label";
-    spotifyLabel.textContent = "Saved Spotify";
-    velofyPlaylist.appendChild(spotifyLabel);
+  if (velofyPlaylistNote) {
+    velofyPlaylistNote.textContent = activeCustom
+      ? `${activeCustom.name} - shuffle, play, or add more from All Songs.`
+      : "Local MP3s play with full Velofy controls. Save tracks into custom playlists with the + button.";
   }
-
-  visibleSpotifyTracks.forEach((track) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `track-button spotify-track-button${currentVelofyMode === "spotify" && track.id === currentSpotifyTrackId ? " is-active" : ""}`;
-    button.dataset.spotifyTrackId = track.id;
-    button.innerHTML = `
-      <strong>${track.title}</strong>
-      <span>${track.subtitle || "Spotify"} - Spotify</span>
-    `;
-    velofyPlaylist.appendChild(button);
-  });
 }
 
 function playVelofyOffset(delta) {
-  if (currentVelofyMode === "spotify" && savedSpotifyTracks.length) {
-    const currentIndex = Math.max(0, savedSpotifyTracks.findIndex((track) => track.id === currentSpotifyTrackId));
-    const nextTrack = savedSpotifyTracks[(currentIndex + delta + savedSpotifyTracks.length) % savedSpotifyTracks.length];
-    openVelofySpotifyTrack(nextTrack);
+  const playableRefs = getVelofyDisplayRefs().filter((ref) => getVelofyTrackByRef(ref));
+  if (velofyShuffleEnabled && playableRefs.length > 1) {
+    const currentRef = getCurrentVelofyRef();
+    const pool = playableRefs.filter((ref) => ref !== currentRef);
+    playVelofyRef(pool[Math.floor(Math.random() * pool.length)], true);
+    return;
+  }
+
+  if (playableRefs.length) {
+    const currentRef = getCurrentVelofyRef();
+    const currentIndexInList = Math.max(0, playableRefs.indexOf(currentRef));
+    const nextRef = playableRefs[(currentIndexInList + delta + playableRefs.length) % playableRefs.length];
+    playVelofyRef(nextRef, !audioElement.paused || currentVelofyMode === "spotify");
     return;
   }
   loadTrack(currentTrackIndex + delta, !audioElement.paused);
@@ -4853,6 +5148,79 @@ function openCurrentSpotifyExternal() {
 
 function renderLauncherCatalog() {
   if (!launcherGameGrid) return;
+
+  const categoryMeta = {
+    games: ["Featured Games", "Big web catalog with source filters and quick-open recent apps."],
+    local: ["Local Arcade", "Offline games that run directly inside vel.os."],
+    tools: ["System Tools", "Utilities, settings, network status, AI, and browser tools."],
+    music: ["Music", "Velofy and music tools in one clean section."],
+    youtube: ["YouTube", "YouTube search, player, favorites, and Global Favs."]
+  };
+  const [sectionLabel, sectionNote] = categoryMeta[launcherStoreCategory] || categoryMeta.games;
+  if (launcherSectionLabel) launcherSectionLabel.textContent = sectionLabel;
+  if (launcherSectionNote) launcherSectionNote.textContent = sectionNote;
+  appStoreButtons.forEach((button) => {
+    const active = button.dataset.storeCategory === launcherStoreCategory;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+
+  if (launcherStoreCategory !== "games") {
+    if (gameSourceTabs) gameSourceTabs.hidden = true;
+    if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
+    const utilitySections = {
+      tools: ["browser", "ai", "settings", "network"],
+      music: ["music"],
+      youtube: ["youtube"]
+    };
+    const localItems = launcherStoreCategory === "local"
+      ? Object.keys(localGameMeta)
+        .map((gameId) => ({ id: gameId, ...localGameMeta[gameId], local: true }))
+        .filter((game) => matchesSearchQuery([game.title, game.category, "offline local"], launcherGameQuery))
+      : [];
+    const utilityItems = (utilitySections[launcherStoreCategory] || [])
+      .map((id) => ({ id, ...utilityApps[id] }))
+      .filter((app) => app.title && matchesSearchQuery([app.title, app.label, launcherStoreCategory], launcherGameQuery));
+    const localCards = localItems.map((game) => `
+      <button class="app-icon" type="button" data-launch-game="${escapeHtml(game.id)}">
+        ${renderBadge({
+          title: game.title,
+          badgeSrc: createGameBadgeSrc(game.title, game.category),
+          badgeText: game.title.slice(0, 2).toUpperCase()
+        }, "app-badge")}
+        <span class="icon-title">${escapeHtml(game.title)}</span>
+        <span class="icon-meta">Local - ${escapeHtml(game.category)}</span>
+      </button>
+    `);
+    const utilityCards = utilityItems.map((app) => {
+      const actionAttr = app.action === "web"
+        ? 'data-open-web="browser"'
+        : app.action === "game"
+          ? `data-launch-game="${escapeHtml(app.gameId || "snake")}"`
+          : `data-open-panel="${escapeHtml(app.panel || app.id)}"`;
+      const meta = app.action === "web" ? utilityApps.browser : app;
+      return `
+        <button class="app-icon app-store-feature" type="button" ${actionAttr}>
+          ${renderBadge(meta, "app-badge")}
+          <span class="icon-title">${escapeHtml(app.title)}</span>
+          <span class="icon-meta">${escapeHtml(app.label || app.title)} - vel.os</span>
+        </button>
+      `;
+    });
+    launcherGameGrid.innerHTML = [...utilityCards, ...localCards].join("");
+    if (!launcherGameGrid.innerHTML) {
+      launcherGameGrid.innerHTML = '<p class="catalog-empty">No apps found.</p>';
+    }
+    if (catalogCount) {
+      const total = launcherStoreCategory === "local" ? Object.keys(localGameMeta).length : utilityItems.length;
+      const visible = localItems.length + utilityItems.length;
+      catalogCount.textContent = launcherGameQuery ? `${visible} / ${total} apps` : `${total} apps`;
+    }
+    return;
+  }
+
+  if (gameSourceTabs) gameSourceTabs.hidden = false;
+  if (launcherOfflineToggle) launcherOfflineToggle.hidden = false;
 
   const localGameIds = Object.keys(localGameMeta);
   const wantsLocal = launcherGameSource === "all" || launcherGameSource === "local";
@@ -4882,7 +5250,7 @@ function renderLauncherCatalog() {
           badgeText: game.title.slice(0, 2).toUpperCase()
         }, "app-badge")}
         <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">Local · ${escapeHtml(game.category)}</span>
+        <span class="icon-meta">Local - ${escapeHtml(game.category)}</span>
       </button>
     `;
   });
@@ -4893,7 +5261,7 @@ function renderLauncherCatalog() {
       <button class="app-icon" type="button" data-open-web="${escapeHtml(game.id)}">
         ${renderBadge(app, "app-badge")}
         <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">${escapeHtml(getGameSourceLabel(game.source))} · ${escapeHtml(game.category)}</span>
+        <span class="icon-meta">${escapeHtml(getGameSourceLabel(game.source))} - ${escapeHtml(game.category)}</span>
       </button>
     `;
   });
@@ -6406,6 +6774,17 @@ launcherGameSearch?.addEventListener("input", () => {
   renderLauncherCatalog();
 });
 
+appStoreTabs?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-store-category]");
+  if (!button) return;
+  launcherStoreCategory = button.dataset.storeCategory;
+  if (!["games", "local", "tools", "music", "youtube"].includes(launcherStoreCategory)) {
+    launcherStoreCategory = "games";
+  }
+  storage.set("vel-launcher-store-category", launcherStoreCategory);
+  renderLauncherCatalog();
+});
+
 launcherOfflineToggle?.addEventListener("click", () => {
   launcherOfflineOnly = !launcherOfflineOnly;
   if (launcherOfflineOnly) {
@@ -6610,6 +6989,16 @@ launcherGameGrid?.addEventListener("click", (event) => {
     return;
   }
 
+  const panelButton = event.target.closest("button[data-open-panel]");
+  if (panelButton) {
+    if (panelButton.dataset.openPanel === "youtube") {
+      openYouTubeApp();
+    } else {
+      openPanel(panelButton.dataset.openPanel);
+    }
+    return;
+  }
+
   const button = event.target.closest("button[data-open-web]");
   if (!button) return;
   openWebApp(button.dataset.openWeb);
@@ -6709,6 +7098,12 @@ mediaPlayerClose?.addEventListener("click", () => {
 settingsWallpaperButtons.forEach((button) => {
   button.addEventListener("click", () => {
     applyWallpaper(button.dataset.wallpaperOption);
+  });
+});
+
+themePackButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    unlockOrApplyThemePack(button.dataset.themePack);
   });
 });
 
@@ -6962,6 +7357,12 @@ velofyProgress.addEventListener("input", () => {
   syncLyricsPlayback(true);
 });
 velofyPlaylist.addEventListener("click", (event) => {
+  const addButton = event.target.closest("[data-velofy-add-ref]");
+  if (addButton) {
+    addVelofyRefToPlaylist(addButton.dataset.velofyAddRef);
+    return;
+  }
+
   const button = event.target.closest("button[data-track-index]");
   if (button) {
     loadTrack(Number(button.dataset.trackIndex), true);
@@ -6975,6 +7376,22 @@ velofyPlaylist.addEventListener("click", (event) => {
 velofySearch?.addEventListener("input", () => {
   velofySearchQuery = velofySearch.value;
   renderPlaylist();
+});
+
+velofyPlaylistSelect?.addEventListener("change", () => {
+  velofyPlaylistMode = velofyPlaylistSelect.value || "all";
+  storage.set("velofy-playlist-mode", velofyPlaylistMode);
+  renderPlaylist();
+});
+
+velofyNewPlaylistButton?.addEventListener("click", () => {
+  createVelofyPlaylist();
+});
+
+velofyShuffleButton?.addEventListener("click", () => {
+  velofyShuffleEnabled = !velofyShuffleEnabled;
+  storage.set("velofy-shuffle", velofyShuffleEnabled ? "1" : "0");
+  renderVelofyPlaylistSelect();
 });
 
 velofySpotifySearchButton?.addEventListener("click", () => {
@@ -8880,6 +9297,7 @@ casinoWallet.render();
 renderPlaylist();
 loadTrack(0, false);
 applyWallpaper(currentWallpaperKey);
+applyThemePack(currentThemePackKey, false);
 applyFont(currentFontKey);
 applyDensity(currentDensityKey);
 applyZoom(currentZoomKey);

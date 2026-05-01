@@ -117,13 +117,20 @@
           <section class="launcher-section">
             <div class="catalog-head">
               <div>
-                <p class="section-label">Featured Games</p>
-                <p class="tiny-note">Big catalog, better mirrors, and quick-open recent apps.</p>
+                <p class="section-label" id="launcherSectionLabel">App Store</p>
+                <p class="tiny-note" id="launcherSectionNote">Browse games, tools, media, and system apps like a tiny OS store.</p>
               </div>
               <div class="catalog-count" id="catalogCount">0 games</div>
             </div>
+            <div class="app-store-tabs" id="appStoreTabs" role="tablist" aria-label="App Store sections">
+              <button class="app-store-tab is-active" type="button" data-store-category="games" role="tab" aria-selected="true">Games</button>
+              <button class="app-store-tab" type="button" data-store-category="local" role="tab" aria-selected="false">Local</button>
+              <button class="app-store-tab" type="button" data-store-category="tools" role="tab" aria-selected="false">Tools</button>
+              <button class="app-store-tab" type="button" data-store-category="music" role="tab" aria-selected="false">Music</button>
+              <button class="app-store-tab" type="button" data-store-category="youtube" role="tab" aria-selected="false">YouTube</button>
+            </div>
             <div class="catalog-tools">
-              <input class="mini-search-input" id="launcherGameSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search games" aria-label="Search games" />
+              <input class="mini-search-input" id="launcherGameSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search apps or games" aria-label="Search apps or games" />
               <button class="catalog-filter-button" id="launcherOfflineToggle" type="button" aria-pressed="false">Offline Only</button>
             </div>
             <div class="catalog-source-tabs" id="gameSourceTabs" role="tablist" aria-label="Game source filters">
@@ -380,14 +387,22 @@
             </section>
             <section class="music-side">
               <article class="side-card">
-                <div class="music-side-head">
-                  <p class="section-label">Playlist</p>
-                  <button class="ghost-button" id="velofyImportButton" type="button">Import Tracks</button>
+              <div class="music-side-head">
+                <p class="section-label">Playlist</p>
+                <button class="ghost-button" id="velofyImportButton" type="button">Import Tracks</button>
+              </div>
+                <div class="velofy-playlist-toolbar">
+                  <select class="velofy-playlist-select" id="velofyPlaylistSelect" aria-label="Velofy playlist">
+                    <option value="all">All Songs</option>
+                    <option value="recent">Recently Played</option>
+                  </select>
+                  <button class="ghost-button" id="velofyNewPlaylistButton" type="button">New</button>
+                  <button class="ghost-button" id="velofyShuffleButton" type="button" aria-pressed="false">Shuffle</button>
                 </div>
                 <input class="mini-search-input velofy-search" id="velofySearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search music" aria-label="Search music" />
                 <input id="velofyImportInput" type="file" accept="audio/*" multiple hidden />
                 <div class="playlist-list" id="velofyPlaylist"></div>
-                <p class="tiny-note">Local MP3s play with full Velofy controls. Saved Spotify songs open official Spotify embeds.</p>
+                <p class="tiny-note" id="velofyPlaylistNote">Local MP3s play with full Velofy controls. Save tracks into custom playlists with the + button.</p>
               </article>
               <article class="side-card spotify-velofy-card">
                 <div class="music-side-head">
@@ -855,6 +870,42 @@
                 <button class="font-option" type="button" data-font-option="rounded"><strong>Rounded</strong><span>Softer tablet feel</span><span class="font-sample font-sample-rounded">vel.os feels lighter and more casual.</span></button>
               </div>
               <p class="tiny-note settings-note">Your wallpaper and font save on this device after refresh.</p>
+            </article>
+            <article class="settings-card theme-store-card">
+              <div class="theme-store-head">
+                <div>
+                  <p class="section-label">Theme Store</p>
+                  <h3>Unlock the vibe</h3>
+                </div>
+                <span class="theme-credit-badge" id="themeCreditBalance">0 VC</span>
+              </div>
+              <div class="theme-store-grid" id="themeStoreGrid">
+                <button class="theme-pack-card is-active" type="button" data-theme-pack="noir">
+                  <span class="theme-pack-preview theme-pack-noir"></span>
+                  <strong>Noir Core</strong>
+                  <span>Default black glass, clean taskbar, classic boot.</span>
+                  <em>Owned</em>
+                </button>
+                <button class="theme-pack-card" type="button" data-theme-pack="frost">
+                  <span class="theme-pack-preview theme-pack-frost"></span>
+                  <strong>Frost Byte</strong>
+                  <span>Snow wallpaper polish, icy taskbar, white boot glow.</span>
+                  <em>120 VC</em>
+                </button>
+                <button class="theme-pack-card" type="button" data-theme-pack="violet">
+                  <span class="theme-pack-preview theme-pack-violet"></span>
+                  <strong>Moon Bloom</strong>
+                  <span>Blue-purple wallpaper, soft icons, dreamy boot.</span>
+                  <em>160 VC</em>
+                </button>
+                <button class="theme-pack-card" type="button" data-theme-pack="terminal">
+                  <span class="theme-pack-preview theme-pack-terminal"></span>
+                  <strong>Terminal Ghost</strong>
+                  <span>Hacker green accents, scanline taskbar, sharp boot.</span>
+                  <em>220 VC</em>
+                </button>
+              </div>
+              <p class="tiny-note settings-note">Earn Vel Credits by opening apps, playing games, and using Velofy. Unlocks save on this device.</p>
             </article>
             <article class="settings-card">
               <p class="section-label">Layout</p>

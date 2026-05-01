@@ -61,6 +61,24 @@ body[data-zoom="ipad"] {
   font-size: 0.76rem;
 }
 
+body[data-theme-pack="frost"] {
+  --line: rgba(230, 245, 255, 0.16);
+  --line-strong: rgba(255, 255, 255, 0.32);
+  --muted: #c7d5df;
+}
+
+body[data-theme-pack="violet"] {
+  --line: rgba(180, 190, 255, 0.18);
+  --line-strong: rgba(205, 212, 255, 0.36);
+  --muted: #c8c9ec;
+}
+
+body[data-theme-pack="terminal"] {
+  --line: rgba(132, 255, 181, 0.2);
+  --line-strong: rgba(132, 255, 181, 0.42);
+  --muted: #9bd9b1;
+}
+
 button,
 input {
   font: inherit;
@@ -108,6 +126,26 @@ body.is-music-playing .desktop-wallpaper {
     radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.055), transparent 30%),
     radial-gradient(circle at 70% 100%, rgba(255, 255, 255, 0.04), transparent 32%),
     linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.52) 62%, rgba(0, 0, 0, 0.9));
+}
+
+body[data-theme-pack="frost"] .wallpaper-shade {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(230, 245, 255, 0.2), transparent 30%),
+    linear-gradient(180deg, rgba(0, 18, 35, 0.04), rgba(0, 0, 0, 0.62));
+}
+
+body[data-theme-pack="violet"] .wallpaper-shade {
+  background:
+    radial-gradient(circle at 68% 22%, rgba(135, 115, 255, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(30, 20, 70, 0.06), rgba(0, 0, 0, 0.6));
+}
+
+body[data-theme-pack="terminal"] .wallpaper-shade {
+  background:
+    linear-gradient(rgba(120, 255, 168, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 30% 22%, rgba(70, 255, 135, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.82));
+  background-size: 100% 4px, auto, auto;
 }
 
 .wallpaper-grain {
@@ -838,6 +876,8 @@ body.is-music-playing .desktop-wallpaper {
 .wallpaper-option:focus-visible,
 .font-option:hover,
 .font-option:focus-visible,
+.theme-pack-card:hover,
+.theme-pack-card:focus-visible,
 .memory-card:hover,
 .memory-card:focus-visible,
 .tap-cell:hover,
@@ -869,6 +909,8 @@ body.is-music-playing .desktop-wallpaper {
 .wallpaper-option:focus-visible,
 .font-option:hover,
 .font-option:focus-visible,
+.theme-pack-card:hover,
+.theme-pack-card:focus-visible,
 .media-card-action:hover,
 .media-card-action:focus-visible,
 .load-more:hover,
@@ -956,6 +998,20 @@ body.is-music-playing .desktop-wallpaper {
   scrollbar-width: thin;
 }
 
+.app-store-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  padding: 0.05rem 0.02rem 0.2rem;
+  scrollbar-width: none;
+}
+
+.app-store-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.app-store-tab,
 .catalog-source-tab {
   flex: 0 0 auto;
   min-height: 36px;
@@ -975,6 +1031,7 @@ body.is-music-playing .desktop-wallpaper {
     color 180ms ease;
 }
 
+.app-store-tab.is-active,
 .catalog-source-tab.is-active {
   border-color: #fff;
   background: #fff;
@@ -982,6 +1039,8 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .app-store-tab:hover,
+  .app-store-tab:focus-visible,
   .catalog-source-tab:hover,
   .catalog-source-tab:focus-visible {
     transform: translateY(-2px);
@@ -1079,6 +1138,47 @@ body.is-music-playing .desktop-wallpaper {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #111;
+}
+
+body[data-icon-pack="frost"] .desktop-shortcut-badge,
+body[data-icon-pack="frost"] .app-badge,
+body[data-icon-pack="frost"] .taskbar-icon,
+body[data-icon-pack="frost"] .taskbar-icon-text {
+  border-color: rgba(210, 235, 255, 0.28);
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.52), transparent 34%),
+    linear-gradient(145deg, rgba(236, 246, 255, 0.38), rgba(42, 64, 82, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 16px 32px rgba(115, 180, 255, 0.14);
+}
+
+body[data-icon-pack="soft"] .desktop-shortcut-badge,
+body[data-icon-pack="soft"] .app-badge,
+body[data-icon-pack="soft"] .taskbar-icon,
+body[data-icon-pack="soft"] .taskbar-icon-text {
+  border-radius: 24px;
+  border-color: rgba(205, 174, 255, 0.24);
+  background:
+    radial-gradient(circle at 36% 18%, rgba(255, 255, 255, 0.42), transparent 34%),
+    linear-gradient(145deg, rgba(105, 80, 150, 0.72), rgba(19, 17, 28, 0.95));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 14px 34px rgba(157, 116, 255, 0.2);
+}
+
+body[data-icon-pack="terminal"] .desktop-shortcut-badge,
+body[data-icon-pack="terminal"] .app-badge,
+body[data-icon-pack="terminal"] .taskbar-icon,
+body[data-icon-pack="terminal"] .taskbar-icon-text {
+  border-radius: 8px;
+  border-color: rgba(140, 255, 181, 0.3);
+  background:
+    linear-gradient(180deg, rgba(140, 255, 181, 0.16), rgba(5, 14, 8, 0.96)),
+    repeating-linear-gradient(0deg, rgba(140, 255, 181, 0.1) 0 1px, transparent 1px 5px);
+  box-shadow:
+    inset 0 0 18px rgba(140, 255, 181, 0.09),
+    0 12px 26px rgba(0, 0, 0, 0.38);
 }
 
 .badge-text,
@@ -2233,10 +2333,28 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .music-player-card {
+  position: relative;
   display: grid;
   gap: 0.82rem;
   align-content: center;
   min-height: 0;
+  overflow: hidden;
+}
+
+.music-player-card::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: var(--velofy-artwork-image, var(--wallpaper-image)) center / cover no-repeat;
+  filter: blur(32px) saturate(1.25) brightness(0.55);
+  opacity: 0.42;
+  transform: scale(1.08);
+  pointer-events: none;
+}
+
+.music-player-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .velofy-spotify-player {
@@ -2358,6 +2476,50 @@ body.is-music-playing .desktop-wallpaper {
   scrollbar-color: rgba(255, 255, 255, 0.44) rgba(255, 255, 255, 0.06);
 }
 
+.velofy-playlist-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.velofy-playlist-select {
+  min-height: 38px;
+  padding: 0.5rem 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.track-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.42rem;
+  align-items: stretch;
+}
+
+.track-row .track-button {
+  min-height: 100%;
+}
+
+.track-add-button {
+  min-width: 42px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-weight: 950;
+}
+
+.track-add-button.is-added {
+  background: rgba(255, 255, 255, 0.9);
+  color: #050505;
+}
+
 .playlist-group-label {
   margin: 0.38rem 0 0.1rem;
   color: var(--muted);
@@ -2454,7 +2616,8 @@ body.is-music-playing .desktop-wallpaper {
 .track-button,
 .watch-card,
 .wallpaper-option,
-.font-option {
+.font-option,
+.theme-pack-card {
   width: 100%;
   padding: 0.74rem 0.86rem;
   border: 1px solid var(--line);
@@ -2477,7 +2640,8 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .wallpaper-option,
-.font-option {
+.font-option,
+.theme-pack-card {
   display: grid;
   gap: 0.55rem;
 }
@@ -2491,18 +2655,21 @@ body.is-music-playing .desktop-wallpaper {
 }
 
 .wallpaper-option strong,
-.font-option strong {
+.font-option strong,
+.theme-pack-card strong {
   font-size: 1rem;
 }
 
 .wallpaper-option span,
-.font-option span {
+.font-option span,
+.theme-pack-card span {
   color: var(--muted);
   font-size: 0.88rem;
 }
 
 .wallpaper-option.is-active,
-.font-option.is-active {
+.font-option.is-active,
+.theme-pack-card.is-active {
   border-color: var(--line-strong);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -2527,6 +2694,92 @@ body.is-music-playing .desktop-wallpaper {
 
 .font-sample-rounded {
   font-family: "Avenir Next Rounded", "Trebuchet MS", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+
+.theme-store-card {
+  grid-column: 1 / -1;
+}
+
+.theme-store-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.theme-store-head h3 {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.25rem, 2.1vw, 1.9rem);
+}
+
+.theme-credit-badge {
+  flex: 0 0 auto;
+  padding: 0.48rem 0.72rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: #fff;
+  color: #050505;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.theme-store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.theme-pack-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #050505;
+}
+
+.theme-pack-noir {
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.18), transparent 22%),
+    linear-gradient(135deg, #222, #030303);
+}
+
+.theme-pack-frost {
+  background:
+    radial-gradient(circle at 24% 18%, #fff, transparent 20%),
+    linear-gradient(135deg, #dcecff, #405767 55%, #050b12);
+}
+
+.theme-pack-violet {
+  background:
+    radial-gradient(circle at 72% 20%, #b7a4ff, transparent 24%),
+    linear-gradient(135deg, #5c6dff, #262046 62%, #06070f);
+}
+
+.theme-pack-terminal {
+  background:
+    linear-gradient(rgba(120, 255, 168, 0.18) 1px, transparent 1px),
+    linear-gradient(135deg, #0aff74, #062414 42%, #020302);
+  background-size: 100% 7px, auto;
+}
+
+.theme-pack-card em {
+  justify-self: start;
+  padding: 0.32rem 0.52rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.theme-pack-card.is-locked:not(.is-active) {
+  opacity: 0.78;
 }
 
 .settings-note {
@@ -4203,6 +4456,35 @@ body.is-music-playing .desktop-wallpaper {
   backdrop-filter: blur(24px) saturate(1.1);
 }
 
+body[data-taskbar-style="frost"] .taskbar {
+  border-top-color: rgba(222, 242, 255, 0.22);
+  background:
+    linear-gradient(180deg, rgba(230, 243, 255, 0.24), rgba(23, 35, 47, 0.78));
+  box-shadow:
+    0 -14px 40px rgba(74, 142, 210, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+body[data-taskbar-style="violet"] .taskbar {
+  border-top-color: rgba(210, 184, 255, 0.22);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(190, 160, 255, 0.22), transparent 48%),
+    linear-gradient(180deg, rgba(47, 35, 76, 0.82), rgba(14, 11, 24, 0.94));
+  box-shadow:
+    0 -16px 44px rgba(122, 86, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+}
+
+body[data-taskbar-style="terminal"] .taskbar {
+  border-top-color: rgba(140, 255, 181, 0.24);
+  background:
+    repeating-linear-gradient(90deg, rgba(140, 255, 181, 0.035) 0 1px, transparent 1px 10px),
+    linear-gradient(180deg, rgba(9, 18, 12, 0.96), rgba(2, 6, 3, 0.97));
+  box-shadow:
+    0 -14px 38px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0 rgba(140, 255, 181, 0.14);
+}
+
 .taskbar-left,
 .taskbar-center,
 .taskbar-right {
@@ -4545,6 +4827,35 @@ body.is-booting .lyrics-show-button {
 .boot-wordmark span:nth-child(4) { animation-delay: 1380ms; }
 .boot-wordmark span:nth-child(5) { animation-delay: 1580ms; }
 .boot-wordmark span:nth-child(6) { animation-delay: 1780ms; }
+
+body[data-boot-style="flash"] .boot-wordmark {
+  color: #f4fbff;
+  text-shadow:
+    0 0 24px rgba(190, 229, 255, 0.46),
+    0 16px 52px rgba(70, 140, 255, 0.2);
+}
+
+body[data-boot-style="dream"] .boot-wordmark {
+  color: #f2eaff;
+  text-shadow:
+    0 0 24px rgba(190, 150, 255, 0.5),
+    0 18px 58px rgba(104, 68, 220, 0.28);
+}
+
+body[data-boot-style="scan"] .boot-wordmark {
+  color: #8cffb5;
+  text-shadow:
+    0 0 16px rgba(140, 255, 181, 0.48),
+    0 0 44px rgba(140, 255, 181, 0.18);
+  animation: none;
+}
+
+body[data-boot-style="scan"] .boot-canvas::before {
+  opacity: 0.42;
+  background:
+    linear-gradient(180deg, transparent 0 48%, rgba(140, 255, 181, 0.16) 50%, transparent 52%),
+    repeating-linear-gradient(0deg, rgba(140, 255, 181, 0.08) 0 1px, transparent 1px 8px);
+}
 
 .boot-loader-gif {
   position: relative;
