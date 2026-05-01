@@ -327,6 +327,7 @@
               <p class="drawer-copy">A cinematic movie library powered by free, embeddable archive films.</p>
             </div>
             <div class="window-actions">
+              <button class="close-button" id="velHubWindowButton" type="button">Window</button>
               <button class="close-button" id="velHubRefreshButton" type="button">Refresh</button>
               <button class="close-button" type="button" data-close-panel="velhub">Close</button>
             </div>
@@ -342,6 +343,17 @@
               <strong id="velHubHeroCount">0</strong>
               <span>movies loaded</span>
             </div>
+          </section>
+
+          <section class="velhub-modern">
+            <div class="velhub-modern-head">
+              <div>
+                <p class="section-label">Modern Picks</p>
+                <h3>Movies people actually search for</h3>
+              </div>
+              <p>Full modern movies need an official licensed source. These cards open trailer searches or watch-option searches inside vel.os.</p>
+            </div>
+            <div class="velhub-modern-grid" id="velHubModernGrid"></div>
           </section>
 
           <section class="velhub-player" id="velHubPlayer" hidden>

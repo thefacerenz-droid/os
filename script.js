@@ -1907,8 +1907,10 @@ const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton
 const youtubeToggleResultsButton = document.getElementById("youtubeToggleResultsButton");
 const velHubDrawer = document.getElementById("velHubDrawer");
 const velHubLaunch = document.getElementById("velHubLaunch");
+const velHubWindowButton = document.getElementById("velHubWindowButton");
 const velHubRefreshButton = document.getElementById("velHubRefreshButton");
 const velHubHeroCount = document.getElementById("velHubHeroCount");
+const velHubModernGrid = document.getElementById("velHubModernGrid");
 const velHubPlayer = document.getElementById("velHubPlayer");
 const velHubFrameWrap = document.getElementById("velHubFrameWrap");
 const velHubPlayerSource = document.getElementById("velHubPlayerSource");
@@ -2210,6 +2212,18 @@ const VEL_HUB_BLOCKED_TERMS = [
   "exploitation",
   "burlesque"
 ];
+const velHubModernPicks = [
+  { title: "The Bad Guys", year: "2022", vibe: "Animated heist comedy", accent: "#f4f4f4" },
+  { title: "The Bad Guys 2", year: "2025", vibe: "Animated crew sequel", accent: "#d7d7d7" },
+  { title: "The Grinch", year: "2018", vibe: "Holiday animation", accent: "#e8f5df" },
+  { title: "How the Grinch Stole Christmas", year: "2000", vibe: "Holiday comedy", accent: "#cfe8c8" },
+  { title: "The Super Mario Bros. Movie", year: "2023", vibe: "Game-world adventure", accent: "#f7d7d7" },
+  { title: "Spider-Man: Across the Spider-Verse", year: "2023", vibe: "Animated superhero", accent: "#d9d3ff" },
+  { title: "Sonic the Hedgehog 3", year: "2024", vibe: "Fast action comedy", accent: "#d3e5ff" },
+  { title: "Inside Out 2", year: "2024", vibe: "Animated comedy", accent: "#ffe1f0" },
+  { title: "Despicable Me 4", year: "2024", vibe: "Minion chaos", accent: "#fff2c2" },
+  { title: "Five Nights at Freddy's", year: "2023", vibe: "Game horror", accent: "#d9c4a3" }
+];
 let velHubState = {
   category: storage.get("velhub-category", "popular"),
   query: storage.get("velhub-query", ""),
@@ -2219,7 +2233,8 @@ let velHubState = {
   loading: false,
   error: "",
   currentMovie: null,
-  launchTimer: null
+  launchTimer: null,
+  cinema: storage.get("velhub-cinema", "1") !== "0"
 };
 if (!VEL_HUB_CATEGORY_QUERIES[velHubState.category]) {
   velHubState.category = "popular";
@@ -5933,6 +5948,34 @@ function normalizeVelHubMovie(doc) {
   };
 }
 
+function setVelHubCinema(enabled) {
+  velHubState.cinema = Boolean(enabled);
+  velHubDrawer?.classList.toggle("is-velhub-cinema", velHubState.cinema);
+  if (velHubWindowButton) {
+    velHubWindowButton.textContent = velHubState.cinema ? "Window" : "Cinema";
+  }
+  storage.set("velhub-cinema", velHubState.cinema ? "1" : "0");
+}
+
+function renderVelHubModernPicks() {
+  if (!velHubModernGrid) return;
+  velHubModernGrid.innerHTML = velHubModernPicks.map((movie, index) => `
+    <article class="velhub-modern-card" style="--modern-accent:${escapeHtml(movie.accent)}; --delay:${index * 45}ms">
+      <div class="velhub-modern-poster">
+        <span>${escapeHtml(movie.title.slice(0, 2).toUpperCase())}</span>
+      </div>
+      <div>
+        <strong>${escapeHtml(movie.title)}</strong>
+        <p>${escapeHtml(movie.year)} - ${escapeHtml(movie.vibe)}</p>
+      </div>
+      <div class="velhub-modern-actions">
+        <button type="button" data-velhub-modern-trailer="${escapeHtml(movie.title)}">Trailer</button>
+        <button type="button" data-velhub-modern-watch="${escapeHtml(movie.title)}">Watch Options</button>
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderVelHubSkeleton(count = 12) {
   if (!velHubGrid) return;
   velHubGrid.innerHTML = Array.from({ length: count }, () => `
@@ -6062,12 +6105,25 @@ function showVelHubLaunch() {
 
 function openVelHubApp() {
   openPanel("velhub");
+  setVelHubCinema(true);
   showVelHubLaunch();
   if (!velHubState.movies.length && !velHubState.loading) {
     loadVelHubMovies();
   } else {
     renderVelHub();
   }
+}
+
+function openVelHubTrailerSearch(title) {
+  if (youtubeSearchInput) {
+    youtubeSearchInput.value = `${title} official trailer`;
+  }
+  openYouTubeApp();
+  searchYouTubeApp();
+}
+
+function openVelHubWatchOptions(title) {
+  openCustomWebUrl(`${title} official streaming watch options`);
 }
 
 function closeVelHubPlayer() {
@@ -7604,8 +7660,25 @@ velHubGrid?.addEventListener("click", (event) => {
   openVelHubMovie(movie);
 });
 
+velHubModernGrid?.addEventListener("click", (event) => {
+  const trailerButton = event.target.closest("[data-velhub-modern-trailer]");
+  if (trailerButton) {
+    openVelHubTrailerSearch(trailerButton.dataset.velhubModernTrailer);
+    return;
+  }
+
+  const watchButton = event.target.closest("[data-velhub-modern-watch]");
+  if (watchButton) {
+    openVelHubWatchOptions(watchButton.dataset.velhubModernWatch);
+  }
+});
+
 velHubLoadMoreButton?.addEventListener("click", () => {
   loadVelHubMovies({ append: true });
+});
+
+velHubWindowButton?.addEventListener("click", () => {
+  setVelHubCinema(!velHubState.cinema);
 });
 
 velHubRefreshButton?.addEventListener("click", () => {
@@ -9869,6 +9942,8 @@ renderMediaHub();
 if (velHubSearchInput) {
   velHubSearchInput.value = velHubState.query;
 }
+setVelHubCinema(velHubState.cinema);
+renderVelHubModernPicks();
 renderVelHub();
 renderVelofySpotifyResults();
 showBootScreen();

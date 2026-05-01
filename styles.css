@@ -4458,6 +4458,25 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
     linear-gradient(180deg, rgba(24, 24, 24, 0.98), rgba(2, 2, 2, 0.99));
 }
 
+.velhub-drawer.is-velhub-cinema {
+  z-index: 45;
+}
+
+.velhub-drawer.is-velhub-cinema .drawer-scrim {
+  opacity: 1;
+  background: #000;
+}
+
+.velhub-drawer.is-velhub-cinema .velhub-panel {
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: clamp(0.58rem, 1.6vw, 1rem);
+  border: 0;
+  border-radius: 0;
+}
+
 .velhub-launch {
   position: absolute;
   inset: 0;
@@ -4598,6 +4617,121 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.velhub-modern {
+  margin-top: 0.85rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.09), transparent 28%),
+    rgba(255, 255, 255, 0.025);
+}
+
+.velhub-modern-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.velhub-modern-head h3,
+.velhub-modern-head p {
+  margin: 0;
+}
+
+.velhub-modern-head h3 {
+  font-size: clamp(1.2rem, 2.4vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.velhub-modern-head > p {
+  max-width: 410px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.velhub-modern-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.58rem;
+}
+
+.velhub-modern-card {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 0.58rem;
+  align-items: center;
+  padding: 0.62rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, var(--modern-accent), transparent 34%),
+    rgba(255, 255, 255, 0.035);
+  opacity: 0;
+  transform: translateY(12px);
+  animation: velhub-card-in 420ms var(--delay, 0ms) ease forwards;
+}
+
+.velhub-modern-poster {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  aspect-ratio: 2 / 3;
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 35% 22%, rgba(255, 255, 255, 0.48), transparent 34%),
+    linear-gradient(145deg, var(--modern-accent), #151515);
+  color: #050505;
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.3);
+}
+
+.velhub-modern-card strong,
+.velhub-modern-card p {
+  display: block;
+  margin: 0;
+}
+
+.velhub-modern-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.velhub-modern-card p {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.velhub-modern-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.38rem;
+}
+
+.velhub-modern-actions button {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font-size: 0.64rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.velhub-modern-actions button:first-child {
+  border-color: #fff;
+  background: #fff;
+  color: #050505;
 }
 
 .velhub-player {
@@ -6292,8 +6426,18 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .velhub-hero,
+  .velhub-modern-head,
   .velhub-player,
   .velhub-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .velhub-modern-head {
+    display: grid;
+    align-items: start;
+  }
+
+  .velhub-modern-grid {
     grid-template-columns: 1fr;
   }
 
