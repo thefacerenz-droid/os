@@ -1793,6 +1793,7 @@ const clockDay = document.getElementById("clockDay");
 const clockTime = document.getElementById("clockTime");
 const clockDate = document.getElementById("clockDate");
 const bootScreen = document.getElementById("bootScreen");
+const desktopShortcuts = document.getElementById("desktopShortcuts");
 const launcherGameSearch = document.getElementById("launcherGameSearch");
 const launcherOfflineToggle = document.getElementById("launcherOfflineToggle");
 const appStoreTabs = document.getElementById("appStoreTabs");
@@ -2115,6 +2116,15 @@ let currentSpotifyTrack = null;
 let velCredits = Number.parseInt(storage.get("vel-theme-credits", "80"), 10) || 80;
 let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir"]);
 unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", ...unlockedThemePacks])] : ["noir"];
+let installedApps = readStoredJson("vel-installed-apps", [
+  "panel:youtube",
+  "panel:music",
+  "panel:ai",
+  "panel:settings"
+]);
+installedApps = Array.isArray(installedApps)
+  ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
+  : ["panel:youtube", "panel:music", "panel:ai", "panel:settings"];
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
 let lyricsLibrary = readStoredJson("vel-lyrics-library", {});
@@ -2193,6 +2203,118 @@ function renderBadge(meta, className = "taskbar-icon") {
   }
 
   return `<span class="${className} taskbar-icon-text">${escapeHtml(meta?.badgeText || "AP")}</span>`;
+}
+
+function saveInstalledApps() {
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+}
+
+function getAppMetaFromRef(ref) {
+  const [type, id] = String(ref || "").split(":");
+  if (type === "panel" && id === "launcher") {
+    return {
+      title: "App Store",
+      label: "Store",
+      badgeText: "AS",
+      action: "panel",
+      panel: "launcher"
+    };
+  }
+
+  if (type === "panel" && utilityApps[id]) return utilityApps[id];
+
+  if (type === "web") {
+    const app = id === "browser" ? utilityApps.browser : webApps[id];
+    if (!app) return null;
+    return {
+      title: app.title,
+      label: app.label || app.title,
+      badgeSrc: app.badgeSrc || "",
+      badgeText: app.badgeText || app.title.slice(0, 2).toUpperCase()
+    };
+  }
+
+  if (type === "game" && localGameMeta[id]) {
+    const game = localGameMeta[id];
+    return {
+      title: game.title,
+      label: game.title,
+      badgeSrc: createGameBadgeSrc(game.title, game.category),
+      badgeText: game.title.slice(0, 2).toUpperCase()
+    };
+  }
+
+  return null;
+}
+
+function openAppRef(ref) {
+  const [type, id] = String(ref || "").split(":");
+  if (type === "panel") {
+    if (id === "youtube") {
+      openYouTubeApp();
+      return;
+    }
+    openPanel(id);
+    return;
+  }
+  if (type === "web") openWebApp(id);
+  if (type === "game") openGame(id);
+}
+
+function isAppInstalled(ref) {
+  return installedApps.includes(ref);
+}
+
+function installApp(ref) {
+  if (!getAppMetaFromRef(ref)) return;
+  if (!isAppInstalled(ref)) {
+    installedApps = [...installedApps, ref].slice(0, 40);
+    saveInstalledApps();
+    awardVelCredits(6);
+  }
+  renderDesktopShortcuts();
+  renderLauncherCatalog();
+}
+
+function removeInstalledApp(ref) {
+  installedApps = installedApps.filter((item) => item !== ref);
+  saveInstalledApps();
+  renderDesktopShortcuts();
+  renderLauncherCatalog();
+}
+
+function renderDesktopShortcuts() {
+  if (!desktopShortcuts) return;
+  const shortcutRefs = [...new Set(["panel:launcher", ...installedApps])]
+    .map((ref) => ({ ref, meta: getAppMetaFromRef(ref) }))
+    .filter((item) => item.meta)
+    .slice(0, 12);
+
+  desktopShortcuts.innerHTML = shortcutRefs.map(({ ref, meta }) => `
+    <button class="desktop-shortcut" type="button" data-app-open-ref="${escapeHtml(ref)}">
+      ${renderBadge(meta, `desktop-shortcut-badge${ref === "panel:youtube" ? " youtube-badge" : ""}`)}
+      <strong>${escapeHtml(meta.title)}</strong>
+    </button>
+  `).join("");
+}
+
+function renderStoreCard({ ref, meta, title, subtitle, openLabel = "Open" }) {
+  const installed = isAppInstalled(ref);
+  const installButton = installed
+    ? `<button class="store-action" type="button" data-remove-ref="${escapeHtml(ref)}">Remove</button>`
+    : `<button class="store-action store-action-primary" type="button" data-install-ref="${escapeHtml(ref)}">Download</button>`;
+  const openButton = `<button class="store-action${installed ? " store-action-primary" : ""}" type="button" data-app-open-ref="${escapeHtml(ref)}">${escapeHtml(openLabel)}</button>`;
+  return `
+    <article class="app-icon app-store-card${installed ? " is-installed" : ""}">
+      <span class="store-status">${installed ? "Installed" : "Get"}</span>
+      ${renderBadge(meta, "app-badge")}
+      <span class="icon-title">${escapeHtml(title || meta.title)}</span>
+      <span class="icon-meta">${escapeHtml(subtitle || meta.label || "vel.os app")}</span>
+      <div class="app-card-actions">
+        ${installed ? `${openButton}${installButton}` : `${installButton}${openButton}`}
+      </div>
+    </article>
+  `;
 }
 
 function recordRecentApp(entry) {
@@ -5181,31 +5303,31 @@ function renderLauncherCatalog() {
     const utilityItems = (utilitySections[launcherStoreCategory] || [])
       .map((id) => ({ id, ...utilityApps[id] }))
       .filter((app) => app.title && matchesSearchQuery([app.title, app.label, launcherStoreCategory], launcherGameQuery));
-    const localCards = localItems.map((game) => `
-      <button class="app-icon" type="button" data-launch-game="${escapeHtml(game.id)}">
-        ${renderBadge({
+    const localCards = localItems.map((game) => renderStoreCard({
+      ref: `game:${game.id}`,
+      meta: {
           title: game.title,
           badgeSrc: createGameBadgeSrc(game.title, game.category),
           badgeText: game.title.slice(0, 2).toUpperCase()
-        }, "app-badge")}
-        <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">Local - ${escapeHtml(game.category)}</span>
-      </button>
-    `);
+      },
+      title: game.title,
+      subtitle: `Local - ${game.category}`,
+      openLabel: "Play"
+    }));
     const utilityCards = utilityItems.map((app) => {
-      const actionAttr = app.action === "web"
-        ? 'data-open-web="browser"'
+      const ref = app.action === "web"
+        ? "web:browser"
         : app.action === "game"
-          ? `data-launch-game="${escapeHtml(app.gameId || "snake")}"`
-          : `data-open-panel="${escapeHtml(app.panel || app.id)}"`;
+          ? `game:${app.gameId || "snake"}`
+          : `panel:${app.panel || app.id}`;
       const meta = app.action === "web" ? utilityApps.browser : app;
-      return `
-        <button class="app-icon app-store-feature" type="button" ${actionAttr}>
-          ${renderBadge(meta, "app-badge")}
-          <span class="icon-title">${escapeHtml(app.title)}</span>
-          <span class="icon-meta">${escapeHtml(app.label || app.title)} - vel.os</span>
-        </button>
-      `;
+      return renderStoreCard({
+        ref,
+        meta,
+        title: app.title,
+        subtitle: `${app.label || app.title} - vel.os`,
+        openLabel: app.action === "game" ? "Play" : "Open"
+      });
     });
     launcherGameGrid.innerHTML = [...utilityCards, ...localCards].join("");
     if (!launcherGameGrid.innerHTML) {
@@ -5240,30 +5362,27 @@ function renderLauncherCatalog() {
       );
     });
 
-  const localCards = localItems.map((game) => {
-    const gameId = game.id;
-    return `
-      <button class="app-icon" type="button" data-launch-game="${escapeHtml(gameId)}">
-        ${renderBadge({
+  const localCards = localItems.map((game) => renderStoreCard({
+    ref: `game:${game.id}`,
+    meta: {
           title: game.title,
           badgeSrc: createGameBadgeSrc(game.title, game.category),
           badgeText: game.title.slice(0, 2).toUpperCase()
-        }, "app-badge")}
-        <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">Local - ${escapeHtml(game.category)}</span>
-      </button>
-    `;
-  });
+    },
+    title: game.title,
+    subtitle: `Local - ${game.category}`,
+    openLabel: "Play"
+  }));
 
   const webCards = webItems.map((game) => {
     const app = webApps[game.id];
-    return `
-      <button class="app-icon" type="button" data-open-web="${escapeHtml(game.id)}">
-        ${renderBadge(app, "app-badge")}
-        <span class="icon-title">${escapeHtml(game.title)}</span>
-        <span class="icon-meta">${escapeHtml(getGameSourceLabel(game.source))} - ${escapeHtml(game.category)}</span>
-      </button>
-    `;
+    return renderStoreCard({
+      ref: `web:${game.id}`,
+      meta: app,
+      title: game.title,
+      subtitle: `${getGameSourceLabel(game.source)} - ${game.category}`,
+      openLabel: "Play"
+    });
   });
 
   launcherGameGrid.innerHTML = [...localCards, ...webCards].join("");
@@ -6717,6 +6836,12 @@ startButton?.addEventListener("click", () => {
   togglePanel("launcher");
 });
 
+desktopShortcuts?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-app-open-ref]");
+  if (!button) return;
+  openAppRef(button.dataset.appOpenRef);
+});
+
 openMusicButton?.addEventListener("click", () => {
   togglePanel("music");
 });
@@ -6983,6 +7108,24 @@ webButtons.forEach((button) => {
 });
 
 launcherGameGrid?.addEventListener("click", (event) => {
+  const installButton = event.target.closest("button[data-install-ref]");
+  if (installButton) {
+    installApp(installButton.dataset.installRef);
+    return;
+  }
+
+  const removeButton = event.target.closest("button[data-remove-ref]");
+  if (removeButton) {
+    removeInstalledApp(removeButton.dataset.removeRef);
+    return;
+  }
+
+  const openRefButton = event.target.closest("button[data-app-open-ref]");
+  if (openRefButton) {
+    openAppRef(openRefButton.dataset.appOpenRef);
+    return;
+  }
+
   const localButton = event.target.closest("button[data-launch-game]");
   if (localButton) {
     openGame(localButton.dataset.launchGame);
@@ -9305,6 +9448,7 @@ if (velofySpotifySearch) {
   velofySpotifySearch.value = velofySpotifySearchQuery;
 }
 renderLauncherCatalog();
+renderDesktopShortcuts();
 renderRecentApps();
 renderAiMessages();
 updateYouTubeGlobalImportUi();

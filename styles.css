@@ -1129,6 +1129,81 @@ body[data-theme-pack="terminal"] .wallpaper-shade {
   transition-delay: 150ms;
 }
 
+.app-store-card {
+  position: relative;
+  align-content: start;
+  min-height: 190px;
+  padding-bottom: 0.72rem;
+}
+
+.app-store-card.is-installed {
+  border-color: rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.025));
+}
+
+.store-status {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.22rem 0.42rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-store-card.is-installed .store-status {
+  background: #fff;
+  color: #050505;
+}
+
+.app-card-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.38rem;
+  width: 100%;
+  margin-top: auto;
+}
+
+.store-action {
+  min-height: 34px;
+  padding: 0.4rem 0.42rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.store-action-primary {
+  border-color: #fff;
+  background: #fff;
+  color: #050505;
+}
+
+.store-action:hover,
+.store-action:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.store-action-primary:hover,
+.store-action-primary:focus-visible {
+  background: rgba(255, 255, 255, 0.84);
+  color: #050505;
+}
+
 .app-badge,
 .taskbar-icon {
   display: block;
