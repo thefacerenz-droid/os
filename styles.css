@@ -4458,16 +4458,16 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
     linear-gradient(180deg, rgba(24, 24, 24, 0.98), rgba(2, 2, 2, 0.99));
 }
 
-.velhub-drawer.is-velhub-cinema {
+.velhub-drawer[aria-hidden="false"].is-velhub-cinema {
   z-index: 45;
 }
 
-.velhub-drawer.is-velhub-cinema .drawer-scrim {
+.velhub-drawer[aria-hidden="false"].is-velhub-cinema .drawer-scrim {
   opacity: 1;
   background: #000;
 }
 
-.velhub-drawer.is-velhub-cinema .velhub-panel {
+.velhub-drawer[aria-hidden="false"].is-velhub-cinema .velhub-panel {
   width: 100%;
   height: 100dvh;
   max-height: 100dvh;
