@@ -2213,16 +2213,39 @@ const VEL_HUB_BLOCKED_TERMS = [
   "burlesque"
 ];
 const velHubModernPicks = [
+  { title: "Hoppers", year: "2026", vibe: "Pixar adventure", accent: "#d9f5ff" },
+  { title: "The LEGO Batman Movie", year: "2017", vibe: "LEGO superhero comedy", accent: "#ffe36b" },
   { title: "The Bad Guys", year: "2022", vibe: "Animated heist comedy", accent: "#f4f4f4" },
   { title: "The Bad Guys 2", year: "2025", vibe: "Animated crew sequel", accent: "#d7d7d7" },
   { title: "The Grinch", year: "2018", vibe: "Holiday animation", accent: "#e8f5df" },
   { title: "How the Grinch Stole Christmas", year: "2000", vibe: "Holiday comedy", accent: "#cfe8c8" },
   { title: "The Super Mario Bros. Movie", year: "2023", vibe: "Game-world adventure", accent: "#f7d7d7" },
+  { title: "A Minecraft Movie", year: "2025", vibe: "Blocky adventure comedy", accent: "#bff5b8" },
   { title: "Spider-Man: Across the Spider-Verse", year: "2023", vibe: "Animated superhero", accent: "#d9d3ff" },
   { title: "Sonic the Hedgehog 3", year: "2024", vibe: "Fast action comedy", accent: "#d3e5ff" },
   { title: "Inside Out 2", year: "2024", vibe: "Animated comedy", accent: "#ffe1f0" },
   { title: "Despicable Me 4", year: "2024", vibe: "Minion chaos", accent: "#fff2c2" },
-  { title: "Five Nights at Freddy's", year: "2023", vibe: "Game horror", accent: "#d9c4a3" }
+  { title: "Five Nights at Freddy's", year: "2023", vibe: "Game horror", accent: "#d9c4a3" },
+  { title: "Kung Fu Panda 4", year: "2024", vibe: "Animated action comedy", accent: "#ffd6a8" },
+  { title: "Puss in Boots: The Last Wish", year: "2022", vibe: "Fantasy adventure", accent: "#ffe0b0" },
+  { title: "Minions: The Rise of Gru", year: "2022", vibe: "Minion origin chaos", accent: "#fff38a" },
+  { title: "Elemental", year: "2023", vibe: "Pixar romance adventure", accent: "#ffb6a9" },
+  { title: "Turning Red", year: "2022", vibe: "Pixar coming-of-age", accent: "#ffc3d9" },
+  { title: "Luca", year: "2021", vibe: "Summer sea adventure", accent: "#bdefff" },
+  { title: "Coco", year: "2017", vibe: "Music family adventure", accent: "#ffd0f0" },
+  { title: "Zootopia", year: "2016", vibe: "Animated mystery comedy", accent: "#d5e7ff" },
+  { title: "Moana", year: "2016", vibe: "Ocean adventure", accent: "#bdefff" },
+  { title: "Moana 2", year: "2024", vibe: "Ocean sequel adventure", accent: "#c5f7ff" },
+  { title: "Toy Story 4", year: "2019", vibe: "Toy adventure", accent: "#cbd8ff" },
+  { title: "Frozen II", year: "2019", vibe: "Disney fantasy musical", accent: "#d9efff" },
+  { title: "Lilo & Stitch", year: "2025", vibe: "Alien family comedy", accent: "#c7dbff" },
+  { title: "How to Train Your Dragon", year: "2025", vibe: "Dragon fantasy adventure", accent: "#c8f1ff" },
+  { title: "Wonka", year: "2023", vibe: "Chocolate musical fantasy", accent: "#e9c9ff" },
+  { title: "Barbie", year: "2023", vibe: "Pink comedy adventure", accent: "#ffd1ea" },
+  { title: "Migration", year: "2023", vibe: "Family bird adventure", accent: "#d7edff" },
+  { title: "Trolls Band Together", year: "2023", vibe: "Music comedy", accent: "#ffc9fa" },
+  { title: "Teenage Mutant Ninja Turtles: Mutant Mayhem", year: "2023", vibe: "Animated action comedy", accent: "#ccffc2" },
+  { title: "PAW Patrol: The Mighty Movie", year: "2023", vibe: "Family superhero rescue", accent: "#d3e5ff" }
 ];
 let velHubState = {
   category: storage.get("velhub-category", "popular"),
