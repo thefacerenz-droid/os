@@ -39,6 +39,10 @@ module.exports = async function handler(req, res) {
   const q = cleanQuery(req.query?.q, "music");
   const pageToken = cleanQuery(req.query?.pageToken);
   const duration = cleanQuery(req.query?.duration).toLowerCase();
+  const embeddable = cleanQuery(req.query?.embeddable).toLowerCase();
+  const syndicated = cleanQuery(req.query?.syndicated).toLowerCase();
+  const videoType = cleanQuery(req.query?.videoType).toLowerCase();
+  const order = cleanQuery(req.query?.order).toLowerCase();
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
@@ -53,6 +57,18 @@ module.exports = async function handler(req, res) {
   }
   if (["short", "medium", "long"].includes(duration)) {
     params.set("videoDuration", duration);
+  }
+  if (["true", "any"].includes(embeddable)) {
+    params.set("videoEmbeddable", embeddable);
+  }
+  if (["true", "any"].includes(syndicated)) {
+    params.set("videoSyndicated", syndicated);
+  }
+  if (["movie", "episode", "any"].includes(videoType)) {
+    params.set("videoType", videoType);
+  }
+  if (["date", "rating", "relevance", "title", "videoCount", "viewCount"].includes(order)) {
+    params.set("order", order);
   }
 
   try {

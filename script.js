@@ -2030,6 +2030,7 @@ const YOUTUBE_HOME_TOPIC_LIMIT = 3;
 const YOUTUBE_SEARCH_CACHE_LIMIT = 70;
 const YOUTUBE_SEARCH_CACHE_TTL = 1000 * 60 * 60 * 12;
 const YOUTUBE_API_COOLDOWN_MS = 1000 * 60 * 60 * 8;
+const YOUTUBE_MOVIE_DEFAULT_QUERY = "free full movie official full length";
 const YOUTUBE_GENERIC_QUERIES = new Set([
   "popular videos today",
   "music videos",
@@ -2037,7 +2038,8 @@ const YOUTUBE_GENERIC_QUERIES = new Set([
   "trending music",
   "sports highlights",
   "learning videos",
-  "news today"
+  "news today",
+  YOUTUBE_MOVIE_DEFAULT_QUERY
 ]);
 const YOUTUBE_INTEREST_TERMS = [
   "fortnite",
@@ -3291,6 +3293,10 @@ async function fetchYouTubeSearchItems(query, pageToken = "", options = {}) {
   const params = new URLSearchParams({ q: query });
   if (pageToken) params.set("pageToken", pageToken);
   if (options.duration) params.set("duration", options.duration);
+  if (options.embeddable) params.set("embeddable", options.embeddable);
+  if (options.syndicated) params.set("syndicated", options.syndicated);
+  if (options.videoType) params.set("videoType", options.videoType);
+  if (options.order) params.set("order", options.order);
   const response = await fetch(`/api/youtube/search?${params}`);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -3336,6 +3342,64 @@ function showYouTubeFavorites() {
   if (youtubeSearchInput) youtubeSearchInput.value = "";
   renderYouTubePlayer();
   renderYouTubeResults();
+}
+
+async function showYouTubeMovies({ append = false, query = "" } = {}) {
+  const movieQuery = String(query || (append ? youtubeAppState.query : youtubeSearchInput?.value) || YOUTUBE_MOVIE_DEFAULT_QUERY).trim() || YOUTUBE_MOVIE_DEFAULT_QUERY;
+  youtubeAppState.mode = "movies";
+  youtubeAppState.query = movieQuery;
+  youtubeAppState.homeTopics = [];
+  youtubeAppState.error = "";
+  youtubeAppState.loading = true;
+  if (!append) {
+    youtubeAppState.results = [];
+    youtubeAppState.nextPageToken = "";
+    youtubeAppState.currentVideo = null;
+    renderYouTubePlayer();
+  }
+  if (youtubeSearchInput) {
+    youtubeSearchInput.value = movieQuery === YOUTUBE_MOVIE_DEFAULT_QUERY ? "" : movieQuery;
+    youtubeSearchInput.placeholder = "Search YouTube movies";
+  }
+  renderYouTubeResults();
+
+  try {
+    const data = await fetchYouTubeSearchItems(
+      movieQuery,
+      append ? youtubeAppState.nextPageToken : "",
+      {
+        duration: "long",
+        embeddable: "true",
+        syndicated: "true",
+        order: "relevance"
+      }
+    );
+    const nextItems = data.items.map((item) => ({
+      ...item,
+      topic: "movies",
+      recommendationTopic: "movies"
+    }));
+    youtubeAppState.results = append
+      ? [...youtubeAppState.results, ...nextItems]
+      : nextItems;
+    youtubeAppState.nextPageToken = data.nextPageToken || "";
+  } catch (error) {
+    const fallback = getLocalYouTubeFallbackResults(movieQuery).filter((video) => {
+      const text = `${video.title || ""} ${video.description || ""} ${video.topic || ""}`.toLowerCase();
+      return text.includes("movie") || text.includes("film") || text.includes("full");
+    });
+    if (!append && fallback.length) {
+      youtubeAppState.results = fallback;
+      youtubeAppState.nextPageToken = "";
+      youtubeAppState.error = "";
+    } else {
+      youtubeAppState.error = getYouTubeFetchError(error);
+    }
+  } finally {
+    youtubeAppState.loading = false;
+    youtubeAppState.didInitialLoad = true;
+    renderYouTubeResults();
+  }
 }
 
 async function showYouTubeGlobal() {
@@ -3506,6 +3570,7 @@ function renderYouTubeStatus() {
   youtubeDrawer?.classList.toggle("is-youtube-history", youtubeAppState.mode === "history");
   youtubeDrawer?.classList.toggle("is-youtube-favorites", youtubeAppState.mode === "favorites");
   youtubeDrawer?.classList.toggle("is-youtube-global", youtubeAppState.mode === "global");
+  youtubeDrawer?.classList.toggle("is-youtube-movies", youtubeAppState.mode === "movies");
   const shouldHideResults = isWatching && youtubeAppState.resultsHidden;
   youtubeDrawer?.classList.toggle("is-youtube-results-hidden", shouldHideResults);
   if (youtubeToggleResultsButton) {
@@ -3531,8 +3596,10 @@ function renderYouTubeStatus() {
           ? `${youtubeWatchHistory.length} watched`
           : youtubeAppState.mode === "favorites"
             ? `${youtubeFavorites.length} saved`
-            : youtubeAppState.mode === "global"
-              ? `${youtubeAppState.results.length || 0} global`
+          : youtubeAppState.mode === "global"
+            ? `${youtubeAppState.results.length || 0} global`
+            : youtubeAppState.mode === "movies"
+              ? `${youtubeAppState.results.length || 0} movies`
             : youtubeAppState.mode === "home" && !youtubeWatchHistory.length && !youtubeFavorites.length
             ? "No history"
             : `${youtubeAppState.results.length || 0} videos`;
@@ -3546,6 +3613,8 @@ function renderYouTubeStatus() {
           ? "Favorites"
           : youtubeAppState.mode === "global"
             ? "Global Favs"
+            : youtubeAppState.mode === "movies"
+              ? "Movies"
           : youtubeAppState.query || "YouTube";
   }
   if (youtubeGlobalForm) {
@@ -3565,7 +3634,7 @@ function renderYouTubeStatus() {
     youtubeClearHistoryButton.hidden = youtubeAppState.mode !== "history" || !youtubeWatchHistory.length;
   }
   if (youtubeLoadMore) {
-    youtubeLoadMore.hidden = youtubeAppState.mode !== "search" || !youtubeAppState.nextPageToken || youtubeAppState.loading;
+    youtubeLoadMore.hidden = !["search", "movies"].includes(youtubeAppState.mode) || !youtubeAppState.nextPageToken || youtubeAppState.loading;
   }
   if (youtubeAddressInput) {
     youtubeAddressInput.value = getYouTubeWatchUrl();
@@ -3677,6 +3746,11 @@ function renderYouTubeResults() {
             ? {
               title: "No global favorites yet",
               body: "Paste a YouTube link above and everyone on vel.os can open it."
+            }
+          : youtubeAppState.mode === "movies"
+            ? {
+              title: "No YouTube movies found",
+              body: "Try searching a movie title plus official full movie, or load a different movie search."
             }
           : {
             title: "No videos yet",
@@ -3794,6 +3868,7 @@ async function searchYouTubeApp({ append = false } = {}) {
 
 function openYouTubeApp() {
   openPanel("youtube");
+  if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
   loadYouTubeHome();
 }
 
@@ -6138,10 +6213,10 @@ function openVelHubApp() {
 }
 
 function openVelHubTrailerSearch(title) {
+  openYouTubeApp();
   if (youtubeSearchInput) {
     youtubeSearchInput.value = `${title} official trailer`;
   }
-  openYouTubeApp();
   searchYouTubeApp();
 }
 
@@ -7365,6 +7440,10 @@ gameSourceTabs?.addEventListener("click", (event) => {
 
 youtubeSearchForm?.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (youtubeAppState.mode === "movies") {
+    showYouTubeMovies({ query: youtubeSearchInput?.value || "" });
+    return;
+  }
   searchYouTubeApp();
 });
 
@@ -7448,6 +7527,10 @@ youtubeFrameWrap?.addEventListener("click", (event) => {
 });
 
 youtubeLoadMore?.addEventListener("click", () => {
+  if (youtubeAppState.mode === "movies") {
+    showYouTubeMovies({ append: true });
+    return;
+  }
   searchYouTubeApp({ append: true });
 });
 
@@ -7474,30 +7557,41 @@ youtubeToggleResultsButton?.addEventListener("click", () => {
 youtubeDrawer?.addEventListener("click", (event) => {
   const homeButton = event.target.closest("[data-youtube-home]");
   if (homeButton) {
+    if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
     loadYouTubeHome();
+    return;
+  }
+
+  const moviesButton = event.target.closest("[data-youtube-movies]");
+  if (moviesButton) {
+    showYouTubeMovies();
     return;
   }
 
   const historyButton = event.target.closest("[data-youtube-history]");
   if (historyButton) {
+    if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
     showYouTubeHistory();
     return;
   }
 
   const favoritesButton = event.target.closest("[data-youtube-favorites]");
   if (favoritesButton) {
+    if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
     showYouTubeFavorites();
     return;
   }
 
   const globalButton = event.target.closest("[data-youtube-global]");
   if (globalButton) {
+    if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
     showYouTubeGlobal();
     return;
   }
 
   const topicButton = event.target.closest("[data-youtube-topic]");
   if (!topicButton) return;
+  if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
   if (youtubeSearchInput) youtubeSearchInput.value = topicButton.dataset.youtubeTopic;
   searchYouTubeApp();
 });
