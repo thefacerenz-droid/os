@@ -968,6 +968,20 @@
               </div>
               <p class="tiny-note settings-note">Your wallpaper and font save on this device after refresh.</p>
             </article>
+            <article class="settings-card chat-settings-card" id="chatSettingsCard">
+              <p class="section-label">Global Chat</p>
+              <h3>Chat Identity</h3>
+              <p class="settings-card-copy">Pick the name people see when you talk in the bottom-left site chat.</p>
+              <form class="chat-settings-form" id="velChatLoginForm">
+                <input id="velChatName" type="text" maxlength="24" autocomplete="nickname" placeholder="Your chat name" aria-label="Chat display name" />
+                <button class="ghost-button is-solid" type="submit">Save Login</button>
+              </form>
+              <div class="chat-settings-current" id="velChatUserBar" hidden>
+                <span>Logged in as <strong id="velChatUserName">Guest</strong></span>
+                <button class="ghost-button" type="button" id="velChatLogout">Switch</button>
+              </div>
+              <p class="tiny-note settings-note">This is a display name saved on your device. Keep it clean because everyone on the site can see chat messages.</p>
+            </article>
             <article class="settings-card theme-store-card">
               <div class="theme-store-head">
                 <div>
@@ -1061,22 +1075,13 @@
               <p class="micro-label">vel.os</p>
               <h2>Global Chat</h2>
             </div>
-            <button class="vel-chat-mini-button" type="button" id="velChatHide">Hide</button>
+            <div class="vel-chat-head-actions">
+              <button class="vel-chat-user-pill" type="button" id="velChatUserPill">Login</button>
+              <button class="vel-chat-mini-button" type="button" id="velChatHide">Hide</button>
+            </div>
           </header>
 
-          <form class="vel-chat-login" id="velChatLoginForm">
-            <label for="velChatName">Pick a display name</label>
-            <div class="vel-chat-login-row">
-              <input id="velChatName" type="text" maxlength="24" autocomplete="nickname" placeholder="Your name" aria-label="Chat display name" />
-              <button type="submit">Login</button>
-            </div>
-            <p>Names save on this device. Keep it clean because everyone on the site can see chat.</p>
-          </form>
-
-          <div class="vel-chat-userbar" id="velChatUserBar" hidden>
-            <span>Logged in as <strong id="velChatUserName">Guest</strong></span>
-            <button type="button" id="velChatLogout">Switch</button>
-          </div>
+          <button class="vel-chat-login-needed" type="button" id="velChatLoginNeeded">Login to chat</button>
 
           <div class="vel-chat-messages" id="velChatMessages" role="log" aria-live="polite" aria-relevant="additions text"></div>
 

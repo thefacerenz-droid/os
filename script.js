@@ -1998,6 +1998,9 @@ const velChatName = document.getElementById("velChatName");
 const velChatUserBar = document.getElementById("velChatUserBar");
 const velChatUserName = document.getElementById("velChatUserName");
 const velChatLogout = document.getElementById("velChatLogout");
+const velChatUserPill = document.getElementById("velChatUserPill");
+const velChatLoginNeeded = document.getElementById("velChatLoginNeeded");
+const chatSettingsCard = document.getElementById("chatSettingsCard");
 const velChatMessages = document.getElementById("velChatMessages");
 const velChatForm = document.getElementById("velChatForm");
 const velChatInput = document.getElementById("velChatInput");
@@ -2889,8 +2892,6 @@ function setVelChatCollapsed(collapsed) {
       velChatMessages?.scrollTo({ top: velChatMessages.scrollHeight });
       if (velChatUser) {
         velChatInput?.focus({ preventScroll: true });
-      } else {
-        velChatName?.focus({ preventScroll: true });
       }
     });
   } else {
@@ -2900,16 +2901,35 @@ function setVelChatCollapsed(collapsed) {
 
 function renderVelChatAuth() {
   velChatUser = normalizeVelChatUser(velChatUser);
-  if (velChatLoginForm) velChatLoginForm.hidden = Boolean(velChatUser);
   if (velChatUserBar) velChatUserBar.hidden = !velChatUser;
   if (velChatUserName) velChatUserName.textContent = velChatUser?.username || "Guest";
+  if (velChatUserPill) {
+    velChatUserPill.textContent = velChatUser?.username || "Login";
+    velChatUserPill.classList.toggle("is-logged-in", Boolean(velChatUser));
+  }
+  if (velChatLoginNeeded) {
+    velChatLoginNeeded.hidden = Boolean(velChatUser);
+  }
+  if (velChatName && velChatUser) {
+    velChatName.value = velChatUser.username;
+  }
   if (velChatInput) {
     velChatInput.disabled = !velChatUser || velChatLoading;
     velChatInput.placeholder = velChatUser
       ? "Message everyone on vel.os..."
-      : "Login first to chat...";
+      : "Login in Settings to chat...";
   }
   velChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", !velChatUser || velChatLoading);
+}
+
+function openChatSettings() {
+  openPanel("settings");
+  window.requestAnimationFrame(() => {
+    chatSettingsCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+    chatSettingsCard?.classList.add("is-highlighted");
+    window.setTimeout(() => chatSettingsCard?.classList.remove("is-highlighted"), 1400);
+    velChatName?.focus({ preventScroll: true });
+  });
 }
 
 function getVelChatUnreadCount() {
@@ -7688,13 +7708,25 @@ velChatHide?.addEventListener("click", () => {
   setVelChatCollapsed(true);
 });
 
+velChatUserPill?.addEventListener("click", () => {
+  openChatSettings();
+});
+
+velChatLoginNeeded?.addEventListener("click", () => {
+  openChatSettings();
+});
+
 velChatLoginForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   const user = createVelChatUser(velChatName?.value || "");
   saveVelChatUser(user);
   renderVelChatAuth();
+  if (isDrawerOpen("settings")) {
+    closePanel("settings");
+  }
   setVelChatCollapsed(false);
   setVelChatStatus(`Logged in as ${user.username}.`, "live");
+  velChatInput?.focus({ preventScroll: true });
 });
 
 velChatLogout?.addEventListener("click", () => {

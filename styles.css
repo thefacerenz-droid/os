@@ -1298,6 +1298,65 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   margin-top: 1rem;
 }
 
+.settings-card-copy {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.chat-settings-card {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.chat-settings-card.is-highlighted {
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08), 0 22px 46px rgba(0, 0, 0, 0.36);
+  transform: translateY(-2px);
+}
+
+.chat-settings-form,
+.chat-settings-current {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.chat-settings-form {
+  margin-top: 0.7rem;
+}
+
+.chat-settings-form input {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  color: #fff;
+  outline: none;
+}
+
+.chat-settings-form input:focus {
+  border-color: rgba(255, 255, 255, 0.36);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.chat-settings-current {
+  justify-content: space-between;
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.chat-settings-current strong {
+  color: #fff;
+}
+
 .web-toolbar {
   display: flex;
   align-items: center;
@@ -5582,10 +5641,10 @@ body.is-booting .vel-chat {
 
 .vel-chat-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(130px, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(220px, 1fr) auto auto;
   gap: 0.65rem;
   width: 100%;
-  max-height: min(540px, calc(100dvh - 7rem));
+  max-height: min(620px, calc(100dvh - 6.5rem));
   margin-bottom: 0.6rem;
   padding: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -5621,15 +5680,28 @@ body.is-booting .vel-chat {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.vel-chat-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
 .vel-chat-head h2 {
   margin: 0.05rem 0 0;
   font-size: 1.12rem;
 }
 
 .vel-chat-mini-button,
+.vel-chat-user-pill,
+.vel-chat-login-needed,
 .vel-chat-userbar button,
 .vel-chat-login button,
 .vel-chat-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
@@ -5641,9 +5713,31 @@ body.is-booting .vel-chat {
 }
 
 .vel-chat-mini-button,
+.vel-chat-user-pill,
 .vel-chat-userbar button {
   padding: 0.48rem 0.75rem;
   font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.vel-chat-user-pill {
+  max-width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vel-chat-user-pill.is-logged-in {
+  background: #fff;
+  color: #050505;
+}
+
+.vel-chat-login-needed {
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
   text-transform: uppercase;
 }
 
@@ -5656,6 +5750,10 @@ body.is-booting .vel-chat {
 
 .vel-chat-mini-button:hover,
 .vel-chat-mini-button:focus-visible,
+.vel-chat-user-pill:hover,
+.vel-chat-user-pill:focus-visible,
+.vel-chat-login-needed:hover,
+.vel-chat-login-needed:focus-visible,
 .vel-chat-userbar button:hover,
 .vel-chat-userbar button:focus-visible,
 .vel-chat-login button:hover,
