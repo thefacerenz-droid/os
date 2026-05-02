@@ -3749,6 +3749,125 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   margin: 0.68rem 0;
 }
 
+.youtube-launch {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.11), transparent 34%),
+    radial-gradient(circle at 60% 45%, rgba(255, 0, 51, 0.18), transparent 24%),
+    #050505;
+  color: #fff;
+  pointer-events: none;
+  animation: youtube-launch-in 260ms ease both;
+}
+
+.youtube-launch[hidden] {
+  display: none;
+}
+
+.youtube-launch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 0 47%, rgba(255, 255, 255, 0.08) 50%, transparent 53%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 14px);
+  opacity: 0.46;
+  transform: translateX(-100%);
+  animation: youtube-launch-scan 1300ms ease-out forwards;
+}
+
+.youtube-launch.is-hiding {
+  animation: youtube-launch-out 420ms ease forwards;
+}
+
+.youtube-launch-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  gap: 0.7rem;
+  text-align: center;
+}
+
+.youtube-launch-play {
+  position: relative;
+  display: block;
+  width: clamp(86px, 16vw, 150px);
+  aspect-ratio: 16 / 10;
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, #fff 0 38%, #ff0033 39% 100%);
+  box-shadow:
+    0 0 34px rgba(255, 255, 255, 0.18),
+    0 0 70px rgba(255, 0, 51, 0.22);
+  opacity: 0;
+  transform: translateY(22px) scale(0.72);
+  animation: youtube-play-pop 680ms cubic-bezier(0.18, 0.9, 0.2, 1) forwards;
+}
+
+.youtube-launch-play::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-block: 18px solid transparent;
+  border-left: 28px solid #050505;
+  transform: translate(-37%, -50%);
+}
+
+.youtube-launch-word {
+  display: flex;
+  align-items: baseline;
+  gap: 0.04em;
+  font-size: clamp(2.4rem, 9vw, 6rem);
+  font-weight: 950;
+  letter-spacing: -0.08em;
+  line-height: 0.9;
+  text-transform: none;
+}
+
+.youtube-launch-word span,
+.youtube-launch-word strong {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(28px) scale(0.72);
+  animation: youtube-letter-pop 520ms cubic-bezier(0.18, 0.9, 0.2, 1) forwards;
+}
+
+.youtube-launch-word span:nth-child(1) { animation-delay: 260ms; }
+.youtube-launch-word span:nth-child(2) { animation-delay: 360ms; }
+.youtube-launch-word span:nth-child(3) { animation-delay: 460ms; }
+
+.youtube-launch-word strong {
+  margin-left: 0.12em;
+  padding: 0.08em 0.16em 0.12em;
+  border-radius: 0.16em;
+  background: #fff;
+  color: #050505;
+  font-size: 0.62em;
+  letter-spacing: -0.05em;
+  animation-delay: 620ms;
+}
+
+.youtube-launch-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: youtube-copy-in 420ms 920ms ease forwards;
+}
+
 .youtube-shell {
   display: grid;
   grid-template-columns: 162px minmax(0, 1fr);
@@ -4414,6 +4533,52 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 @keyframes youtube-skeleton {
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes youtube-launch-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes youtube-launch-out {
+  to {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes youtube-launch-scan {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes youtube-play-pop {
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes youtube-letter-pop {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes youtube-copy-in {
+  to {
+    opacity: 1;
   }
 }
 

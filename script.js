@@ -1883,6 +1883,7 @@ const aiClearButton = document.getElementById("aiClearButton");
 const aiPromptButtons = [...document.querySelectorAll("[data-ai-prompt]")];
 const youtubeDrawer = document.getElementById("youtubeDrawer");
 const youtubePanel = youtubeDrawer?.querySelector(".youtube-panel");
+const youtubeLaunch = document.getElementById("youtubeLaunch");
 const youtubeAddressForm = document.getElementById("youtubeAddressForm");
 const youtubeAddressInput = document.getElementById("youtubeAddressInput");
 const youtubeSearchForm = document.getElementById("youtubeSearchForm");
@@ -2004,6 +2005,7 @@ let feedVideoObserver = null;
 let youtubePlayer = null;
 let youtubeApiReadyPromise = null;
 let youtubeAppPlayerHintTimer = null;
+let youtubeLaunchTimer = null;
 let mediaSearchDebounceTimer = null;
 let launcherGameQuery = "";
 let launcherStoreCategory = storage.get("vel-launcher-store-category", "games");
@@ -2880,6 +2882,22 @@ function dismissYouTubePlayerHint() {
   youtubeAppState.hintDismissed = true;
   clearYouTubePlayerHintTimer();
   youtubeFrameWrap?.querySelector("[data-youtube-player-hint]")?.classList.remove("is-visible");
+}
+
+function showYouTubeLaunch() {
+  if (!youtubeLaunch) return;
+  window.clearTimeout(youtubeLaunchTimer);
+  youtubeLaunch.classList.remove("is-hiding");
+  youtubeLaunch.hidden = false;
+  youtubeLaunch.setAttribute("aria-hidden", "false");
+  youtubeLaunchTimer = window.setTimeout(() => {
+    youtubeLaunch.classList.add("is-hiding");
+    window.setTimeout(() => {
+      youtubeLaunch.hidden = true;
+      youtubeLaunch.setAttribute("aria-hidden", "true");
+      youtubeLaunch.classList.remove("is-hiding");
+    }, 420);
+  }, 1450);
 }
 
 function toggleYouTubeEmbedHost() {
@@ -3867,7 +3885,11 @@ async function searchYouTubeApp({ append = false } = {}) {
 }
 
 function openYouTubeApp() {
+  const wasOpen = isDrawerOpen("youtube");
   openPanel("youtube");
+  if (!wasOpen) {
+    showYouTubeLaunch();
+  }
   if (youtubeSearchInput) youtubeSearchInput.placeholder = "Search YouTube";
   loadYouTubeHome();
 }
