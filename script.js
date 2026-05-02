@@ -1989,6 +1989,20 @@ const networkVpnButton = document.getElementById("networkVpnButton");
 const proxyNoteInput = document.getElementById("proxyNoteInput");
 const proxyNoteSave = document.getElementById("proxyNoteSave");
 const proxyNoteReadout = document.getElementById("proxyNoteReadout");
+const velChat = document.getElementById("velChat");
+const velChatToggle = document.getElementById("velChatToggle");
+const velChatPanel = document.getElementById("velChatPanel");
+const velChatHide = document.getElementById("velChatHide");
+const velChatLoginForm = document.getElementById("velChatLoginForm");
+const velChatName = document.getElementById("velChatName");
+const velChatUserBar = document.getElementById("velChatUserBar");
+const velChatUserName = document.getElementById("velChatUserName");
+const velChatLogout = document.getElementById("velChatLogout");
+const velChatMessages = document.getElementById("velChatMessages");
+const velChatForm = document.getElementById("velChatForm");
+const velChatInput = document.getElementById("velChatInput");
+const velChatStatus = document.getElementById("velChatStatus");
+const velChatUnread = document.getElementById("velChatUnread");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -2020,6 +2034,10 @@ if (!gameSourceLabels[launcherGameSource]) {
 let networkNote = storage.get("vel-network-note", "");
 const AI_HISTORY_KEY = "vel-ai-history";
 const AI_HISTORY_LIMIT = 24;
+const VEL_CHAT_USER_KEY = "vel-chat-user";
+const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
+const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
+const VEL_CHAT_POLL_MS = 3000;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
 const YOUTUBE_FAVORITES_KEY = "vel-youtube-favorites";
 const YOUTUBE_INTEREST_KEY = "vel-youtube-interest-topics";
@@ -2131,6 +2149,12 @@ aiMessages = Array.isArray(aiMessages)
     .slice(-AI_HISTORY_LIMIT)
   : [];
 let aiLoading = false;
+let velChatUser = readStoredJson(VEL_CHAT_USER_KEY, null);
+let velChatItems = [];
+let velChatLoading = false;
+let velChatPollTimer = null;
+let velChatCollapsed = storage.get(VEL_CHAT_COLLAPSED_KEY, "1") === "1";
+let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
 let velofySearchQuery = "";
 let velofyPlaylistMode = storage.get("velofy-playlist-mode", "all");
 let velofyShuffleEnabled = storage.get("velofy-shuffle", "0") === "1";
@@ -2799,6 +2823,243 @@ function clearAiChat() {
   saveAiMessages();
   renderAiMessages();
   aiInput?.focus({ preventScroll: true });
+}
+
+function cleanVelChatName(value = "") {
+  return String(value || "")
+    .replace(/[^\w\s.-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 24);
+}
+
+function createVelChatUser(name) {
+  return {
+    id: window.crypto?.randomUUID?.() || `user-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    username: cleanVelChatName(name) || "Guest"
+  };
+}
+
+function normalizeVelChatUser(user) {
+  if (!user || typeof user !== "object") return null;
+  const username = cleanVelChatName(user.username);
+  const id = String(user.id || "").replace(/[^\w.-]/g, "").slice(0, 64);
+  if (!username || !id) return null;
+  return { id, username };
+}
+
+function saveVelChatUser(user) {
+  velChatUser = normalizeVelChatUser(user);
+  if (velChatUser) {
+    storage.set(VEL_CHAT_USER_KEY, JSON.stringify(velChatUser));
+  } else {
+    try {
+      window.localStorage.removeItem(VEL_CHAT_USER_KEY);
+    } catch (error) {
+      return;
+    }
+  }
+}
+
+function formatVelChatTime(value) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(new Date(value));
+  } catch (error) {
+    return "";
+  }
+}
+
+function setVelChatStatus(message, tone = "") {
+  if (!velChatStatus) return;
+  velChatStatus.textContent = message;
+  velChatStatus.dataset.tone = tone;
+}
+
+function setVelChatCollapsed(collapsed) {
+  velChatCollapsed = Boolean(collapsed);
+  storage.set(VEL_CHAT_COLLAPSED_KEY, velChatCollapsed ? "1" : "0");
+  velChat?.classList.toggle("is-collapsed", velChatCollapsed);
+  velChatToggle?.setAttribute("aria-expanded", velChatCollapsed ? "false" : "true");
+  if (!velChatCollapsed) {
+    markVelChatSeen();
+    window.requestAnimationFrame(() => {
+      velChatMessages?.scrollTo({ top: velChatMessages.scrollHeight });
+      if (velChatUser) {
+        velChatInput?.focus({ preventScroll: true });
+      } else {
+        velChatName?.focus({ preventScroll: true });
+      }
+    });
+  } else {
+    renderVelChatUnread();
+  }
+}
+
+function renderVelChatAuth() {
+  velChatUser = normalizeVelChatUser(velChatUser);
+  if (velChatLoginForm) velChatLoginForm.hidden = Boolean(velChatUser);
+  if (velChatUserBar) velChatUserBar.hidden = !velChatUser;
+  if (velChatUserName) velChatUserName.textContent = velChatUser?.username || "Guest";
+  if (velChatInput) {
+    velChatInput.disabled = !velChatUser || velChatLoading;
+    velChatInput.placeholder = velChatUser
+      ? "Message everyone on vel.os..."
+      : "Login first to chat...";
+  }
+  velChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", !velChatUser || velChatLoading);
+}
+
+function getVelChatUnreadCount() {
+  if (!velChatCollapsed || !velChatItems.length) return 0;
+  const lastSeenIndex = velChatItems.findIndex((message) => message.id === velChatLastSeenId);
+  const unseen = lastSeenIndex === -1
+    ? velChatItems
+    : velChatItems.slice(lastSeenIndex + 1);
+  return unseen.filter((message) => message.userId !== velChatUser?.id).length;
+}
+
+function renderVelChatUnread() {
+  if (!velChatUnread) return;
+  const count = getVelChatUnreadCount();
+  velChatUnread.hidden = count <= 0;
+  velChatUnread.textContent = count > 99 ? "99+" : String(count);
+}
+
+function markVelChatSeen() {
+  const last = velChatItems[velChatItems.length - 1];
+  if (!last) return;
+  velChatLastSeenId = last.id;
+  storage.set(VEL_CHAT_LAST_SEEN_KEY, velChatLastSeenId);
+  renderVelChatUnread();
+}
+
+function renderVelChatMessages(forceStick = false) {
+  if (!velChatMessages) return;
+  const shouldStickToBottom = velChatMessages.scrollTop + velChatMessages.clientHeight >= velChatMessages.scrollHeight - 80;
+  if (!velChatItems.length) {
+    velChatMessages.innerHTML = `<p class="vel-chat-empty">No messages yet. Login and be the first one in the lobby.</p>`;
+  } else {
+    velChatMessages.innerHTML = velChatItems.map((message) => {
+      const isOwn = message.userId === velChatUser?.id;
+      return `
+        <article class="vel-chat-message ${isOwn ? "is-own" : ""}">
+          <div class="vel-chat-message-meta">
+            <strong>${escapeHtml(message.username || "Guest")}</strong>
+            <span>${escapeHtml(formatVelChatTime(message.createdAt))}</span>
+          </div>
+          <p class="vel-chat-message-bubble">${escapeHtml(message.text || "")}</p>
+        </article>
+      `;
+    }).join("");
+  }
+  if (forceStick || shouldStickToBottom) {
+    velChatMessages.scrollTop = velChatMessages.scrollHeight;
+  }
+  if (!velChatCollapsed) {
+    markVelChatSeen();
+  } else {
+    renderVelChatUnread();
+  }
+}
+
+function normalizeVelChatItems(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((message) => ({
+      id: String(message?.id || "").slice(0, 48),
+      userId: String(message?.userId || "").slice(0, 64),
+      username: cleanVelChatName(message?.username) || "Guest",
+      text: String(message?.text || "").trim().slice(0, 360),
+      createdAt: Number(message?.createdAt) || Date.now()
+    }))
+    .filter((message) => message.id && message.text)
+    .slice(-180);
+}
+
+async function fetchVelChatMessages(showLoading = false) {
+  if (velChatLoading && showLoading) return;
+  if (showLoading) {
+    velChatLoading = true;
+    renderVelChatAuth();
+    setVelChatStatus("Connecting chat...");
+  }
+
+  try {
+    const response = await fetch("/api/chat/messages", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || "Global Chat could not load.");
+    }
+    velChatItems = normalizeVelChatItems(data.messages);
+    renderVelChatMessages(showLoading);
+    setVelChatStatus(data.persistent
+      ? "Live site-wide chat connected."
+      : "Chat is temporary until Redis storage is connected.",
+    data.persistent ? "live" : "warn");
+  } catch (error) {
+    setVelChatStatus(error.message || "Chat offline. Retrying...", "error");
+  } finally {
+    velChatLoading = false;
+    renderVelChatAuth();
+    scheduleVelChatPoll();
+  }
+}
+
+function scheduleVelChatPoll() {
+  if (!velChat) return;
+  window.clearTimeout(velChatPollTimer);
+  velChatPollTimer = window.setTimeout(() => fetchVelChatMessages(false), VEL_CHAT_POLL_MS);
+}
+
+async function sendVelChatMessage(text) {
+  const message = String(text || "").trim();
+  if (!message || !velChatUser || velChatLoading) return;
+  velChatLoading = true;
+  renderVelChatAuth();
+  setVelChatStatus("Sending...");
+
+  try {
+    const response = await fetch("/api/chat/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: velChatUser.id,
+        username: velChatUser.username,
+        text: message
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || "Message could not send.");
+    }
+    velChatItems = normalizeVelChatItems(data.messages);
+    if (velChatInput) velChatInput.value = "";
+    renderVelChatMessages(true);
+    setVelChatStatus(data.persistent
+      ? "Sent to everyone on vel.os."
+      : "Sent in temporary chat. Connect Redis for permanent global messages.",
+    data.persistent ? "live" : "warn");
+  } catch (error) {
+    setVelChatStatus(error.message || "Message failed.", "error");
+  } finally {
+    velChatLoading = false;
+    renderVelChatAuth();
+    scheduleVelChatPoll();
+    velChatInput?.focus({ preventScroll: true });
+  }
+}
+
+function initVelChat() {
+  velChatUser = normalizeVelChatUser(velChatUser);
+  if (velChatName && velChatUser) {
+    velChatName.value = velChatUser.username;
+  }
+  setVelChatCollapsed(velChatCollapsed);
+  renderVelChatAuth();
+  renderVelChatMessages();
+  fetchVelChatMessages(true);
 }
 
 function formatYouTubeDate(value = "") {
@@ -7411,6 +7672,43 @@ aiPromptButtons.forEach((button) => {
   });
 });
 
+velChat?.addEventListener("pointerdown", (event) => {
+  event.stopPropagation();
+});
+
+velChat?.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+velChatToggle?.addEventListener("click", () => {
+  setVelChatCollapsed(false);
+});
+
+velChatHide?.addEventListener("click", () => {
+  setVelChatCollapsed(true);
+});
+
+velChatLoginForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const user = createVelChatUser(velChatName?.value || "");
+  saveVelChatUser(user);
+  renderVelChatAuth();
+  setVelChatCollapsed(false);
+  setVelChatStatus(`Logged in as ${user.username}.`, "live");
+});
+
+velChatLogout?.addEventListener("click", () => {
+  saveVelChatUser(null);
+  renderVelChatAuth();
+  if (velChatName) velChatName.value = "";
+  velChatName?.focus({ preventScroll: true });
+});
+
+velChatForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendVelChatMessage(velChatInput?.value || "");
+});
+
 launcherGameSearch?.addEventListener("input", () => {
   launcherGameQuery = launcherGameSearch.value;
   renderLauncherCatalog();
@@ -7934,6 +8232,14 @@ switchButtons.forEach((button) => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.target?.closest?.(".vel-chat")) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setVelChatCollapsed(true);
+    }
+    return;
+  }
+
   if (event.key === "Escape") {
     closeAllPanels();
     return;
@@ -10069,6 +10375,7 @@ renderLauncherCatalog();
 renderDesktopShortcuts();
 renderRecentApps();
 renderAiMessages();
+initVelChat();
 updateYouTubeGlobalImportUi();
 initDraggableDrawers();
 initScrollAssist();

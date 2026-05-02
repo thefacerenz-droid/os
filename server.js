@@ -9,6 +9,8 @@ const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = __dirname;
 const GLOBAL_YOUTUBE_LIMIT = 200;
 const GLOBAL_YOUTUBE_FILE = path.join(__dirname, "data", "global-youtube-favorites.json");
+const GLOBAL_CHAT_LIMIT = 180;
+const GLOBAL_CHAT_FILE = path.join(__dirname, "data", "global-chat-messages.json");
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 const sessions = new Map();
 let spotifyToken = null;
@@ -119,6 +121,14 @@ function cleanAiMessage(value) {
 
 function cleanGlobalText(value, fallback = "") {
   return String(value || fallback).replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
+function cleanChatText(value = "", limit = 360) {
+  return String(value || "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, limit);
 }
 
 async function readBody(req) {
@@ -345,6 +355,85 @@ async function handleYoutubeGlobal(req, res) {
   ].slice(0, GLOBAL_YOUTUBE_LIMIT);
   writeGlobalYouTubeFavorites(items);
   return sendJson(res, 201, { item: nextItem, items, storage: "file" });
+}
+
+function normalizeChatMessages(value) {
+  return (Array.isArray(value) ? value : [])
+    .map((message) => ({
+      id: cleanChatText(message?.id, 48),
+      userId: cleanChatText(message?.userId, 64),
+      username: cleanChatText(message?.username, 24) || "Guest",
+      text: cleanChatText(message?.text, 360),
+      createdAt: Number(message?.createdAt) || Date.now()
+    }))
+    .filter((message) => message.id && message.text)
+    .slice(-GLOBAL_CHAT_LIMIT);
+}
+
+function readGlobalChatMessages() {
+  try {
+    const raw = fs.readFileSync(GLOBAL_CHAT_FILE, "utf8");
+    return normalizeChatMessages(JSON.parse(raw));
+  } catch (error) {
+    return [];
+  }
+}
+
+function writeGlobalChatMessages(messages) {
+  fs.mkdirSync(path.dirname(GLOBAL_CHAT_FILE), { recursive: true });
+  fs.writeFileSync(GLOBAL_CHAT_FILE, JSON.stringify(normalizeChatMessages(messages), null, 2));
+}
+
+function normalizeIncomingChatMessage(input = {}) {
+  const text = cleanChatText(input.text, 360);
+  if (!text) return null;
+  return {
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+    userId: cleanChatText(input.userId, 64) || `guest-${Math.random().toString(36).slice(2, 10)}`,
+    username: cleanChatText(input.username, 24) || "Guest",
+    text,
+    createdAt: Date.now()
+  };
+}
+
+async function handleChatMessages(req, res) {
+  if (req.method === "GET") {
+    return sendJson(res, 200, {
+      messages: readGlobalChatMessages(),
+      storage: "file",
+      persistent: true,
+      message: "Local Global Chat is saved to a file while testing."
+    });
+  }
+
+  if (req.method !== "POST") {
+    return sendJson(res, 405, {
+      error: "method_not_allowed",
+      message: "Use GET or POST for Global Chat."
+    });
+  }
+
+  let body = {};
+  try {
+    body = JSON.parse(await readBody(req) || "{}");
+  } catch (error) {
+    body = {};
+  }
+  const nextMessage = normalizeIncomingChatMessage(body);
+  if (!nextMessage) {
+    return sendJson(res, 400, {
+      error: "empty_message",
+      message: "Type a message before sending."
+    });
+  }
+  const messages = [...readGlobalChatMessages(), nextMessage].slice(-GLOBAL_CHAT_LIMIT);
+  writeGlobalChatMessages(messages);
+  return sendJson(res, 201, {
+    message: nextMessage,
+    messages,
+    storage: "file",
+    persistent: true
+  });
 }
 
 async function getSpotifyToken() {
@@ -621,6 +710,7 @@ async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || `localhost:${PORT}`}`);
   try {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
+    if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res);
     if (req.method === "GET" && url.pathname === "/api/spotify/search") return await handleSpotifySearch(req, res, url);

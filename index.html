@@ -1047,6 +1047,46 @@
           <div class="taskbar-clock"><strong id="taskbarTime">8:50</strong><span id="taskbarDate">Tue</span></div>
         </div>
       </footer>
+
+      <aside class="vel-chat is-collapsed" id="velChat" aria-label="Vel Chat">
+        <button class="vel-chat-bubble" type="button" id="velChatToggle" aria-expanded="false" aria-controls="velChatPanel">
+          <span class="vel-chat-bubble-dot" aria-hidden="true"></span>
+          <strong>Chat</strong>
+          <span class="vel-chat-unread" id="velChatUnread" hidden>0</span>
+        </button>
+
+        <section class="vel-chat-panel" id="velChatPanel" aria-label="Global chat panel">
+          <header class="vel-chat-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Global Chat</h2>
+            </div>
+            <button class="vel-chat-mini-button" type="button" id="velChatHide">Hide</button>
+          </header>
+
+          <form class="vel-chat-login" id="velChatLoginForm">
+            <label for="velChatName">Pick a display name</label>
+            <div class="vel-chat-login-row">
+              <input id="velChatName" type="text" maxlength="24" autocomplete="nickname" placeholder="Your name" aria-label="Chat display name" />
+              <button type="submit">Login</button>
+            </div>
+            <p>Names save on this device. Keep it clean because everyone on the site can see chat.</p>
+          </form>
+
+          <div class="vel-chat-userbar" id="velChatUserBar" hidden>
+            <span>Logged in as <strong id="velChatUserName">Guest</strong></span>
+            <button type="button" id="velChatLogout">Switch</button>
+          </div>
+
+          <div class="vel-chat-messages" id="velChatMessages" role="log" aria-live="polite" aria-relevant="additions text"></div>
+
+          <form class="vel-chat-form" id="velChatForm">
+            <input id="velChatInput" type="text" maxlength="360" autocomplete="off" placeholder="Message everyone on vel.os..." aria-label="Chat message" />
+            <button type="submit">Send</button>
+          </form>
+          <p class="vel-chat-status" id="velChatStatus">Connecting chat...</p>
+        </section>
+      </aside>
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
