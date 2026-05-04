@@ -2957,6 +2957,7 @@ function setVelChatLocked(isLocked, message = "") {
   velChatUnlocked = !isLocked;
   velChat?.classList.toggle("is-locked", isLocked);
   if (velChatPinForm) velChatPinForm.hidden = !isLocked;
+  if (!isLocked && velChatPinInput) velChatPinInput.value = "";
   if (velChatMessages) velChatMessages.hidden = isLocked;
   if (velChatForm) velChatForm.hidden = isLocked;
   if (velChatAttachmentName) velChatAttachmentName.hidden = isLocked || !velChatAttachment;
@@ -2966,6 +2967,7 @@ function setVelChatLocked(isLocked, message = "") {
 
 function clearVelChatPin(message = "PIN required to view chat.") {
   setSessionChatPin("");
+  if (velChatPinInput) velChatPinInput.value = "";
   setVelChatLocked(true, message);
   window.clearTimeout(velChatPollTimer);
 }
@@ -3093,8 +3095,9 @@ function renderVelChatAuth() {
   if (velChatUserBar) velChatUserBar.hidden = !velChatUser;
   if (velChatUserName) velChatUserName.textContent = velChatUser?.username || "Guest";
   if (velChatUserPill) {
-    velChatUserPill.textContent = velChatUser?.username || "Login";
-    velChatUserPill.classList.toggle("is-logged-in", Boolean(velChatUser));
+    velChatUserPill.hidden = !velChatUnlocked || Boolean(velChatUser);
+    velChatUserPill.textContent = "Login";
+    velChatUserPill.classList.toggle("is-logged-in", false);
   }
   if (velChatLoginNeeded) {
     velChatLoginNeeded.hidden = !velChatUnlocked || Boolean(velChatUser);

@@ -5774,8 +5774,8 @@ body.is-booting .vel-chat {
 }
 
 .vel-chat-panel {
-  display: grid;
-  grid-template-rows: auto auto minmax(220px, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
   width: 100%;
   max-height: min(620px, calc(100dvh - 6.5rem));
@@ -5791,12 +5791,12 @@ body.is-booting .vel-chat {
   animation: chat-panel-in 220ms ease both;
 }
 
-.vel-chat.is-collapsed .vel-chat-panel {
-  display: none;
+.vel-chat [hidden] {
+  display: none !important;
 }
 
-.vel-chat.is-locked .vel-chat-panel {
-  grid-template-rows: auto minmax(210px, 1fr) auto;
+.vel-chat.is-collapsed .vel-chat-panel {
+  display: none;
 }
 
 .vel-chat:not(.is-collapsed) .vel-chat-bubble {
@@ -5872,6 +5872,7 @@ body.is-booting .vel-chat {
 
 .vel-chat-pin {
   display: grid;
+  flex: 1 1 210px;
   align-content: center;
   gap: 0.65rem;
   min-height: 210px;
@@ -5926,6 +5927,7 @@ body.is-booting .vel-chat {
 }
 
 .vel-chat-login-needed {
+  flex: 0 0 auto;
   justify-content: center;
   width: 100%;
   min-height: 42px;
@@ -6041,9 +6043,10 @@ body.is-booting .vel-chat {
 
 .vel-chat-messages {
   display: grid;
+  flex: 1 1 360px;
   align-content: start;
   gap: 0.55rem;
-  min-height: 0;
+  min-height: clamp(230px, 42dvh, 430px);
   padding: 0.15rem 0.25rem 0.15rem 0;
   overflow: auto;
   overscroll-behavior: contain;
