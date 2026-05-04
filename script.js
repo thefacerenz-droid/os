@@ -1318,6 +1318,13 @@ const utilityApps = {
     action: "panel",
     panel: "network"
   },
+  calculator: {
+    title: "Calculator",
+    label: "Calc",
+    badgeText: "67",
+    action: "panel",
+    panel: "calculator"
+  },
   localArcade: {
     title: "Local Arcade",
     label: "Arcade",
@@ -1794,6 +1801,7 @@ const drawers = {
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
   network: document.getElementById("networkDrawer"),
+  calculator: document.getElementById("calculatorDrawer"),
   settings: document.getElementById("settingsDrawer")
 };
 
@@ -1993,6 +2001,8 @@ const velChat = document.getElementById("velChat");
 const velChatToggle = document.getElementById("velChatToggle");
 const velChatPanel = document.getElementById("velChatPanel");
 const velChatHide = document.getElementById("velChatHide");
+const velChatPinForm = document.getElementById("velChatPinForm");
+const velChatPinInput = document.getElementById("velChatPinInput");
 const velChatLoginForm = document.getElementById("velChatLoginForm");
 const velChatName = document.getElementById("velChatName");
 const velChatUserBar = document.getElementById("velChatUserBar");
@@ -2004,8 +2014,18 @@ const chatSettingsCard = document.getElementById("chatSettingsCard");
 const velChatMessages = document.getElementById("velChatMessages");
 const velChatForm = document.getElementById("velChatForm");
 const velChatInput = document.getElementById("velChatInput");
+const velChatAttachButton = document.getElementById("velChatAttachButton");
+const velChatAttachmentInput = document.getElementById("velChatAttachmentInput");
+const velChatAttachmentName = document.getElementById("velChatAttachmentName");
 const velChatStatus = document.getElementById("velChatStatus");
 const velChatUnread = document.getElementById("velChatUnread");
+const calculatorForm = document.getElementById("calculatorForm");
+const calculatorExpression = document.getElementById("calculatorExpression");
+const calculatorResult = document.getElementById("calculatorResult");
+const calculatorKeys = document.getElementById("calculatorKeys");
+const secretVault = document.getElementById("secretVault");
+const secretVaultGrid = document.getElementById("secretVaultGrid");
+const secretVaultRefresh = document.getElementById("secretVaultRefresh");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -2040,7 +2060,9 @@ const AI_HISTORY_LIMIT = 24;
 const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
+const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
 const VEL_CHAT_POLL_MS = 3000;
+const VEL_CHAT_ATTACHMENT_LIMIT = 1700000;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
 const YOUTUBE_FAVORITES_KEY = "vel-youtube-favorites";
 const YOUTUBE_INTEREST_KEY = "vel-youtube-interest-topics";
@@ -2158,6 +2180,12 @@ let velChatLoading = false;
 let velChatPollTimer = null;
 let velChatCollapsed = storage.get(VEL_CHAT_COLLAPSED_KEY, "1") === "1";
 let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
+let velChatUnlocked = false;
+let velChatPin = "";
+let velChatAttachment = null;
+let secretVaultUnlocked = false;
+let secretVaultLoading = false;
+let secretVaultVideos = [];
 let velofySearchQuery = "";
 let velofyPlaylistMode = storage.get("velofy-playlist-mode", "all");
 let velofyShuffleEnabled = storage.get("velofy-shuffle", "0") === "1";
@@ -2181,15 +2209,21 @@ let installedApps = readStoredJson("vel-installed-apps", [
   "panel:velhub",
   "panel:music",
   "panel:ai",
+  "panel:calculator",
   "panel:settings"
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:velhub", "panel:music", "panel:ai", "panel:settings"];
+  : ["panel:youtube", "panel:velhub", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v2", "1");
+}
+if (storage.get("vel-installed-apps-v3", "0") !== "1" && !installedApps.includes("panel:calculator")) {
+  installedApps = ["panel:calculator", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v3", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2526,6 +2560,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "calculator") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="calculator"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "network") {
     openNetworkButton?.classList.add("is-active");
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="network"]')?.classList.add("is-active");
@@ -2646,6 +2684,11 @@ function openPanel(name) {
   if (name === "network") {
     recordRecentApp({ type: "panel", id: "network" });
     renderNetworkState();
+  }
+
+  if (name === "calculator") {
+    recordRecentApp({ type: "panel", id: "calculator" });
+    window.requestAnimationFrame(() => calculatorExpression?.focus({ preventScroll: true }));
   }
 
   if (name === "game" && activeLocalGame === "snake") {
@@ -2881,6 +2924,150 @@ function setVelChatStatus(message, tone = "") {
   velChatStatus.dataset.tone = tone;
 }
 
+function getSessionChatPin() {
+  try {
+    return window.sessionStorage.getItem(VEL_CHAT_PIN_SESSION_KEY) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function setSessionChatPin(value) {
+  velChatPin = String(value || "").trim();
+  try {
+    if (velChatPin) {
+      window.sessionStorage.setItem(VEL_CHAT_PIN_SESSION_KEY, velChatPin);
+    } else {
+      window.sessionStorage.removeItem(VEL_CHAT_PIN_SESSION_KEY);
+    }
+  } catch (error) {
+    return;
+  }
+}
+
+function getVelChatHeaders(extra = {}) {
+  const pin = velChatPin || getSessionChatPin();
+  return {
+    ...extra,
+    ...(pin ? { "x-vel-chat-pin": pin } : {})
+  };
+}
+
+function setVelChatLocked(isLocked, message = "") {
+  velChatUnlocked = !isLocked;
+  velChat?.classList.toggle("is-locked", isLocked);
+  if (velChatPinForm) velChatPinForm.hidden = !isLocked;
+  if (velChatMessages) velChatMessages.hidden = isLocked;
+  if (velChatForm) velChatForm.hidden = isLocked;
+  if (velChatAttachmentName) velChatAttachmentName.hidden = isLocked || !velChatAttachment;
+  if (message) setVelChatStatus(message, isLocked ? "warn" : "live");
+  renderVelChatAuth();
+}
+
+function clearVelChatPin(message = "PIN required to view chat.") {
+  setSessionChatPin("");
+  setVelChatLocked(true, message);
+  window.clearTimeout(velChatPollTimer);
+}
+
+function getFirstUrl(value = "") {
+  const match = String(value || "").match(/https?:\/\/[^\s<>"']+/i);
+  return match?.[0]?.replace(/[),.!?]+$/, "") || "";
+}
+
+function getMediaTypeFromUrl(value = "") {
+  const cleanUrl = String(value || "").split("?")[0].toLowerCase();
+  if (/\.(png|jpe?g|gif|webp)$/.test(cleanUrl)) return "image";
+  if (/\.(mp4|webm|ogg|mov)$/.test(cleanUrl)) return "video";
+  return "link";
+}
+
+function isYouTubeLink(value = "") {
+  try {
+    const url = new URL(value);
+    return /(^|\.)youtube\.com$|(^|\.)youtu\.be$/i.test(url.hostname);
+  } catch (error) {
+    return false;
+  }
+}
+
+function renderChatTextWithLinks(text = "") {
+  const parts = String(text || "").split(/(https?:\/\/[^\s<>"']+)/gi);
+  return parts.map((part) => {
+    if (!/^https?:\/\//i.test(part)) return escapeHtml(part);
+    const cleanUrl = part.replace(/[),.!?]+$/, "");
+    const trailing = part.slice(cleanUrl.length);
+    const label = isYouTubeLink(cleanUrl) ? "Open YouTube link" : cleanUrl;
+    return `<a href="${escapeHtml(cleanUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>${escapeHtml(trailing)}`;
+  }).join("");
+}
+
+function renderVelChatAttachment(attachment) {
+  if (!attachment?.url) return "";
+  const name = escapeHtml(attachment.name || "Attachment");
+  const url = escapeHtml(attachment.url);
+  if (attachment.type === "image") {
+    return `<a class="vel-chat-media-link" href="${url}" target="_blank" rel="noopener noreferrer"><img class="vel-chat-media" src="${url}" alt="${name}" loading="lazy" /></a>`;
+  }
+  if (attachment.type === "video") {
+    return `<video class="vel-chat-media" src="${url}" controls playsinline preload="metadata" aria-label="${name}"></video>`;
+  }
+  return `<a class="vel-chat-link-card" href="${url}" target="_blank" rel="noopener noreferrer"><span>${isYouTubeLink(attachment.url) ? "YouTube" : "Link"}</span><strong>${name}</strong></a>`;
+}
+
+function setVelChatAttachment(attachment = null) {
+  velChatAttachment = attachment;
+  if (!velChatAttachmentName) return;
+  if (!attachment) {
+    velChatAttachmentName.hidden = true;
+    velChatAttachmentName.textContent = "";
+    return;
+  }
+  velChatAttachmentName.hidden = false;
+  velChatAttachmentName.textContent = `Attached: ${attachment.name}`;
+}
+
+function makeAttachmentFromText(text = "") {
+  const url = getFirstUrl(text);
+  if (!url) return null;
+  const type = getMediaTypeFromUrl(url);
+  if (type === "link" && !isYouTubeLink(url)) return null;
+  return {
+    type,
+    url,
+    name: isYouTubeLink(url) ? "YouTube link" : type === "image" ? "Image link" : "Video link",
+    size: 0
+  };
+}
+
+function readVelChatAttachment(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
+    if (!/^image\/|^video\//i.test(file.type)) {
+      reject(new Error("Only pictures and videos can be attached."));
+      return;
+    }
+    if (file.size > VEL_CHAT_ATTACHMENT_LIMIT) {
+      reject(new Error("That file is too large for chat. Put big videos in assets/secret-videos for the vault."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        type: file.type.startsWith("image/") ? "image" : "video",
+        url: String(reader.result || ""),
+        name: file.name || "Attachment",
+        size: file.size
+      });
+    };
+    reader.onerror = () => reject(new Error("Could not read that attachment."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function setVelChatCollapsed(collapsed) {
   velChatCollapsed = Boolean(collapsed);
   storage.set(VEL_CHAT_COLLAPSED_KEY, velChatCollapsed ? "1" : "0");
@@ -2890,7 +3077,9 @@ function setVelChatCollapsed(collapsed) {
     markVelChatSeen();
     window.requestAnimationFrame(() => {
       velChatMessages?.scrollTo({ top: velChatMessages.scrollHeight });
-      if (velChatUser) {
+      if (!velChatUnlocked) {
+        velChatPinInput?.focus({ preventScroll: true });
+      } else if (velChatUser) {
         velChatInput?.focus({ preventScroll: true });
       }
     });
@@ -2908,18 +3097,19 @@ function renderVelChatAuth() {
     velChatUserPill.classList.toggle("is-logged-in", Boolean(velChatUser));
   }
   if (velChatLoginNeeded) {
-    velChatLoginNeeded.hidden = Boolean(velChatUser);
+    velChatLoginNeeded.hidden = !velChatUnlocked || Boolean(velChatUser);
   }
   if (velChatName && velChatUser) {
     velChatName.value = velChatUser.username;
   }
   if (velChatInput) {
-    velChatInput.disabled = !velChatUser || velChatLoading;
+    velChatInput.disabled = !velChatUnlocked || !velChatUser || velChatLoading;
     velChatInput.placeholder = velChatUser
       ? "Message everyone on vel.os..."
-      : "Login in Settings to chat...";
+      : velChatUnlocked ? "Login in Settings to chat..." : "Enter PIN first...";
   }
-  velChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", !velChatUser || velChatLoading);
+  velChatAttachButton?.toggleAttribute("disabled", !velChatUnlocked || !velChatUser || velChatLoading);
+  velChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", !velChatUnlocked || !velChatUser || velChatLoading);
 }
 
 function openChatSettings() {
@@ -2970,7 +3160,8 @@ function renderVelChatMessages(forceStick = false) {
             <strong>${escapeHtml(message.username || "Guest")}</strong>
             <span>${escapeHtml(formatVelChatTime(message.createdAt))}</span>
           </div>
-          <p class="vel-chat-message-bubble">${escapeHtml(message.text || "")}</p>
+          ${message.text ? `<p class="vel-chat-message-bubble">${renderChatTextWithLinks(message.text || "")}</p>` : ""}
+          ${renderVelChatAttachment(message.attachment)}
         </article>
       `;
     }).join("");
@@ -2992,13 +3183,25 @@ function normalizeVelChatItems(items) {
       userId: String(message?.userId || "").slice(0, 64),
       username: cleanVelChatName(message?.username) || "Guest",
       text: String(message?.text || "").trim().slice(0, 360),
+      attachment: message?.attachment && typeof message.attachment === "object"
+        ? {
+          type: ["image", "video", "link"].includes(message.attachment.type) ? message.attachment.type : "link",
+          url: String(message.attachment.url || ""),
+          name: String(message.attachment.name || "Attachment").slice(0, 90),
+          size: Number(message.attachment.size) || 0
+        }
+        : null,
       createdAt: Number(message?.createdAt) || Date.now()
     }))
-    .filter((message) => message.id && message.text)
+    .filter((message) => message.id && (message.text || message.attachment?.url))
     .slice(-180);
 }
 
 async function fetchVelChatMessages(showLoading = false) {
+  if (!velChatUnlocked) {
+    setVelChatLocked(true);
+    return;
+  }
   if (velChatLoading && showLoading) return;
   if (showLoading) {
     velChatLoading = true;
@@ -3007,8 +3210,15 @@ async function fetchVelChatMessages(showLoading = false) {
   }
 
   try {
-    const response = await fetch("/api/chat/messages", { cache: "no-store" });
+    const response = await fetch("/api/chat/messages", {
+      cache: "no-store",
+      headers: getVelChatHeaders()
+    });
     const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      return;
+    }
     if (!response.ok) {
       throw new Error(data.message || "Global Chat could not load.");
     }
@@ -3035,7 +3245,7 @@ function scheduleVelChatPoll() {
 
 async function sendVelChatMessage(text) {
   const message = String(text || "").trim();
-  if (!message || !velChatUser || velChatLoading) return;
+  if ((!message && !velChatAttachment) || !velChatUnlocked || !velChatUser || velChatLoading) return;
   velChatLoading = true;
   renderVelChatAuth();
   setVelChatStatus("Sending...");
@@ -3043,19 +3253,26 @@ async function sendVelChatMessage(text) {
   try {
     const response = await fetch("/api/chat/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         userId: velChatUser.id,
         username: velChatUser.username,
-        text: message
+        text: message,
+        attachment: velChatAttachment || makeAttachmentFromText(message)
       })
     });
     const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      return;
+    }
     if (!response.ok) {
       throw new Error(data.message || "Message could not send.");
     }
     velChatItems = normalizeVelChatItems(data.messages);
     if (velChatInput) velChatInput.value = "";
+    if (velChatAttachmentInput) velChatAttachmentInput.value = "";
+    setVelChatAttachment(null);
     renderVelChatMessages(true);
     setVelChatStatus(data.persistent
       ? "Sent to everyone on vel.os."
@@ -3076,10 +3293,113 @@ function initVelChat() {
   if (velChatName && velChatUser) {
     velChatName.value = velChatUser.username;
   }
+  velChatPin = getSessionChatPin();
+  velChatUnlocked = Boolean(velChatPin);
   setVelChatCollapsed(velChatCollapsed);
+  setVelChatLocked(!velChatUnlocked);
   renderVelChatAuth();
   renderVelChatMessages();
-  fetchVelChatMessages(true);
+  if (velChatUnlocked) fetchVelChatMessages(true);
+}
+
+async function unlockVelChat(pinValue) {
+  const nextPin = String(pinValue || "").trim();
+  if (!nextPin) {
+    setVelChatStatus("Enter the chat PIN.", "warn");
+    return;
+  }
+  setSessionChatPin(nextPin);
+  setVelChatLocked(false, "Unlocking chat...");
+  await fetchVelChatMessages(true);
+  if (velChatUnlocked) {
+    setVelChatStatus("Chat unlocked.", "live");
+    velChatInput?.focus({ preventScroll: true });
+  }
+}
+
+function sanitizeCalculatorExpression(value = "") {
+  return String(value || "")
+    .replace(/[×x]/g, "*")
+    .replace(/[÷]/g, "/")
+    .replace(/[^\d+\-*/().\s]/g, "")
+    .slice(0, 80);
+}
+
+function calculateExpression(value = "") {
+  const expression = sanitizeCalculatorExpression(value);
+  if (!expression.trim()) return "";
+  if (!/^[\d+\-*/().\s]+$/.test(expression)) {
+    throw new Error("Only numbers and math symbols are allowed.");
+  }
+  const result = Function(`"use strict"; return (${expression});`)();
+  if (!Number.isFinite(Number(result))) throw new Error("That does not calculate cleanly.");
+  return Number(result);
+}
+
+function formatVaultSize(bytes = 0) {
+  const value = Number(bytes) || 0;
+  if (value > 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  if (value > 1024) return `${Math.round(value / 1024)} KB`;
+  return `${value} B`;
+}
+
+function renderSecretVault() {
+  if (!secretVaultGrid) return;
+  if (secretVaultLoading) {
+    secretVaultGrid.innerHTML = '<p class="catalog-empty">Loading vault videos...</p>';
+    return;
+  }
+  if (!secretVaultVideos.length) {
+    secretVaultGrid.innerHTML = '<p class="catalog-empty">No videos yet. Add MP4, WEBM, OGG, or MOV files to assets/secret-videos, then publish.</p>';
+    return;
+  }
+  secretVaultGrid.innerHTML = secretVaultVideos.map((video) => `
+    <article class="secret-video-card">
+      <video src="${escapeHtml(video.url)}" controls playsinline preload="metadata"></video>
+      <strong>${escapeHtml(video.name || video.fileName || "Vault Video")}</strong>
+      <span>${escapeHtml(formatVaultSize(video.size))}</span>
+    </article>
+  `).join("");
+}
+
+async function loadSecretVaultVideos() {
+  if (!secretVaultGrid) return;
+  secretVaultLoading = true;
+  renderSecretVault();
+  try {
+    const response = await fetch("/api/secret/videos", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Vault videos could not load.");
+    secretVaultVideos = Array.isArray(data.videos) ? data.videos : [];
+  } catch (error) {
+    secretVaultGrid.innerHTML = `<p class="catalog-empty">${escapeHtml(error.message || "Vault videos could not load.")}</p>`;
+    return;
+  } finally {
+    secretVaultLoading = false;
+  }
+  renderSecretVault();
+}
+
+function unlockSecretVault() {
+  secretVaultUnlocked = true;
+  if (secretVault) secretVault.hidden = false;
+  loadSecretVaultVideos();
+}
+
+function submitCalculator() {
+  if (!calculatorExpression || !calculatorResult) return;
+  const expression = calculatorExpression.value;
+  const normalized = sanitizeCalculatorExpression(expression).replace(/\s+/g, "");
+  try {
+    const result = calculateExpression(expression);
+    calculatorResult.textContent = String(result);
+    if (normalized === "67+7") {
+      calculatorResult.textContent = "74 - vault unlocked";
+      unlockSecretVault();
+    }
+  } catch (error) {
+    calculatorResult.textContent = error.message || "Error";
+  }
 }
 
 function formatYouTubeDate(value = "") {
@@ -5793,7 +6113,7 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "ai", "settings", "network"],
+      tools: ["browser", "ai", "calculator", "settings", "network"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -7708,6 +8028,11 @@ velChatHide?.addEventListener("click", () => {
   setVelChatCollapsed(true);
 });
 
+velChatPinForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  unlockVelChat(velChatPinInput?.value || "");
+});
+
 velChatUserPill?.addEventListener("click", () => {
   openChatSettings();
 });
@@ -7739,6 +8064,50 @@ velChatLogout?.addEventListener("click", () => {
 velChatForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   sendVelChatMessage(velChatInput?.value || "");
+});
+
+velChatAttachButton?.addEventListener("click", () => {
+  velChatAttachmentInput?.click();
+});
+
+velChatAttachmentInput?.addEventListener("change", async () => {
+  const file = velChatAttachmentInput.files?.[0];
+  if (!file) {
+    setVelChatAttachment(null);
+    return;
+  }
+  try {
+    const attachment = await readVelChatAttachment(file);
+    setVelChatAttachment(attachment);
+    setVelChatStatus(`${file.type.startsWith("image/") ? "Picture" : "Video"} ready to send.`, "live");
+  } catch (error) {
+    if (velChatAttachmentInput) velChatAttachmentInput.value = "";
+    setVelChatAttachment(null);
+    setVelChatStatus(error.message || "Attachment failed.", "error");
+  }
+});
+
+calculatorForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitCalculator();
+});
+
+calculatorKeys?.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button || !calculatorExpression) return;
+  if (button.hasAttribute("data-calc-clear")) {
+    calculatorExpression.value = "";
+    if (calculatorResult) calculatorResult.textContent = "0";
+    calculatorExpression.focus({ preventScroll: true });
+    return;
+  }
+  calculatorExpression.value += button.dataset.calcKey || "";
+  calculatorExpression.focus({ preventScroll: true });
+});
+
+secretVaultRefresh?.addEventListener("click", () => {
+  if (!secretVaultUnlocked) return;
+  loadSecretVaultVideos();
 });
 
 launcherGameSearch?.addEventListener("input", () => {

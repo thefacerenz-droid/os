@@ -939,6 +939,63 @@
         </div>
       </section>
 
+      <section class="drawer" id="calculatorDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close calculator" data-close-panel="calculator"></button>
+        <div class="drawer-panel calculator-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Calculator</h2>
+              <p class="drawer-copy">A clean desktop calculator with a tiny hidden vault.</p>
+            </div>
+            <button class="close-button" type="button" data-close-panel="calculator">Close</button>
+          </header>
+
+          <div class="calculator-layout">
+            <article class="calculator-card">
+              <form class="calculator-form" id="calculatorForm">
+                <label class="section-label" for="calculatorExpression">Expression</label>
+                <input id="calculatorExpression" type="text" inputmode="decimal" autocomplete="off" placeholder="67 + 7" aria-label="Calculator expression" />
+                <button class="ghost-button is-solid" type="submit">Equals</button>
+              </form>
+              <p class="calculator-result" id="calculatorResult">0</p>
+              <div class="calculator-keys" id="calculatorKeys" aria-label="Calculator keys">
+                <button type="button" data-calc-key="7">7</button>
+                <button type="button" data-calc-key="8">8</button>
+                <button type="button" data-calc-key="9">9</button>
+                <button type="button" data-calc-key="/">/</button>
+                <button type="button" data-calc-key="4">4</button>
+                <button type="button" data-calc-key="5">5</button>
+                <button type="button" data-calc-key="6">6</button>
+                <button type="button" data-calc-key="*">*</button>
+                <button type="button" data-calc-key="1">1</button>
+                <button type="button" data-calc-key="2">2</button>
+                <button type="button" data-calc-key="3">3</button>
+                <button type="button" data-calc-key="-">-</button>
+                <button type="button" data-calc-key="0">0</button>
+                <button type="button" data-calc-key=".">.</button>
+                <button type="button" data-calc-clear>Clear</button>
+                <button type="button" data-calc-key="+">+</button>
+              </div>
+            </article>
+
+            <article class="calculator-card secret-vault" id="secretVault" hidden>
+              <div class="secret-vault-head">
+                <div>
+                  <p class="section-label">Unlocked</p>
+                  <h3>Vel Vault</h3>
+                </div>
+                <button class="ghost-button" type="button" id="secretVaultRefresh">Refresh</button>
+              </div>
+              <p class="tiny-note">Drop videos into <strong>assets/secret-videos</strong>, publish, and they will show up here automatically.</p>
+              <div class="secret-vault-grid" id="secretVaultGrid">
+                <p class="catalog-empty">Enter the code to load vault videos.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section class="drawer" id="settingsDrawer" aria-hidden="true">
         <button class="drawer-scrim" type="button" aria-label="Close settings" data-close-panel="settings"></button>
         <div class="drawer-panel settings-panel">
@@ -1081,14 +1138,26 @@
             </div>
           </header>
 
+          <form class="vel-chat-pin" id="velChatPinForm">
+            <strong>PIN required</strong>
+            <span>Enter the chat PIN to view and send messages.</span>
+            <div>
+              <input id="velChatPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="3367" aria-label="Chat PIN" />
+              <button type="submit">Enter</button>
+            </div>
+          </form>
+
           <button class="vel-chat-login-needed" type="button" id="velChatLoginNeeded">Login to chat</button>
 
           <div class="vel-chat-messages" id="velChatMessages" role="log" aria-live="polite" aria-relevant="additions text"></div>
 
           <form class="vel-chat-form" id="velChatForm">
+            <button class="vel-chat-attach-button" type="button" id="velChatAttachButton" aria-label="Attach picture or video">Media</button>
+            <input id="velChatAttachmentInput" type="file" accept="image/*,video/mp4,video/webm,video/ogg" hidden />
             <input id="velChatInput" type="text" maxlength="360" autocomplete="off" placeholder="Message everyone on vel.os..." aria-label="Chat message" />
             <button type="submit">Send</button>
           </form>
+          <p class="vel-chat-attachment" id="velChatAttachmentName" hidden></p>
           <p class="vel-chat-status" id="velChatStatus">Connecting chat...</p>
         </section>
       </aside>

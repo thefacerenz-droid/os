@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/secret/videos.js": {
+      "includeFiles": "assets/secret-videos/**"
+    }
+  }
+}

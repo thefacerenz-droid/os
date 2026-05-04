@@ -11,6 +11,11 @@ const GLOBAL_YOUTUBE_LIMIT = 200;
 const GLOBAL_YOUTUBE_FILE = path.join(__dirname, "data", "global-youtube-favorites.json");
 const GLOBAL_CHAT_LIMIT = 180;
 const GLOBAL_CHAT_FILE = path.join(__dirname, "data", "global-chat-messages.json");
+const GLOBAL_CHAT_PIN = "3367";
+const CHAT_ATTACHMENT_URL_LIMIT = 2600000;
+const CHAT_ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
+const SECRET_VIDEO_DIR = path.join(__dirname, "assets", "secret-videos");
+const SECRET_VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".ogg", ".mov"]);
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 const sessions = new Map();
 let spotifyToken = null;
@@ -26,7 +31,9 @@ const MIME_TYPES = {
   ".jpeg": "image/jpeg",
   ".mp3": "audio/mpeg",
   ".mp4": "video/mp4",
-  ".webm": "video/webm"
+  ".webm": "video/webm",
+  ".ogg": "video/ogg",
+  ".mov": "video/quicktime"
 };
 
 function loadEnv(filePath) {
@@ -129,6 +136,69 @@ function cleanChatText(value = "", limit = 360) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, limit);
+}
+
+function getChatPin(req, body = {}, url = null) {
+  return cleanChatText(
+    req.headers["x-vel-chat-pin"] || body.pin || url?.searchParams?.get("pin") || "",
+    12
+  );
+}
+
+function sendChatPinRequired(req, res, body = {}, url = null) {
+  if (getChatPin(req, body, url) === GLOBAL_CHAT_PIN) return false;
+  sendJson(res, 401, {
+    error: "pin_required",
+    message: "Enter the chat PIN before viewing or sending messages."
+  });
+  return true;
+}
+
+function getChatAttachmentTypeFromUrl(value = "") {
+  const cleanUrl = String(value).split("?")[0].toLowerCase();
+  if (/\.(png|jpe?g|gif|webp)$/.test(cleanUrl)) return "image";
+  if (/\.(mp4|webm|ogg|mov)$/.test(cleanUrl)) return "video";
+  return "link";
+}
+
+function normalizeChatAttachment(input = null) {
+  if (!input || typeof input !== "object") return null;
+  const rawUrl = String(input.url || "").trim();
+  if (!rawUrl || rawUrl.length > CHAT_ATTACHMENT_URL_LIMIT) {
+    const error = new Error("That attachment is too large for chat. Use the vault folder for big videos.");
+    error.code = "attachment_too_large";
+    throw error;
+  }
+
+  const isDataUrl = rawUrl.startsWith("data:");
+  let type = ["image", "video", "link"].includes(input.type)
+    ? input.type
+    : getChatAttachmentTypeFromUrl(rawUrl);
+
+  if (isDataUrl) {
+    if (!CHAT_ALLOWED_DATA_MEDIA.test(rawUrl)) {
+      const error = new Error("Only PNG, JPG, GIF, WEBP, MP4, WEBM, and OGG attachments are supported.");
+      error.code = "unsupported_attachment";
+      throw error;
+    }
+    type = rawUrl.startsWith("data:image/") ? "image" : "video";
+  } else {
+    try {
+      const parsed = new URL(rawUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Unsupported protocol.");
+    } catch (error) {
+      const invalid = new Error("Attachment links must start with http:// or https://.");
+      invalid.code = "invalid_attachment_url";
+      throw invalid;
+    }
+  }
+
+  return {
+    type,
+    url: rawUrl,
+    name: cleanChatText(input.name, 90) || (type === "image" ? "Image" : type === "video" ? "Video" : "Link"),
+    size: Math.max(0, Number(input.size) || 0)
+  };
 }
 
 async function readBody(req) {
@@ -359,14 +429,23 @@ async function handleYoutubeGlobal(req, res) {
 
 function normalizeChatMessages(value) {
   return (Array.isArray(value) ? value : [])
-    .map((message) => ({
-      id: cleanChatText(message?.id, 48),
-      userId: cleanChatText(message?.userId, 64),
-      username: cleanChatText(message?.username, 24) || "Guest",
-      text: cleanChatText(message?.text, 360),
-      createdAt: Number(message?.createdAt) || Date.now()
-    }))
-    .filter((message) => message.id && message.text)
+    .map((message) => {
+      let attachment = null;
+      try {
+        attachment = normalizeChatAttachment(message?.attachment);
+      } catch (error) {
+        attachment = null;
+      }
+      return {
+        id: cleanChatText(message?.id, 48),
+        userId: cleanChatText(message?.userId, 64),
+        username: cleanChatText(message?.username, 24) || "Guest",
+        text: cleanChatText(message?.text, 360),
+        attachment,
+        createdAt: Number(message?.createdAt) || Date.now()
+      };
+    })
+    .filter((message) => message.id && (message.text || message.attachment))
     .slice(-GLOBAL_CHAT_LIMIT);
 }
 
@@ -386,18 +465,21 @@ function writeGlobalChatMessages(messages) {
 
 function normalizeIncomingChatMessage(input = {}) {
   const text = cleanChatText(input.text, 360);
-  if (!text) return null;
+  const attachment = normalizeChatAttachment(input.attachment);
+  if (!text && !attachment) return null;
   return {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
     userId: cleanChatText(input.userId, 64) || `guest-${Math.random().toString(36).slice(2, 10)}`,
     username: cleanChatText(input.username, 24) || "Guest",
     text,
+    attachment,
     createdAt: Date.now()
   };
 }
 
-async function handleChatMessages(req, res) {
+async function handleChatMessages(req, res, url) {
   if (req.method === "GET") {
+    if (sendChatPinRequired(req, res, {}, url)) return;
     return sendJson(res, 200, {
       messages: readGlobalChatMessages(),
       storage: "file",
@@ -419,7 +501,19 @@ async function handleChatMessages(req, res) {
   } catch (error) {
     body = {};
   }
-  const nextMessage = normalizeIncomingChatMessage(body);
+  if (sendChatPinRequired(req, res, body, url)) return;
+  let nextMessage = null;
+  try {
+    nextMessage = normalizeIncomingChatMessage(body);
+  } catch (error) {
+    const statusCode = error.code === "attachment_too_large"
+      ? 413
+      : ["unsupported_attachment", "invalid_attachment_url"].includes(error.code) ? 400 : 500;
+    return sendJson(res, statusCode, {
+      error: error.code || "chat_error",
+      message: error.message || "Could not send that attachment."
+    });
+  }
   if (!nextMessage) {
     return sendJson(res, 400, {
       error: "empty_message",
@@ -433,6 +527,52 @@ async function handleChatMessages(req, res) {
     messages,
     storage: "file",
     persistent: true
+  });
+}
+
+function getSecretVideoType(extension) {
+  if (extension === ".webm") return "video/webm";
+  if (extension === ".ogg") return "video/ogg";
+  if (extension === ".mov") return "video/quicktime";
+  return "video/mp4";
+}
+
+function handleSecretVideos(req, res) {
+  if (req.method !== "GET") {
+    return sendJson(res, 405, {
+      error: "method_not_allowed",
+      message: "Use GET for vault videos."
+    });
+  }
+
+  let files = [];
+  try {
+    files = fs.readdirSync(SECRET_VIDEO_DIR, { withFileTypes: true });
+  } catch (error) {
+    files = [];
+  }
+
+  const videos = files
+    .filter((file) => file.isFile())
+    .map((file) => {
+      const extension = path.extname(file.name).toLowerCase();
+      if (!SECRET_VIDEO_EXTENSIONS.has(extension)) return null;
+      const filePath = path.join(SECRET_VIDEO_DIR, file.name);
+      const stat = fs.statSync(filePath);
+      return {
+        name: path.basename(file.name, extension).replace(/[-_]+/g, " "),
+        fileName: file.name,
+        url: `/assets/secret-videos/${encodeURIComponent(file.name)}`,
+        type: getSecretVideoType(extension),
+        size: stat.size
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return sendJson(res, 200, {
+    videos,
+    folder: "assets/secret-videos"
   });
 }
 
@@ -710,7 +850,8 @@ async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || `localhost:${PORT}`}`);
   try {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
-    if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res);
+    if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
+    if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res);
     if (req.method === "GET" && url.pathname === "/api/spotify/search") return await handleSpotifySearch(req, res, url);

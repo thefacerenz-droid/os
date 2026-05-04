@@ -553,6 +553,10 @@ body[data-theme-pack="terminal"] .wallpaper-shade {
   width: min(920px, calc(100% - 2.3rem));
 }
 
+.calculator-panel {
+  width: min(900px, calc(100% - 2.3rem));
+}
+
 .ai-panel {
   width: min(860px, calc(100% - 2.3rem));
 }
@@ -1355,6 +1359,136 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 
 .chat-settings-current strong {
   color: #fff;
+}
+
+.calculator-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.calculator-card {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.calculator-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.calculator-form input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.36);
+  color: #fff;
+  font-size: 1.15rem;
+  outline: none;
+}
+
+.calculator-form input:focus {
+  border-color: rgba(255, 255, 255, 0.36);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.calculator-result {
+  display: flex;
+  align-items: center;
+  min-height: 66px;
+  margin: 0.85rem 0;
+  padding: 0.8rem 1rem;
+  border-radius: 18px;
+  background: #050505;
+  color: #fff;
+  font-size: clamp(1.6rem, 5vw, 2.7rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+.calculator-keys {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.calculator-keys button {
+  min-height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.calculator-keys button:hover,
+.calculator-keys button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.secret-vault {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(255, 255, 255, 0.1), transparent 30%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.secret-vault-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.secret-vault-head h3 {
+  margin: 0;
+}
+
+.secret-vault-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  max-height: min(48dvh, 520px);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.secret-video-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.secret-video-card video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  background: #000;
+  object-fit: cover;
+}
+
+.secret-video-card strong {
+  color: #fff;
+  font-size: 0.88rem;
+}
+
+.secret-video-card span {
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .web-toolbar {
@@ -5661,6 +5795,10 @@ body.is-booting .vel-chat {
   display: none;
 }
 
+.vel-chat.is-locked .vel-chat-panel {
+  grid-template-rows: auto minmax(210px, 1fr) auto;
+}
+
 .vel-chat:not(.is-collapsed) .vel-chat-bubble {
   display: none;
 }
@@ -5730,6 +5868,61 @@ body.is-booting .vel-chat {
 .vel-chat-user-pill.is-logged-in {
   background: #fff;
   color: #050505;
+}
+
+.vel-chat-pin {
+  display: grid;
+  align-content: center;
+  gap: 0.65rem;
+  min-height: 210px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.11), transparent 34%),
+    rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.vel-chat-pin strong {
+  color: #fff;
+  font-size: 1.08rem;
+}
+
+.vel-chat-pin span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.vel-chat-pin div {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.vel-chat-pin input {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.62rem 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 0.18em;
+  outline: none;
+}
+
+.vel-chat-pin button {
+  min-height: 42px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: #fff;
+  color: #050505;
+  font-weight: 900;
 }
 
 .vel-chat-login-needed {
@@ -5928,8 +6121,62 @@ body.is-booting .vel-chat {
   color: #070707;
 }
 
+.vel-chat-message-bubble a {
+  color: inherit;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vel-chat-media {
+  display: block;
+  max-width: min(100%, 250px);
+  max-height: 250px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: #000;
+  object-fit: cover;
+}
+
+.vel-chat-message.is-own .vel-chat-media {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.vel-chat-link-card {
+  display: grid;
+  gap: 0.16rem;
+  max-width: 86%;
+  padding: 0.62rem 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  text-decoration: none;
+}
+
+.vel-chat-link-card span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .vel-chat-form {
   padding-top: 0.1rem;
+}
+
+.vel-chat-attach-button {
+  padding: 0.55rem 0.74rem;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+.vel-chat-attachment {
+  margin: -0.28rem 0 0;
+  padding: 0 0.25rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.7rem;
 }
 
 .vel-chat-form button:disabled,
@@ -7037,6 +7284,14 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 }
 
 @media (max-width: 820px) {
+  .calculator-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .secret-vault-grid {
+    max-height: min(42dvh, 420px);
+  }
+
   .velhub-panel {
     width: calc(100% - 1.1rem);
     padding: 0.58rem;

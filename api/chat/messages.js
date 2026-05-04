@@ -2,6 +2,9 @@ const CHAT_LIMIT = 180;
 const CHAT_KEY = "velos:global-chat-messages";
 const REDIS_CLIENT_KEY = "__velos_chat_redis_client_promise";
 const MEMORY_KEY = "__velos_chat_messages";
+const CHAT_PIN = "3367";
+const ATTACHMENT_URL_LIMIT = 2600000;
+const ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -16,6 +19,76 @@ function cleanChatText(value = "", limit = 360) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, limit);
+}
+
+function getRequestPin(req, body = {}) {
+  let queryPin = "";
+  try {
+    const url = new URL(req.url || "/", "http://localhost");
+    queryPin = url.searchParams.get("pin") || "";
+  } catch (error) {
+    queryPin = "";
+  }
+  return cleanChatText(req.headers?.["x-vel-chat-pin"] || body.pin || queryPin, 12);
+}
+
+function hasValidPin(req, body = {}) {
+  return getRequestPin(req, body) === CHAT_PIN;
+}
+
+function sendPinRequired(res) {
+  return sendJson(res, 401, {
+    error: "pin_required",
+    message: "Enter the chat PIN before viewing or sending messages."
+  });
+}
+
+function getAttachmentTypeFromUrl(url = "") {
+  const cleanUrl = String(url).split("?")[0].toLowerCase();
+  if (/\.(png|jpe?g|gif|webp)$/.test(cleanUrl)) return "image";
+  if (/\.(mp4|webm|ogg|mov)$/.test(cleanUrl)) return "video";
+  return "link";
+}
+
+function normalizeAttachment(input = null) {
+  if (!input || typeof input !== "object") return null;
+  const rawUrl = String(input.url || "").trim();
+  if (!rawUrl || rawUrl.length > ATTACHMENT_URL_LIMIT) {
+    const error = new Error("That attachment is too large for chat. Use the vault folder for big videos.");
+    error.code = "attachment_too_large";
+    throw error;
+  }
+
+  const requestedType = ["image", "video", "link"].includes(input.type) ? input.type : "";
+  const isDataUrl = rawUrl.startsWith("data:");
+  let type = requestedType || getAttachmentTypeFromUrl(rawUrl);
+
+  if (isDataUrl) {
+    if (!ALLOWED_DATA_MEDIA.test(rawUrl)) {
+      const error = new Error("Only PNG, JPG, GIF, WEBP, MP4, WEBM, and OGG attachments are supported.");
+      error.code = "unsupported_attachment";
+      throw error;
+    }
+    type = rawUrl.startsWith("data:image/") ? "image" : "video";
+  } else {
+    try {
+      const parsed = new URL(rawUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("Unsupported protocol.");
+      }
+    } catch (error) {
+      const invalid = new Error("Attachment links must start with http:// or https://.");
+      invalid.code = "invalid_attachment_url";
+      throw invalid;
+    }
+  }
+
+  return {
+    type,
+    url: rawUrl,
+    name: cleanChatText(input.name, 90) || (type === "image" ? "Image" : type === "video" ? "Video" : "Link"),
+    size: Math.max(0, Number(input.size) || 0)
+  };
 }
 
 function getKvConfig() {
@@ -101,14 +174,23 @@ async function getRedisClient() {
 
 function normalizeStoredMessages(value) {
   return (Array.isArray(value) ? value : [])
-    .map((message) => ({
-      id: cleanChatText(message?.id, 48),
-      userId: cleanChatText(message?.userId, 64),
-      username: cleanChatText(message?.username, 24) || "Guest",
-      text: cleanChatText(message?.text, 360),
-      createdAt: Number(message?.createdAt) || Date.now()
-    }))
-    .filter((message) => message.id && message.text)
+    .map((message) => {
+      let attachment = null;
+      try {
+        attachment = normalizeAttachment(message?.attachment);
+      } catch (error) {
+        attachment = null;
+      }
+      return {
+        id: cleanChatText(message?.id, 48),
+        userId: cleanChatText(message?.userId, 64),
+        username: cleanChatText(message?.username, 24) || "Guest",
+        text: cleanChatText(message?.text, 360),
+        attachment,
+        createdAt: Number(message?.createdAt) || Date.now()
+      };
+    })
+    .filter((message) => message.id && (message.text || message.attachment))
     .slice(-CHAT_LIMIT);
 }
 
@@ -178,12 +260,14 @@ function normalizeIncomingMessage(body = {}) {
   const username = cleanChatText(body.username, 24) || "Guest";
   const userId = cleanChatText(body.userId, 64) || `guest-${Math.random().toString(36).slice(2, 10)}`;
   const text = cleanChatText(body.text, 360);
-  if (!text) return null;
+  const attachment = normalizeAttachment(body.attachment);
+  if (!text && !attachment) return null;
   return {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
     userId,
     username,
     text,
+    attachment,
     createdAt: Date.now()
   };
 }
@@ -191,6 +275,7 @@ function normalizeIncomingMessage(body = {}) {
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
+      if (!hasValidPin(req)) return sendPinRequired(res);
       const store = await readChatStore();
       return sendJson(res, 200, store);
     }
@@ -209,6 +294,7 @@ module.exports = async function handler(req, res) {
     } catch (error) {
       body = {};
     }
+    if (!hasValidPin(req, body)) return sendPinRequired(res);
 
     const nextMessage = normalizeIncomingMessage(body);
     if (!nextMessage) {
@@ -228,7 +314,12 @@ module.exports = async function handler(req, res) {
       persistent: storage !== "memory"
     });
   } catch (error) {
-    return sendJson(res, error.code === "missing_storage" ? 503 : 500, {
+    const statusCode = error.code === "missing_storage"
+      ? 503
+      : error.code === "attachment_too_large"
+        ? 413
+        : ["unsupported_attachment", "invalid_attachment_url"].includes(error.code) ? 400 : 500;
+    return sendJson(res, statusCode, {
       error: error.code || "chat_error",
       message: error.message || "Global Chat failed.",
       storage: restKvConfigured() ? "kv" : redisUrlConfigured() ? "redis" : "memory"
