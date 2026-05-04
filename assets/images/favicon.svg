@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="vel.os">
+  <defs>
+    <linearGradient id="bg" x1="12" y1="6" x2="52" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a2a2a" />
+      <stop offset="0.52" stop-color="#050505" />
+      <stop offset="1" stop-color="#171717" />
+    </linearGradient>
+    <linearGradient id="mark" x1="18" y1="12" x2="46" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="0.58" stop-color="#d8d8d8" />
+      <stop offset="1" stop-color="#7f7f7f" />
+    </linearGradient>
+  </defs>
+  <rect x="5" y="5" width="54" height="54" rx="15" fill="url(#bg)" />
+  <rect x="6.25" y="6.25" width="51.5" height="51.5" rx="13.75" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="2.5" />
+  <path d="M13.5 15.5h10.2L32 40.1l8.3-24.6h10.2L36.1 49.2h-8.2L13.5 15.5Z" fill="url(#mark)" />
+  <path d="M22.4 15.5 32 43.4l9.6-27.9h3.3L33.7 46.7h-3.4L19.1 15.5h3.3Z" fill="#ffffff" fill-opacity="0.32" />
+</svg>
