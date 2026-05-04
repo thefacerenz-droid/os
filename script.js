@@ -2638,6 +2638,10 @@ function suspendPanelPlayback(name) {
     stopVelHubPlayback();
   }
 
+  if (name === "calculator") {
+    closeSecretVault();
+  }
+
 }
 
 function openPanel(name) {
@@ -3365,6 +3369,23 @@ function renderSecretVault() {
   `).join("");
 }
 
+function closeSecretVault() {
+  secretVaultUnlocked = false;
+  secretVaultLoading = false;
+  secretVaultVideos = [];
+  secretVault?.querySelectorAll("video").forEach((video) => {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  });
+  if (secretVault) secretVault.hidden = true;
+  if (secretVaultGrid) {
+    secretVaultGrid.innerHTML = '<p class="catalog-empty">Enter the code to load vault videos.</p>';
+  }
+  if (calculatorExpression) calculatorExpression.value = "";
+  if (calculatorResult) calculatorResult.textContent = "0";
+}
+
 async function loadSecretVaultVideos() {
   if (!secretVaultGrid) return;
   secretVaultLoading = true;
@@ -3397,7 +3418,8 @@ function submitCalculator() {
     const result = calculateExpression(expression);
     calculatorResult.textContent = String(result);
     if (normalized === "67+7") {
-      calculatorResult.textContent = "74 - vault unlocked";
+      calculatorExpression.value = "";
+      calculatorResult.textContent = "Vault unlocked";
       unlockSecretVault();
     }
   } catch (error) {
