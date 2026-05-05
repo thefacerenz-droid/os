@@ -2069,7 +2069,6 @@ const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
-const VEL_WELCOME_DONE_KEY = "vel-welcome-done";
 const VEL_CHAT_POLL_MS = 3000;
 const VEL_CHAT_ATTACHMENT_LIMIT = 1700000;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
@@ -2951,23 +2950,24 @@ function setVelChatStatus(message, tone = "") {
 
 function getSessionChatPin() {
   try {
-    return window.sessionStorage.getItem(VEL_CHAT_PIN_SESSION_KEY) || "";
+    window.sessionStorage.removeItem(VEL_CHAT_PIN_SESSION_KEY);
   } catch (error) {
-    return "";
+    return velChatPin || "";
+  }
+  return velChatPin || "";
+}
+
+function clearLegacyStoredChatPin() {
+  try {
+    window.sessionStorage.removeItem(VEL_CHAT_PIN_SESSION_KEY);
+  } catch (error) {
+    return;
   }
 }
 
 function setSessionChatPin(value) {
   velChatPin = String(value || "").trim();
-  try {
-    if (velChatPin) {
-      window.sessionStorage.setItem(VEL_CHAT_PIN_SESSION_KEY, velChatPin);
-    } else {
-      window.sessionStorage.removeItem(VEL_CHAT_PIN_SESSION_KEY);
-    }
-  } catch (error) {
-    return;
-  }
+  clearLegacyStoredChatPin();
 }
 
 function getVelChatHeaders(extra = {}) {
@@ -6650,7 +6650,7 @@ function typeWelcomeText(text = "") {
 }
 
 function needsWelcomeGate() {
-  return Boolean(welcomeGate) && (!normalizeVelChatUser(velChatUser) || !getSessionChatPin());
+  return Boolean(welcomeGate) && (!normalizeVelChatUser(velChatUser) || !velChatPin);
 }
 
 function completeWelcomeGate() {
@@ -6660,7 +6660,6 @@ function completeWelcomeGate() {
   if (welcomeGate) welcomeGate.hidden = true;
   document.body.classList.remove("is-onboarding");
   setWelcomeStatus("");
-  storage.set(VEL_WELCOME_DONE_KEY, "1");
 }
 
 function showWelcomeGate(step = "") {
@@ -6703,7 +6702,7 @@ async function submitWelcomeName() {
   const existing = normalizeVelChatUser(velChatUser);
   saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
   renderVelChatAuth();
-  if (getSessionChatPin()) {
+  if (velChatPin) {
     completeWelcomeGate();
     return;
   }
@@ -6732,13 +6731,10 @@ async function submitWelcomePin() {
 }
 
 function showBootScreen() {
-  if (!bootScreen) return;
-  document.body.classList.add("is-booting");
-  window.setTimeout(() => {
-    bootScreen.classList.add("is-hidden");
-    document.body.classList.remove("is-booting");
-    maybeShowWelcomeGate();
-  }, 3800);
+  clearLegacyStoredChatPin();
+  if (bootScreen) bootScreen.classList.add("is-hidden");
+  document.body.classList.remove("is-booting");
+  maybeShowWelcomeGate();
 }
 
 function setActiveLocalGame(gameId, displayMeta = null) {
