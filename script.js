@@ -1809,6 +1809,13 @@ const clockDay = document.getElementById("clockDay");
 const clockTime = document.getElementById("clockTime");
 const clockDate = document.getElementById("clockDate");
 const bootScreen = document.getElementById("bootScreen");
+const welcomeGate = document.getElementById("welcomeGate");
+const welcomeGateTitle = document.getElementById("welcomeGateTitle");
+const welcomeNameForm = document.getElementById("welcomeNameForm");
+const welcomeNameInput = document.getElementById("welcomeNameInput");
+const welcomePinForm = document.getElementById("welcomePinForm");
+const welcomePinInput = document.getElementById("welcomePinInput");
+const welcomeStatus = document.getElementById("welcomeStatus");
 const desktopShortcuts = document.getElementById("desktopShortcuts");
 const launcherGameSearch = document.getElementById("launcherGameSearch");
 const launcherOfflineToggle = document.getElementById("launcherOfflineToggle");
@@ -1911,6 +1918,7 @@ const youtubeFrameWrap = document.getElementById("youtubeFrameWrap");
 const youtubePlayerChannel = document.getElementById("youtubePlayerChannel");
 const youtubePlayerTitle = document.getElementById("youtubePlayerTitle");
 const youtubePlayerDescription = document.getElementById("youtubePlayerDescription");
+const youtubeUserChip = document.getElementById("youtubeUserChip");
 const youtubeOpenTabButton = document.getElementById("youtubeOpenTabButton");
 const youtubeFullscreenButton = document.getElementById("youtubeFullscreenButton");
 const youtubeToggleResultsButton = document.getElementById("youtubeToggleResultsButton");
@@ -2061,6 +2069,7 @@ const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
+const VEL_WELCOME_DONE_KEY = "vel-welcome-done";
 const VEL_CHAT_POLL_MS = 3000;
 const VEL_CHAT_ATTACHMENT_LIMIT = 1700000;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
@@ -2176,6 +2185,7 @@ aiMessages = Array.isArray(aiMessages)
 let aiLoading = false;
 let velChatUser = readStoredJson(VEL_CHAT_USER_KEY, null);
 let velChatItems = [];
+let velChatRenderSignature = "";
 let velChatLoading = false;
 let velChatPollTimer = null;
 let velChatCollapsed = storage.get(VEL_CHAT_COLLAPSED_KEY, "1") === "1";
@@ -2183,6 +2193,8 @@ let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
 let velChatUnlocked = false;
 let velChatPin = "";
 let velChatAttachment = null;
+let welcomeTypeTimer = null;
+let welcomeGateStep = "name";
 let secretVaultUnlocked = false;
 let secretVaultLoading = false;
 let secretVaultVideos = [];
@@ -2898,6 +2910,14 @@ function normalizeVelChatUser(user) {
   return { id, username };
 }
 
+function syncVelIdentity() {
+  const user = normalizeVelChatUser(velChatUser);
+  if (youtubeUserChip) {
+    youtubeUserChip.textContent = user ? `@${user.username}` : "Guest";
+  }
+  document.body.dataset.velUser = user?.username || "";
+}
+
 function saveVelChatUser(user) {
   velChatUser = normalizeVelChatUser(user);
   if (velChatUser) {
@@ -2909,6 +2929,7 @@ function saveVelChatUser(user) {
       return;
     }
   }
+  syncVelIdentity();
 }
 
 function formatVelChatTime(value) {
@@ -2960,12 +2981,13 @@ function getVelChatHeaders(extra = {}) {
 function setVelChatLocked(isLocked, message = "") {
   velChatUnlocked = !isLocked;
   velChat?.classList.toggle("is-locked", isLocked);
-  if (velChatPinForm) velChatPinForm.hidden = !isLocked;
+  if (velChatPinForm) velChatPinForm.hidden = true;
   if (!isLocked && velChatPinInput) velChatPinInput.value = "";
   if (velChatMessages) velChatMessages.hidden = isLocked;
   if (velChatForm) velChatForm.hidden = isLocked;
   if (velChatAttachmentName) velChatAttachmentName.hidden = isLocked || !velChatAttachment;
   if (message) setVelChatStatus(message, isLocked ? "warn" : "live");
+  if (isLocked && !message) setVelChatStatus("Finish startup login to unlock chat.", "warn");
   renderVelChatAuth();
 }
 
@@ -2974,6 +2996,10 @@ function clearVelChatPin(message = "PIN required to view chat.") {
   if (velChatPinInput) velChatPinInput.value = "";
   setVelChatLocked(true, message);
   window.clearTimeout(velChatPollTimer);
+  const bootDone = !bootScreen || bootScreen.classList.contains("is-hidden");
+  if (bootDone && !document.body.classList.contains("is-booting") && welcomeGate?.hidden) {
+    showWelcomeGate(velChatUser ? "pin" : "name");
+  }
 }
 
 function getFirstUrl(value = "") {
@@ -3082,10 +3108,8 @@ function setVelChatCollapsed(collapsed) {
   if (!velChatCollapsed) {
     markVelChatSeen();
     window.requestAnimationFrame(() => {
-      velChatMessages?.scrollTo({ top: velChatMessages.scrollHeight });
-      if (!velChatUnlocked) {
-        velChatPinInput?.focus({ preventScroll: true });
-      } else if (velChatUser) {
+      stickVelChatToBottom();
+      if (velChatUnlocked && velChatUser) {
         velChatInput?.focus({ preventScroll: true });
       }
     });
@@ -3153,9 +3177,53 @@ function markVelChatSeen() {
   renderVelChatUnread();
 }
 
+function getVelChatRenderSignature() {
+  return velChatItems
+    .map((message) => `${message.id}:${message.createdAt}:${message.attachment?.url?.length || 0}`)
+    .join("|");
+}
+
+function isVelChatNearBottom(buffer = 80) {
+  if (!velChatMessages) return true;
+  return velChatMessages.scrollTop + velChatMessages.clientHeight >= velChatMessages.scrollHeight - buffer;
+}
+
+function stickVelChatToBottom() {
+  if (!velChatMessages) return;
+  velChatMessages.scrollTop = velChatMessages.scrollHeight;
+}
+
+function watchVelChatMediaLoads(shouldStick) {
+  if (!velChatMessages) return;
+  const mediaItems = [...velChatMessages.querySelectorAll("img.vel-chat-media, video.vel-chat-media")];
+  const handleMediaReady = () => {
+    if (shouldStick || isVelChatNearBottom(140)) {
+      window.requestAnimationFrame(stickVelChatToBottom);
+    }
+  };
+  mediaItems.forEach((item) => {
+    item.addEventListener("load", handleMediaReady, { once: true });
+    item.addEventListener("loadedmetadata", handleMediaReady, { once: true });
+    if (item.tagName === "IMG" && item.complete) {
+      handleMediaReady();
+    }
+  });
+}
+
 function renderVelChatMessages(forceStick = false) {
   if (!velChatMessages) return;
-  const shouldStickToBottom = velChatMessages.scrollTop + velChatMessages.clientHeight >= velChatMessages.scrollHeight - 80;
+  const shouldStickToBottom = forceStick || isVelChatNearBottom();
+  const previousScrollTop = velChatMessages.scrollTop;
+  const nextSignature = getVelChatRenderSignature();
+  if (nextSignature === velChatRenderSignature && !forceStick && velChatMessages.childElementCount) {
+    if (!velChatCollapsed) {
+      markVelChatSeen();
+    } else {
+      renderVelChatUnread();
+    }
+    return;
+  }
+  velChatRenderSignature = nextSignature;
   if (!velChatItems.length) {
     velChatMessages.innerHTML = `<p class="vel-chat-empty">No messages yet. Login and be the first one in the lobby.</p>`;
   } else {
@@ -3173,9 +3241,12 @@ function renderVelChatMessages(forceStick = false) {
       `;
     }).join("");
   }
-  if (forceStick || shouldStickToBottom) {
-    velChatMessages.scrollTop = velChatMessages.scrollHeight;
+  if (shouldStickToBottom) {
+    stickVelChatToBottom();
+  } else {
+    velChatMessages.scrollTop = previousScrollTop;
   }
+  watchVelChatMediaLoads(shouldStickToBottom);
   if (!velChatCollapsed) {
     markVelChatSeen();
   } else {
@@ -3297,6 +3368,7 @@ async function sendVelChatMessage(text) {
 
 function initVelChat() {
   velChatUser = normalizeVelChatUser(velChatUser);
+  syncVelIdentity();
   if (velChatName && velChatUser) {
     velChatName.value = velChatUser.username;
   }
@@ -3313,7 +3385,7 @@ async function unlockVelChat(pinValue) {
   const nextPin = String(pinValue || "").trim();
   if (!nextPin) {
     setVelChatStatus("Enter the chat PIN.", "warn");
-    return;
+    return false;
   }
   setSessionChatPin(nextPin);
   setVelChatLocked(false, "Unlocking chat...");
@@ -3321,7 +3393,9 @@ async function unlockVelChat(pinValue) {
   if (velChatUnlocked) {
     setVelChatStatus("Chat unlocked.", "live");
     velChatInput?.focus({ preventScroll: true });
+    return true;
   }
+  return false;
 }
 
 function sanitizeCalculatorExpression(value = "") {
@@ -6554,12 +6628,116 @@ function initDraggableLyricsWidget() {
   });
 }
 
+function setWelcomeStatus(message = "", tone = "") {
+  if (!welcomeStatus) return;
+  welcomeStatus.textContent = message;
+  welcomeStatus.dataset.tone = tone;
+}
+
+function typeWelcomeText(text = "") {
+  if (!welcomeGateTitle) return;
+  window.clearInterval(welcomeTypeTimer);
+  welcomeGateTitle.textContent = "";
+  let index = 0;
+  welcomeTypeTimer = window.setInterval(() => {
+    index += 1;
+    welcomeGateTitle.textContent = text.slice(0, index);
+    if (index >= text.length) {
+      window.clearInterval(welcomeTypeTimer);
+      welcomeTypeTimer = null;
+    }
+  }, 32);
+}
+
+function needsWelcomeGate() {
+  return Boolean(welcomeGate) && (!normalizeVelChatUser(velChatUser) || !getSessionChatPin());
+}
+
+function completeWelcomeGate() {
+  window.clearInterval(welcomeTypeTimer);
+  welcomeTypeTimer = null;
+  welcomeGateStep = "name";
+  if (welcomeGate) welcomeGate.hidden = true;
+  document.body.classList.remove("is-onboarding");
+  setWelcomeStatus("");
+  storage.set(VEL_WELCOME_DONE_KEY, "1");
+}
+
+function showWelcomeGate(step = "") {
+  if (!welcomeGate) return;
+  velChatUser = normalizeVelChatUser(velChatUser);
+  const hasUser = Boolean(velChatUser);
+  welcomeGateStep = step || (hasUser ? "pin" : "name");
+  welcomeGate.hidden = false;
+  document.body.classList.add("is-onboarding");
+  setWelcomeStatus("");
+  if (welcomeNameForm) welcomeNameForm.hidden = welcomeGateStep !== "name";
+  if (welcomePinForm) welcomePinForm.hidden = welcomeGateStep !== "pin";
+  if (welcomeGateStep === "name") {
+    typeWelcomeText("Welcome user, what should we call you?");
+    if (welcomeNameInput) welcomeNameInput.value = hasUser ? velChatUser.username : "";
+    window.setTimeout(() => welcomeNameInput?.focus({ preventScroll: true }), 420);
+    return;
+  }
+  typeWelcomeText(hasUser ? `Welcome back, ${velChatUser.username}. Enter PIN.` : "Enter PIN to unlock vel.os.");
+  if (welcomePinInput) welcomePinInput.value = "";
+  window.setTimeout(() => welcomePinInput?.focus({ preventScroll: true }), 420);
+}
+
+function maybeShowWelcomeGate() {
+  if (needsWelcomeGate()) {
+    showWelcomeGate();
+    return true;
+  }
+  completeWelcomeGate();
+  return false;
+}
+
+async function submitWelcomeName() {
+  const username = cleanVelChatName(welcomeNameInput?.value || "");
+  if (!username) {
+    setWelcomeStatus("Type a name first.", "error");
+    welcomeNameInput?.focus({ preventScroll: true });
+    return;
+  }
+  const existing = normalizeVelChatUser(velChatUser);
+  saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
+  renderVelChatAuth();
+  if (getSessionChatPin()) {
+    completeWelcomeGate();
+    return;
+  }
+  showWelcomeGate("pin");
+}
+
+async function submitWelcomePin() {
+  const pin = String(welcomePinInput?.value || "").trim();
+  if (!pin) {
+    setWelcomeStatus("Enter the PIN to continue.", "error");
+    welcomePinInput?.focus({ preventScroll: true });
+    return;
+  }
+  setWelcomeStatus("Checking PIN...");
+  welcomePinForm?.querySelector("button")?.toggleAttribute("disabled", true);
+  const unlocked = await unlockVelChat(pin);
+  welcomePinForm?.querySelector("button")?.toggleAttribute("disabled", false);
+  if (!unlocked) {
+    if (welcomePinInput) welcomePinInput.value = "";
+    setWelcomeStatus("Wrong PIN. Try again.", "error");
+    welcomePinInput?.focus({ preventScroll: true });
+    return;
+  }
+  setWelcomeStatus(`Welcome, ${velChatUser?.username || "user"}.`);
+  window.setTimeout(completeWelcomeGate, 420);
+}
+
 function showBootScreen() {
   if (!bootScreen) return;
   document.body.classList.add("is-booting");
   window.setTimeout(() => {
     bootScreen.classList.add("is-hidden");
     document.body.classList.remove("is-booting");
+    maybeShowWelcomeGate();
   }, 3800);
 }
 
@@ -8051,6 +8229,16 @@ velChatToggle?.addEventListener("click", () => {
 
 velChatHide?.addEventListener("click", () => {
   setVelChatCollapsed(true);
+});
+
+welcomeNameForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitWelcomeName();
+});
+
+welcomePinForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitWelcomePin();
 });
 
 velChatPinForm?.addEventListener("submit", (event) => {

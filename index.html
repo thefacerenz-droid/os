@@ -76,6 +76,24 @@
         </div>
       </section>
 
+      <section class="welcome-gate" id="welcomeGate" aria-modal="true" role="dialog" aria-labelledby="welcomeGateTitle" hidden>
+        <div class="welcome-card">
+          <p class="micro-label">vel.os identity</p>
+          <h2 id="welcomeGateTitle" class="welcome-typed" aria-live="polite"></h2>
+          <form class="welcome-form" id="welcomeNameForm">
+            <label for="welcomeNameInput">Username</label>
+            <input id="welcomeNameInput" type="text" maxlength="24" autocomplete="nickname" placeholder="Pick a clean name" aria-label="Vel.os username" />
+            <button class="ghost-button is-solid" type="submit">Next</button>
+          </form>
+          <form class="welcome-form" id="welcomePinForm" hidden>
+            <label for="welcomePinInput">Enter PIN</label>
+            <input id="welcomePinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="PIN" aria-label="Startup PIN" />
+            <button class="ghost-button is-solid" type="submit">Enter vel.os</button>
+          </form>
+          <p class="welcome-status" id="welcomeStatus" aria-live="polite"></p>
+        </div>
+      </section>
+
       <section class="lyrics-widget" id="lyricsWidget" aria-label="Lyrics panel">
         <header class="lyrics-widget-head" id="lyricsWidgetHead">
           <div>
@@ -266,6 +284,7 @@
           <div class="youtube-shell" id="youtubeShell">
             <aside class="youtube-sidebar" aria-label="YouTube sections">
               <strong class="youtube-logo"><span>YT</span>YouTube</strong>
+              <span class="youtube-user-chip" id="youtubeUserChip">Guest</span>
               <button type="button" data-youtube-home>Home</button>
               <button type="button" data-youtube-topic="Trending music">Trending</button>
               <button type="button" data-youtube-movies>Movies</button>
@@ -1139,15 +1158,6 @@
               <button class="vel-chat-mini-button" type="button" id="velChatHide">Hide</button>
             </div>
           </header>
-
-          <form class="vel-chat-pin" id="velChatPinForm">
-            <strong>PIN required</strong>
-            <span>Enter the chat PIN to view and send messages.</span>
-            <div>
-              <input id="velChatPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="PIN" aria-label="Chat PIN" />
-              <button type="submit">Enter</button>
-            </div>
-          </form>
 
           <button class="vel-chat-login-needed" type="button" id="velChatLoginNeeded">Login to chat</button>
 
