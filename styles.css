@@ -1469,7 +1469,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .lobby-pills,
 .lobby-actions,
 .lobby-sketch-tools,
-.lobby-card-head {
+.lobby-card-head,
+.lobby-head-actions {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -1497,7 +1498,10 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .lobby-actions button,
 .lobby-prompt-form button,
 .lobby-submit-form button,
-.lobby-join-form button {
+.lobby-join-form button,
+.lobby-invite-panel button,
+.lobby-invite-bin button,
+.lobby-sketch-delete {
   min-height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
@@ -1570,6 +1574,94 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   flex-wrap: wrap;
 }
 
+.lobby-invite-bin,
+.lobby-invite-panel {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.lobby-invite-panel {
+  margin-bottom: 0.75rem;
+}
+
+.lobby-invite-panel strong {
+  display: block;
+  color: #fff;
+  font-size: 0.88rem;
+}
+
+.lobby-invite-panel span {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.lobby-invite-card,
+.lobby-user-card,
+.lobby-collaborators {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.lobby-invite-card {
+  align-items: flex-start;
+}
+
+.lobby-invite-card strong,
+.lobby-user-card strong,
+.lobby-collaborators strong {
+  color: #fff;
+  font-size: 0.78rem;
+}
+
+.lobby-invite-card span,
+.lobby-user-card span,
+.lobby-collaborators span {
+  display: block;
+  margin-top: 0.16rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.lobby-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.lobby-invite-actions button,
+.lobby-user-card button,
+.lobby-sketch-delete {
+  min-height: 30px;
+  padding: 0.34rem 0.55rem;
+  font-size: 0.68rem;
+}
+
+.lobby-user-list {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 190px;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.lobby-collaborators {
+  margin: 0 0 0.75rem;
+}
+
 .lobby-canvas-wrap {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1634,6 +1726,13 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .lobby-sketch-card strong {
   color: #fff;
   font-size: 0.82rem;
+}
+
+.lobby-sketch-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .lobby-sketch-card span,

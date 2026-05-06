@@ -5,6 +5,8 @@ const LOBBY_PIN = "3745";
 const NOTE_LIMIT = 8000;
 const DRAWING_LIMIT = 700000;
 const ENTRY_LIMIT = 36;
+const INVITE_LIMIT = 80;
+const USER_ACTIVE_MS = 1000 * 60 * 8;
 const ALLOWED_DRAWING = /^data:image\/(?:png|jpe?g|webp);base64,/i;
 
 function sendJson(res, statusCode, payload) {
@@ -43,6 +45,13 @@ function cleanUser(input = {}) {
   };
 }
 
+function cleanPerson(input = {}) {
+  const userId = cleanText(input.userId || input.id, 64);
+  const username = cleanText(input.username || input.name, 24);
+  if (!userId || !username) return null;
+  return { userId, username };
+}
+
 function getRequestPin(req, body = {}) {
   let queryPin = "";
   try {
@@ -61,7 +70,7 @@ function hasValidPin(req, body = {}) {
 function sendPinRequired(res) {
   return sendJson(res, 401, {
     error: "pin_required",
-    message: "Enter the startup PIN before opening shared lobbies."
+    message: "Enter the startup PIN before opening Notebook."
   });
 }
 
@@ -126,7 +135,7 @@ function validateRedisUrl(value) {
 async function kvCommand(command) {
   const config = getKvConfig();
   if (!config.url || !config.token) {
-    const error = new Error("Connect Redis/KV storage to make Lobbies permanent.");
+      const error = new Error("Connect Redis/KV storage to make Notebook permanent.");
     error.code = "missing_storage";
     throw error;
   }
@@ -170,6 +179,7 @@ function emptyLobby(name = "Main") {
       prompt: "Draw the weirdest creature you can imagine.",
       promptBy: "vel.os",
       promptAt: 0,
+      collaborators: [],
       entries: []
     }
   };
@@ -178,14 +188,44 @@ function emptyLobby(name = "Main") {
 function normalizeEntry(entry = {}) {
   const image = String(entry.image || "");
   if (!ALLOWED_DRAWING.test(image) || image.length > DRAWING_LIMIT) return null;
+  const fallbackAuthor = cleanPerson(entry) || { userId: cleanText(entry.userId, 64), username: cleanText(entry.username, 24) || "Guest" };
+  const authors = (Array.isArray(entry.authors) ? entry.authors : [fallbackAuthor])
+    .map(cleanPerson)
+    .filter(Boolean)
+    .filter((person, index, people) => people.findIndex((item) => item.userId === person.userId) === index)
+    .slice(0, 8);
   return {
     id: cleanText(entry.id, 48) || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    userId: cleanText(entry.userId, 64),
-    username: cleanText(entry.username, 24) || "Guest",
+    userId: cleanText(entry.userId, 64) || authors[0]?.userId || "",
+    username: cleanText(entry.username, 24) || authors[0]?.username || "Guest",
+    authors,
     image,
     caption: cleanText(entry.caption, 120),
     prompt: cleanText(entry.prompt, 140),
     createdAt: Number(entry.createdAt) || Date.now()
+  };
+}
+
+function normalizeInvite(invite = {}) {
+  const id = cleanText(invite.id, 48);
+  const from = cleanPerson({
+    userId: invite.fromUserId || invite.from?.userId,
+    username: invite.fromUsername || invite.from?.username
+  });
+  const to = cleanPerson({
+    userId: invite.toUserId || invite.to?.userId,
+    username: invite.toUsername || invite.to?.username
+  });
+  if (!id || !from || !to) return null;
+  return {
+    id,
+    lobby: cleanLobbyName(invite.lobby || "Main"),
+    prompt: cleanText(invite.prompt, 140),
+    fromUserId: from.userId,
+    fromUsername: from.username,
+    toUserId: to.userId,
+    toUsername: to.username,
+    createdAt: Number(invite.createdAt) || Date.now()
   };
 }
 
@@ -196,6 +236,11 @@ function normalizeLobby(lobby = {}, fallbackName = "Main") {
     .map(normalizeEntry)
     .filter(Boolean)
     .slice(0, ENTRY_LIMIT);
+  const collaborators = (Array.isArray(lobby.sketch?.collaborators) ? lobby.sketch.collaborators : [])
+    .map(cleanPerson)
+    .filter(Boolean)
+    .filter((person, index, people) => people.findIndex((item) => item.userId === person.userId) === index)
+    .slice(0, 8);
   return {
     name,
     note: {
@@ -207,6 +252,7 @@ function normalizeLobby(lobby = {}, fallbackName = "Main") {
       prompt: cleanText(lobby.sketch?.prompt, 140) || blank.sketch.prompt,
       promptBy: cleanText(lobby.sketch?.promptBy, 24) || blank.sketch.promptBy,
       promptAt: Number(lobby.sketch?.promptAt) || 0,
+      collaborators,
       entries
     }
   };
@@ -222,7 +268,21 @@ function normalizeStore(value = {}) {
     const key = name.toLowerCase();
     if (!lobbies[key]) lobbies[key] = emptyLobby(name);
   });
-  return { lobbies };
+  const users = {};
+  Object.entries(value?.users || {}).forEach(([key, user]) => {
+    const person = cleanPerson(user);
+    if (!person) return;
+    users[person.userId || key] = {
+      ...person,
+      lobby: cleanLobbyName(user.lobby || "Main"),
+      lastSeen: Number(user.lastSeen) || 0
+    };
+  });
+  const invites = (Array.isArray(value?.invites) ? value.invites : [])
+    .map(normalizeInvite)
+    .filter(Boolean)
+    .slice(0, INVITE_LIMIT);
+  return { lobbies, users, invites };
 }
 
 async function readStore() {
@@ -273,7 +333,59 @@ function getLobby(store, name) {
   return store.lobbies[key];
 }
 
-function serialize(store, lobbyName) {
+function prunePresence(store) {
+  const now = Date.now();
+  Object.entries(store.users || {}).forEach(([id, user]) => {
+    if (!user?.lastSeen || now - user.lastSeen > USER_ACTIVE_MS) {
+      delete store.users[id];
+    }
+  });
+  store.invites = (store.invites || []).filter((invite) => now - (invite.createdAt || now) < USER_ACTIVE_MS * 4);
+}
+
+function touchUser(store, user, lobbyName) {
+  if (!user?.userId) return;
+  prunePresence(store);
+  store.users[user.userId] = {
+    userId: user.userId,
+    username: user.username || "Guest",
+    lobby: cleanLobbyName(lobbyName),
+    lastSeen: Date.now()
+  };
+}
+
+function addCollaborators(lobby, people = []) {
+  const current = Array.isArray(lobby.sketch.collaborators) ? lobby.sketch.collaborators : [];
+  lobby.sketch.collaborators = [...current, ...people]
+    .map(cleanPerson)
+    .filter(Boolean)
+    .filter((person, index, list) => list.findIndex((item) => item.userId === person.userId) === index)
+    .slice(0, 8);
+}
+
+function getActiveUsers(store) {
+  prunePresence(store);
+  return Object.values(store.users || {})
+    .filter((user) => user?.userId && user?.username)
+    .sort((left, right) => (right.lastSeen || 0) - (left.lastSeen || 0))
+    .slice(0, 50);
+}
+
+function getPendingInvites(store, userId = "") {
+  if (!userId) return [];
+  return (store.invites || [])
+    .filter((invite) => invite.toUserId === userId)
+    .sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0))
+    .slice(0, 20);
+}
+
+function canDeleteEntry(entry, user) {
+  if (!entry || !user?.userId) return false;
+  return entry.userId === user.userId
+    || (entry.authors || []).some((author) => author.userId === user.userId);
+}
+
+function serialize(store, lobbyName, user = null) {
   const lobby = getLobby(store, lobbyName);
   return {
     lobby,
@@ -284,6 +396,8 @@ function serialize(store, lobbyName) {
       }))
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       .slice(0, 18),
+    users: getActiveUsers(store),
+    invites: getPendingInvites(store, user?.userId),
     storage: store.storage || "memory",
     persistent: Boolean(store.persistent)
   };
@@ -295,6 +409,15 @@ module.exports = async function handler(req, res) {
       if (!hasValidPin(req)) return sendPinRequired(res);
       const url = new URL(req.url || "/", "http://localhost");
       const store = await readStore();
+      const user = cleanPerson({
+        userId: url.searchParams.get("userId") || "",
+        username: url.searchParams.get("username") || ""
+      });
+      if (user) {
+        touchUser(store, user, url.searchParams.get("lobby") || "Main");
+        const saved = await writeStore(store);
+        return sendJson(res, 200, serialize(saved, url.searchParams.get("lobby") || "Main", user));
+      }
       return sendJson(res, 200, serialize(store, url.searchParams.get("lobby") || "Main"));
     }
 
@@ -302,7 +425,7 @@ module.exports = async function handler(req, res) {
       res.setHeader("Allow", "GET, POST");
       return sendJson(res, 405, {
         error: "method_not_allowed",
-        message: "Use GET or POST for Lobbies."
+        message: "Use GET or POST for Notebook."
       });
     }
 
@@ -310,10 +433,11 @@ module.exports = async function handler(req, res) {
     if (!hasValidPin(req, body)) return sendPinRequired(res);
 
     const action = cleanText(body.action, 32);
-    const lobbyName = cleanLobbyName(body.lobby || "Main");
+    let lobbyName = cleanLobbyName(body.lobby || "Main");
     const user = cleanUser(body);
     const store = await readStore();
-    const lobby = getLobby(store, lobbyName);
+    touchUser(store, user, lobbyName);
+    let lobby = getLobby(store, lobbyName);
 
     if (action === "note") {
       lobby.note = {
@@ -325,6 +449,7 @@ module.exports = async function handler(req, res) {
       lobby.sketch.prompt = cleanText(body.prompt, 140) || emptyLobby().sketch.prompt;
       lobby.sketch.promptBy = user.username;
       lobby.sketch.promptAt = Date.now();
+      lobby.sketch.collaborators = [user];
       lobby.sketch.entries = [];
     } else if (action === "entry") {
       const image = String(body.image || "");
@@ -334,15 +459,76 @@ module.exports = async function handler(req, res) {
           message: "That drawing is too large or not supported."
         });
       }
+      addCollaborators(lobby, [user]);
       const entry = normalizeEntry({
         id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
         ...user,
+        authors: lobby.sketch.collaborators,
         image,
         caption: body.caption,
         prompt: lobby.sketch.prompt,
         createdAt: Date.now()
       });
       lobby.sketch.entries = [entry, ...lobby.sketch.entries].filter(Boolean).slice(0, ENTRY_LIMIT);
+    } else if (action === "delete-entry") {
+      const entryId = cleanText(body.entryId, 48);
+      const entry = lobby.sketch.entries.find((item) => item.id === entryId);
+      if (!entry) {
+        return sendJson(res, 404, {
+          error: "missing_entry",
+          message: "That sketch is already gone."
+        });
+      }
+      if (!canDeleteEntry(entry, user)) {
+        return sendJson(res, 403, {
+          error: "not_entry_author",
+          message: "Only sketch authors can delete that post."
+        });
+      }
+      lobby.sketch.entries = lobby.sketch.entries.filter((item) => item.id !== entryId);
+    } else if (action === "invite") {
+      const targetUserId = cleanText(body.targetUserId, 64);
+      const target = store.users[targetUserId];
+      if (!target || target.userId === user.userId) {
+        return sendJson(res, 404, {
+          error: "missing_user",
+          message: "That person is not online in Notebook right now."
+        });
+      }
+      const invite = normalizeInvite({
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        lobby: lobby.name,
+        prompt: lobby.sketch.prompt,
+        fromUserId: user.userId,
+        fromUsername: user.username,
+        toUserId: target.userId,
+        toUsername: target.username,
+        createdAt: Date.now()
+      });
+      store.invites = [
+        invite,
+        ...store.invites.filter((item) => !(item.lobby.toLowerCase() === invite.lobby.toLowerCase() && item.fromUserId === invite.fromUserId && item.toUserId === invite.toUserId))
+      ].slice(0, INVITE_LIMIT);
+      addCollaborators(lobby, [user]);
+    } else if (action === "invite-response") {
+      const inviteId = cleanText(body.inviteId, 48);
+      const invite = store.invites.find((item) => item.id === inviteId && item.toUserId === user.userId);
+      if (!invite) {
+        return sendJson(res, 404, {
+          error: "missing_invite",
+          message: "That invite is no longer active."
+        });
+      }
+      store.invites = store.invites.filter((item) => item.id !== inviteId);
+      if (body.accepted === true) {
+        lobbyName = invite.lobby;
+        lobby = getLobby(store, lobbyName);
+        addCollaborators(lobby, [
+          { userId: invite.fromUserId, username: invite.fromUsername },
+          user
+        ]);
+        touchUser(store, user, lobbyName);
+      }
     } else if (action === "clear-sketch") {
       lobby.sketch.entries = [];
     } else if (action === "clear-note") {
@@ -354,16 +540,16 @@ module.exports = async function handler(req, res) {
     } else {
       return sendJson(res, 400, {
         error: "bad_action",
-        message: "Choose a lobby action."
+        message: "Choose a Notebook action."
       });
     }
 
     const saved = await writeStore(store);
-    return sendJson(res, 200, serialize(saved, lobbyName));
+    return sendJson(res, 200, serialize(saved, lobbyName, user));
   } catch (error) {
     return sendJson(res, error.code === "missing_storage" ? 503 : 500, {
       error: error.code || "lobbies_error",
-      message: error.message || "Lobbies failed.",
+      message: error.message || "Notebook failed.",
       storage: restKvConfigured() ? "kv" : redisUrlConfigured() ? "redis" : "memory"
     });
   }

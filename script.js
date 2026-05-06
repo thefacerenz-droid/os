@@ -1305,9 +1305,9 @@ const utilityApps = {
     panel: "velhub"
   },
   lobbies: {
-    title: "Lobbies",
-    label: "Lobbies",
-    badgeText: "LB",
+    title: "Notebook",
+    label: "Notebook",
+    badgeText: "NB",
     action: "panel",
     panel: "lobbies"
   },
@@ -2057,6 +2057,11 @@ const lobbyNoteClear = document.getElementById("lobbyNoteClear");
 const lobbyNoteMeta = document.getElementById("lobbyNoteMeta");
 const lobbyRefreshButton = document.getElementById("lobbyRefreshButton");
 const lobbySketchTitle = document.getElementById("lobbySketchTitle");
+const lobbyInviteToggle = document.getElementById("lobbyInviteToggle");
+const lobbyInvitePanel = document.getElementById("lobbyInvitePanel");
+const lobbyUserList = document.getElementById("lobbyUserList");
+const lobbyInviteInbox = document.getElementById("lobbyInviteInbox");
+const lobbyCollaborators = document.getElementById("lobbyCollaborators");
 const lobbyPromptForm = document.getElementById("lobbyPromptForm");
 const lobbyPromptInput = document.getElementById("lobbyPromptInput");
 const lobbySketchCanvas = document.getElementById("lobbySketchCanvas");
@@ -2230,11 +2235,16 @@ let welcomeGateStep = "name";
 let secretVaultUnlocked = false;
 let secretVaultLoading = false;
 let secretVaultVideos = [];
+const LOBBY_POLL_MS = 6000;
+let lobbyPollTimer = null;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
   lobbyData: null,
   lobbies: [],
+  users: [],
+  invites: [],
+  inviteOpen: false,
   loading: false,
   drawing: false,
   lastPoint: null
@@ -2699,6 +2709,10 @@ function suspendPanelPlayback(name) {
 
   if (name === "velhub") {
     stopVelHubPlayback();
+  }
+
+  if (name === "lobbies") {
+    window.clearTimeout(lobbyPollTimer);
   }
 
   if (name === "calculator") {
@@ -3646,6 +3660,97 @@ function getLobbyUserPayload() {
   };
 }
 
+function getLobbyCollaborators() {
+  const user = getLobbyUserPayload();
+  const collaborators = Array.isArray(lobbyState.lobbyData?.sketch?.collaborators)
+    ? lobbyState.lobbyData.sketch.collaborators
+    : [];
+  return [...collaborators, user]
+    .filter((person) => person?.userId && person?.username)
+    .filter((person, index, people) => people.findIndex((item) => item.userId === person.userId) === index)
+    .slice(0, 8);
+}
+
+function formatLobbyPeople(people = [], fallback = "Solo sketch") {
+  const names = people
+    .map((person) => person?.username)
+    .filter(Boolean)
+    .filter((name, index, list) => list.indexOf(name) === index);
+  if (!names.length) return fallback;
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} + ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} + ${names[names.length - 1]}`;
+}
+
+function renderLobbyCollaborators() {
+  if (!lobbyCollaborators) return;
+  const collaborators = getLobbyCollaborators();
+  lobbyCollaborators.innerHTML = `
+    <div>
+      <strong>${escapeHtml(collaborators.length > 1 ? "Collab sketch" : "Solo sketch")}</strong>
+      <span>${escapeHtml(formatLobbyPeople(collaborators))}</span>
+    </div>
+    <span>${collaborators.length} artist${collaborators.length === 1 ? "" : "s"}</span>
+  `;
+}
+
+function renderLobbyInviteInbox() {
+  if (!lobbyInviteInbox) return;
+  const invites = Array.isArray(lobbyState.invites) ? lobbyState.invites : [];
+  const cards = invites.map((invite) => `
+    <article class="lobby-invite-card">
+      <div>
+        <strong>${escapeHtml(invite.fromUsername || "Someone")}</strong>
+        <span>Invite to ${escapeHtml(invite.lobby || "Notebook")} - ${escapeHtml(invite.prompt || "Sketch together")}</span>
+      </div>
+      <div class="lobby-invite-actions">
+        <button type="button" data-lobby-invite-accept="${escapeHtml(invite.id)}">Accept</button>
+        <button type="button" data-lobby-invite-decline="${escapeHtml(invite.id)}">Decline</button>
+      </div>
+    </article>
+  `).join("");
+  lobbyInviteInbox.innerHTML = `
+    <p class="section-label">Invite Bin${invites.length ? ` (${invites.length})` : ""}</p>
+    ${cards || '<p class="tiny-note">No sketch invites yet. When someone invites you, it lands here.</p>'}
+  `;
+}
+
+function renderLobbyUserList() {
+  if (!lobbyUserList) return;
+  const current = getLobbyUserPayload();
+  const users = (Array.isArray(lobbyState.users) ? lobbyState.users : [])
+    .filter((user) => user?.userId && user.userId !== current.userId);
+  if (!users.length) {
+    lobbyUserList.innerHTML = '<p class="tiny-note">No one else is online in Notebook yet. Have them open Notebook, then refresh.</p>';
+    return;
+  }
+  lobbyUserList.innerHTML = users.map((user) => `
+    <article class="lobby-user-card">
+      <div>
+        <strong>${escapeHtml(user.username || "Guest")}</strong>
+        <span>${escapeHtml(user.lobby ? `In ${user.lobby}` : "Online")}</span>
+      </div>
+      <button type="button" data-lobby-invite-user="${escapeHtml(user.userId)}">Invite</button>
+    </article>
+  `).join("");
+}
+
+function setLobbyInvitePanel(open) {
+  lobbyState.inviteOpen = Boolean(open);
+  if (lobbyInvitePanel) lobbyInvitePanel.hidden = !lobbyState.inviteOpen;
+  if (lobbyInviteToggle) {
+    lobbyInviteToggle.setAttribute("aria-expanded", String(lobbyState.inviteOpen));
+    lobbyInviteToggle.textContent = lobbyState.inviteOpen ? "Hide Invite" : "Invite";
+  }
+  if (lobbyState.inviteOpen) renderLobbyUserList();
+}
+
+function scheduleLobbyPoll() {
+  window.clearTimeout(lobbyPollTimer);
+  if (!isDrawerOpen("lobbies") || !velChatPin) return;
+  lobbyPollTimer = window.setTimeout(() => loadLobbyState({ silent: true }), LOBBY_POLL_MS);
+}
+
 function setLobbyMode(mode = "notes") {
   lobbyState.mode = mode === "sketch" ? "sketch" : "notes";
   storage.set("vel-lobby-mode", lobbyState.mode);
@@ -3690,19 +3795,27 @@ function renderLobbyState() {
   if (lobbyPromptInput && document.activeElement !== lobbyPromptInput) {
     lobbyPromptInput.value = lobby?.sketch?.prompt || "";
   }
+  renderLobbyInviteInbox();
+  renderLobbyUserList();
+  renderLobbyCollaborators();
   renderLobbyGallery();
 }
 
-async function loadLobbyState() {
+async function loadLobbyState(options = {}) {
   if (!lobbyPills || lobbyState.loading || !velChatPin) {
     renderLobbyState();
-    if (!velChatPin) setLobbyStatus("Enter the startup PIN to sync lobbies.", "warn");
+    if (!velChatPin) setLobbyStatus("Enter the startup PIN to sync Notebook.", "warn");
     return;
   }
   lobbyState.loading = true;
-  setLobbyStatus("Loading lobby...");
+  if (!options.silent) setLobbyStatus("Loading Notebook...");
   try {
-    const params = new URLSearchParams({ lobby: cleanLobbyName(lobbyState.lobby) });
+    const user = getLobbyUserPayload();
+    const params = new URLSearchParams({
+      lobby: cleanLobbyName(lobbyState.lobby),
+      userId: user.userId,
+      username: user.username
+    });
     const response = await fetch(`/api/lobbies?${params.toString()}`, {
       cache: "no-store",
       headers: getVelChatHeaders()
@@ -3712,25 +3825,30 @@ async function loadLobbyState() {
       clearVelChatPin(data.message || "Wrong PIN. Try again.");
       return;
     }
-    if (!response.ok) throw new Error(data.message || "Lobby could not load.");
+    if (!response.ok) throw new Error(data.message || "Notebook could not load.");
     lobbyState.lobbyData = data.lobby || null;
     lobbyState.lobbies = Array.isArray(data.lobbies) ? data.lobbies : [];
-    setLobbyStatus(data.persistent ? "Lobby synced globally." : "Lobby is temporary until Redis is connected.", data.persistent ? "live" : "warn");
+    lobbyState.users = Array.isArray(data.users) ? data.users : [];
+    lobbyState.invites = Array.isArray(data.invites) ? data.invites : [];
+    if (!options.silent) {
+      setLobbyStatus(data.persistent ? "Notebook synced globally." : "Notebook is temporary until Redis is connected.", data.persistent ? "live" : "warn");
+    }
   } catch (error) {
-    setLobbyStatus(error.message || "Lobby offline.", "error");
+    setLobbyStatus(error.message || "Notebook offline.", "error");
   } finally {
     lobbyState.loading = false;
     renderLobbyState();
+    scheduleLobbyPoll();
   }
 }
 
 async function postLobbyAction(payload = {}, message = "Lobby saved.") {
   if (!velChatPin) {
-    setLobbyStatus("Enter the startup PIN to use lobbies.", "warn");
+    setLobbyStatus("Enter the startup PIN to use Notebook.", "warn");
     showWelcomeGate(velChatUser ? "pin" : "name");
     return null;
   }
-  setLobbyStatus("Saving lobby...");
+  setLobbyStatus("Updating Notebook...");
   const body = {
     lobby: cleanLobbyName(lobbyState.lobby),
     ...getLobbyUserPayload(),
@@ -3747,14 +3865,16 @@ async function postLobbyAction(payload = {}, message = "Lobby saved.") {
       clearVelChatPin(data.message || "Wrong PIN. Try again.");
       return null;
     }
-    if (!response.ok) throw new Error(data.message || "Lobby could not save.");
+    if (!response.ok) throw new Error(data.message || "Notebook could not save.");
     lobbyState.lobbyData = data.lobby || null;
     lobbyState.lobbies = Array.isArray(data.lobbies) ? data.lobbies : [];
+    lobbyState.users = Array.isArray(data.users) ? data.users : [];
+    lobbyState.invites = Array.isArray(data.invites) ? data.invites : [];
     setLobbyStatus(message, data.persistent ? "live" : "warn");
     renderLobbyState();
     return data;
   } catch (error) {
-    setLobbyStatus(error.message || "Lobby save failed.", "error");
+    setLobbyStatus(error.message || "Notebook update failed.", "error");
     return null;
   }
 }
@@ -3787,6 +3907,43 @@ function setLobbyPrompt(prompt = "") {
 function clearLobbySketchGallery() {
   if (!window.confirm(`Clear the Sketch Phone gallery in ${cleanLobbyName(lobbyState.lobby)}?`)) return;
   postLobbyAction({ action: "clear-sketch" }, "Sketch gallery cleared.");
+}
+
+function sendLobbyInvite(targetUserId = "") {
+  const id = String(targetUserId || "").trim();
+  if (!id) return;
+  postLobbyAction({
+    action: "invite",
+    targetUserId: id
+  }, "Invite sent to their bin.");
+}
+
+function respondLobbyInvite(inviteId = "", accepted = false) {
+  const id = String(inviteId || "").trim();
+  if (!id) return;
+  postLobbyAction({
+    action: "invite-response",
+    inviteId: id,
+    accepted: Boolean(accepted)
+  }, accepted ? "Invite accepted. You joined their sketch." : "Invite declined.").then((data) => {
+    if (!data) return;
+    if (accepted && data.lobby?.name) {
+      lobbyState.lobby = cleanLobbyName(data.lobby.name);
+      storage.set("vel-lobby-name", lobbyState.lobby);
+      setLobbyMode("sketch");
+    }
+    renderLobbyState();
+  });
+}
+
+function deleteLobbySketch(entryId = "") {
+  const id = String(entryId || "").trim();
+  if (!id) return;
+  if (!window.confirm("Delete this sketch from the Notebook gallery?")) return;
+  postLobbyAction({
+    action: "delete-entry",
+    entryId: id
+  }, "Sketch deleted.");
 }
 
 function ensureLobbyCanvasPaper() {
@@ -3885,7 +4042,10 @@ function renderLobbyGallery() {
   lobbySketchGallery.innerHTML = entries.map((entry) => `
     <article class="lobby-sketch-card">
       <img src="${escapeHtml(entry.image)}" alt="Sketch by ${escapeHtml(entry.username || "Guest")}" loading="lazy" />
-      <strong>${escapeHtml(entry.username || "Guest")}</strong>
+      <div class="lobby-sketch-card-head">
+        <strong>${escapeHtml(formatLobbyPeople(entry.authors, entry.username || "Guest"))}</strong>
+        <button class="lobby-sketch-delete" type="button" data-lobby-delete-entry="${escapeHtml(entry.id)}" aria-label="Delete sketch">Delete</button>
+      </div>
       ${entry.caption ? `<p>${escapeHtml(entry.caption)}</p>` : ""}
       <span>${escapeHtml(formatLobbyTime(entry.createdAt))}</span>
     </article>
@@ -8853,6 +9013,29 @@ lobbySketchClear?.addEventListener("click", () => {
   clearLobbySketchGallery();
 });
 
+lobbyInviteToggle?.addEventListener("click", () => {
+  setLobbyInvitePanel(!lobbyState.inviteOpen);
+});
+
+lobbyUserList?.addEventListener("click", (event) => {
+  const inviteButton = event.target.closest("[data-lobby-invite-user]");
+  if (!inviteButton) return;
+  sendLobbyInvite(inviteButton.dataset.lobbyInviteUser || "");
+});
+
+lobbyInviteInbox?.addEventListener("click", (event) => {
+  const acceptButton = event.target.closest("[data-lobby-invite-accept]");
+  if (acceptButton) {
+    respondLobbyInvite(acceptButton.dataset.lobbyInviteAccept || "", true);
+    return;
+  }
+
+  const declineButton = event.target.closest("[data-lobby-invite-decline]");
+  if (declineButton) {
+    respondLobbyInvite(declineButton.dataset.lobbyInviteDecline || "", false);
+  }
+});
+
 lobbyCanvasClear?.addEventListener("click", () => {
   clearLobbyCanvas();
 });
@@ -8860,6 +9043,12 @@ lobbyCanvasClear?.addEventListener("click", () => {
 lobbySketchSubmitForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   submitLobbySketch();
+});
+
+lobbySketchGallery?.addEventListener("click", (event) => {
+  const deleteButton = event.target.closest("[data-lobby-delete-entry]");
+  if (!deleteButton) return;
+  deleteLobbySketch(deleteButton.dataset.lobbyDeleteEntry || "");
 });
 
 lobbySketchCanvas?.addEventListener("pointerdown", startLobbyDrawing);

@@ -954,13 +954,13 @@
       </section>
 
       <section class="drawer" id="lobbiesDrawer" aria-hidden="true">
-        <button class="drawer-scrim" type="button" aria-label="Close lobbies" data-close-panel="lobbies"></button>
+        <button class="drawer-scrim" type="button" aria-label="Close notebook" data-close-panel="lobbies"></button>
         <div class="drawer-panel lobbies-panel">
           <header class="drawer-head">
             <div>
               <p class="micro-label">vel.os</p>
-              <h2>Lobbies</h2>
-              <p class="drawer-copy">Shared rooms for notes and a quick Gartic-style sketch game.</p>
+              <h2>Notebook</h2>
+              <p class="drawer-copy">Shared notes, invite bins, and collaborative sketch rooms.</p>
             </div>
             <button class="close-button" type="button" data-close-panel="lobbies">Close</button>
           </header>
@@ -977,6 +977,10 @@
                 <input id="lobbyNameInput" type="text" maxlength="28" autocomplete="off" placeholder="Join or create lobby" aria-label="Lobby name" />
                 <button class="ghost-button is-solid" type="submit">Join</button>
               </form>
+              <div class="lobby-invite-bin" id="lobbyInviteInbox">
+                <p class="section-label">Invite Bin</p>
+                <p class="tiny-note">Invites show up here when someone asks you to sketch.</p>
+              </div>
               <p class="tiny-note" id="lobbyStatus">Pick a lobby to start.</p>
             </aside>
 
@@ -1002,12 +1006,23 @@
                   <p class="section-label">Sketch Phone</p>
                   <h3 id="lobbySketchTitle">Draw the prompt</h3>
                 </div>
-                <button class="ghost-button" type="button" id="lobbySketchClear">Clear Gallery</button>
+                <div class="lobby-head-actions">
+                  <button class="ghost-button is-solid" type="button" id="lobbyInviteToggle">Invite</button>
+                  <button class="ghost-button" type="button" id="lobbySketchClear">Clear Gallery</button>
+                </div>
+              </div>
+              <div class="lobby-invite-panel" id="lobbyInvitePanel" hidden>
+                <div>
+                  <strong>Invite someone online</strong>
+                  <span>They will see it in their Invite Bin and can accept or decline.</span>
+                </div>
+                <div class="lobby-user-list" id="lobbyUserList"></div>
               </div>
               <form class="lobby-prompt-form" id="lobbyPromptForm">
                 <input id="lobbyPromptInput" type="text" maxlength="140" autocomplete="off" placeholder="Set the drawing prompt" aria-label="Sketch prompt" />
                 <button class="ghost-button is-solid" type="submit">Set Prompt</button>
               </form>
+              <p class="lobby-collaborators" id="lobbyCollaborators">Solo sketch</p>
               <div class="lobby-canvas-wrap">
                 <canvas id="lobbySketchCanvas" width="640" height="400" aria-label="Sketch canvas"></canvas>
               </div>
