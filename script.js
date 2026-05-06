@@ -1311,6 +1311,13 @@ const utilityApps = {
     action: "panel",
     panel: "lobbies"
   },
+  soundboard: {
+    title: "Soundboard",
+    label: "Sounds",
+    badgeText: "SB",
+    action: "panel",
+    panel: "soundboard"
+  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1809,6 +1816,7 @@ const drawers = {
   game: document.getElementById("gameDrawer"),
   network: document.getElementById("networkDrawer"),
   lobbies: document.getElementById("lobbiesDrawer"),
+  soundboard: document.getElementById("soundboardDrawer"),
   calculator: document.getElementById("calculatorDrawer"),
   settings: document.getElementById("settingsDrawer")
 };
@@ -2072,6 +2080,10 @@ const lobbySketchSubmitForm = document.getElementById("lobbySketchSubmitForm");
 const lobbySketchCaption = document.getElementById("lobbySketchCaption");
 const lobbySketchGallery = document.getElementById("lobbySketchGallery");
 const lobbySketchClear = document.getElementById("lobbySketchClear");
+const soundboardGrid = document.getElementById("soundboardGrid");
+const soundboardVolume = document.getElementById("soundboardVolume");
+const soundboardStop = document.getElementById("soundboardStop");
+const soundboardStatus = document.getElementById("soundboardStatus");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -2237,6 +2249,8 @@ let secretVaultLoading = false;
 let secretVaultVideos = [];
 const LOBBY_POLL_MS = 6000;
 let lobbyPollTimer = null;
+let soundboardAudioContext = null;
+let soundboardActiveNodes = [];
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -2271,6 +2285,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
   "panel:youtube",
   "panel:velhub",
   "panel:lobbies",
+  "panel:soundboard",
   "panel:music",
   "panel:ai",
   "panel:calculator",
@@ -2278,7 +2293,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
+  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
@@ -2293,6 +2308,11 @@ if (storage.get("vel-installed-apps-v4", "0") !== "1" && !installedApps.includes
   installedApps = ["panel:lobbies", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v4", "1");
+}
+if (storage.get("vel-installed-apps-v5", "0") !== "1" && !installedApps.includes("panel:soundboard")) {
+  installedApps = ["panel:soundboard", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v5", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2629,6 +2649,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="lobbies"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "soundboard") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="soundboard"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2715,6 +2739,10 @@ function suspendPanelPlayback(name) {
     window.clearTimeout(lobbyPollTimer);
   }
 
+  if (name === "soundboard") {
+    stopSoundboardSounds();
+  }
+
   if (name === "calculator") {
     closeSecretVault();
   }
@@ -2764,6 +2792,11 @@ function openPanel(name) {
     window.requestAnimationFrame(() => {
       resizeLobbyCanvas();
     });
+  }
+
+  if (name === "soundboard") {
+    recordRecentApp({ type: "panel", id: "soundboard" });
+    renderSoundboard();
   }
 
   if (name === "settings") {
@@ -3624,6 +3657,175 @@ function submitCalculator() {
   }
 }
 
+const soundboardSounds = [
+  { id: "airhorn", title: "Airhorn", detail: "Big two-tone blast", accent: "#f7d45a" },
+  { id: "boom", title: "Boom", detail: "Deep impact hit", accent: "#ff6b6b" },
+  { id: "laser", title: "Laser", detail: "Arcade zap", accent: "#71e8ff" },
+  { id: "coin", title: "Coin", detail: "Tiny win pickup", accent: "#ffd36b" },
+  { id: "pop", title: "Pop", detail: "Clean bubble tap", accent: "#c8f7ff" },
+  { id: "bell", title: "Bell", detail: "Bright chime", accent: "#f4f4f4" },
+  { id: "error", title: "Error", detail: "Retro no-no beep", accent: "#ff4f8b" },
+  { id: "whoosh", title: "Whoosh", detail: "Fast sweep", accent: "#bdb7ff" },
+  { id: "drum", title: "Drum Fill", detail: "Quick tom run", accent: "#ffb36b" },
+  { id: "victory", title: "Victory", detail: "Tiny level clear", accent: "#a8ffbf" },
+  { id: "sad", title: "Sad Trombone", detail: "Womp slide", accent: "#7fa0ff" },
+  { id: "glitch", title: "Glitch", detail: "Broken computer chirps", accent: "#d9d9d9" }
+];
+
+function getSoundboardContext() {
+  if (!soundboardAudioContext) {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+    soundboardAudioContext = new AudioCtor();
+  }
+  if (soundboardAudioContext.state === "suspended") {
+    soundboardAudioContext.resume().catch(() => {});
+  }
+  return soundboardAudioContext;
+}
+
+function getSoundboardVolume() {
+  const value = Number(soundboardVolume?.value || 72);
+  return Math.max(0, Math.min(1, value / 100));
+}
+
+function setSoundboardStatus(message = "Pick a pad to play a sound.") {
+  if (soundboardStatus) soundboardStatus.textContent = message;
+}
+
+function trackSoundboardNode(node) {
+  if (!node) return;
+  soundboardActiveNodes.push(node);
+  window.setTimeout(() => {
+    soundboardActiveNodes = soundboardActiveNodes.filter((item) => item !== node);
+  }, 2400);
+}
+
+function playSoundTone(freq = 440, duration = 0.18, options = {}) {
+  const ctx = getSoundboardContext();
+  if (!ctx) {
+    setSoundboardStatus("Audio is not supported in this browser.");
+    return;
+  }
+  const now = ctx.currentTime;
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+  oscillator.type = options.type || "sine";
+  oscillator.frequency.setValueAtTime(freq, now);
+  if (options.to) {
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, options.to), now + duration);
+  }
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, (options.gain || 0.42) * getSoundboardVolume()), now + (options.attack || 0.012));
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.04);
+  trackSoundboardNode(oscillator);
+}
+
+function playSoundNoise(duration = 0.2, options = {}) {
+  const ctx = getSoundboardContext();
+  if (!ctx) return;
+  const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * duration)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < data.length; index += 1) {
+    const fade = 1 - index / data.length;
+    data[index] = (Math.random() * 2 - 1) * fade;
+  }
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  filter.type = options.filter || "bandpass";
+  filter.frequency.value = options.frequency || 900;
+  filter.Q.value = options.q || 1.2;
+  gain.gain.value = (options.gain || 0.22) * getSoundboardVolume();
+  source.buffer = buffer;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+  trackSoundboardNode(source);
+}
+
+function pulseSoundPad(id = "") {
+  const button = [...(soundboardGrid?.querySelectorAll("[data-sound-id]") || [])]
+    .find((item) => item.dataset.soundId === id);
+  if (!button) return;
+  button.classList.add("is-playing");
+  window.setTimeout(() => button.classList.remove("is-playing"), 360);
+}
+
+function playSoundboardSound(id = "") {
+  const sound = soundboardSounds.find((item) => item.id === id);
+  if (!sound) return;
+  pulseSoundPad(id);
+  setSoundboardStatus(`Playing ${sound.title}.`);
+
+  if (id === "airhorn") {
+    playSoundTone(466, 0.22, { type: "square", to: 523, gain: 0.28 });
+    window.setTimeout(() => playSoundTone(392, 0.24, { type: "square", to: 466, gain: 0.26 }), 170);
+  } else if (id === "boom") {
+    playSoundTone(92, 0.42, { type: "sine", to: 38, gain: 0.62 });
+    playSoundNoise(0.28, { filter: "lowpass", frequency: 180, gain: 0.24 });
+  } else if (id === "laser") {
+    playSoundTone(1200, 0.28, { type: "sawtooth", to: 170, gain: 0.24 });
+  } else if (id === "coin") {
+    playSoundTone(988, 0.09, { type: "triangle", gain: 0.26 });
+    window.setTimeout(() => playSoundTone(1568, 0.12, { type: "triangle", gain: 0.24 }), 70);
+  } else if (id === "pop") {
+    playSoundTone(180, 0.08, { type: "sine", to: 540, gain: 0.22 });
+  } else if (id === "bell") {
+    playSoundTone(1046, 0.42, { type: "sine", gain: 0.2 });
+    playSoundTone(1568, 0.34, { type: "sine", gain: 0.12 });
+  } else if (id === "error") {
+    playSoundTone(210, 0.12, { type: "square", gain: 0.22 });
+    window.setTimeout(() => playSoundTone(150, 0.18, { type: "square", gain: 0.22 }), 115);
+  } else if (id === "whoosh") {
+    playSoundNoise(0.38, { filter: "highpass", frequency: 760, gain: 0.28 });
+    playSoundTone(620, 0.28, { type: "sine", to: 120, gain: 0.1 });
+  } else if (id === "drum") {
+    [160, 130, 105, 82].forEach((freq, index) => {
+      window.setTimeout(() => playSoundTone(freq, 0.12, { type: "sine", to: freq * 0.55, gain: 0.34 }), index * 88);
+    });
+  } else if (id === "victory") {
+    [523, 659, 784, 1046].forEach((freq, index) => {
+      window.setTimeout(() => playSoundTone(freq, 0.16, { type: "triangle", gain: 0.24 }), index * 115);
+    });
+  } else if (id === "sad") {
+    playSoundTone(330, 0.32, { type: "sawtooth", to: 294, gain: 0.2 });
+    window.setTimeout(() => playSoundTone(277, 0.44, { type: "sawtooth", to: 196, gain: 0.2 }), 260);
+  } else if (id === "glitch") {
+    [680, 240, 920, 180, 740].forEach((freq, index) => {
+      window.setTimeout(() => playSoundTone(freq, 0.045, { type: "square", gain: 0.18 }), index * 48);
+    });
+  }
+}
+
+function stopSoundboardSounds() {
+  soundboardActiveNodes.forEach((node) => {
+    try {
+      node.stop?.();
+      node.disconnect?.();
+    } catch (error) {
+      return;
+    }
+  });
+  soundboardActiveNodes = [];
+  setSoundboardStatus("Stopped all soundboard sounds.");
+}
+
+function renderSoundboard() {
+  if (!soundboardGrid) return;
+  soundboardGrid.innerHTML = soundboardSounds.map((sound) => `
+    <button class="sound-pad" type="button" data-sound-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Play ${escapeHtml(sound.title)}">
+      <strong>${escapeHtml(sound.title)}</strong>
+      <span>${escapeHtml(sound.detail)}</span>
+    </button>
+  `).join("");
+}
+
 function cleanLobbyName(value = "") {
   return String(value || "")
     .replace(/[^\w\s.-]/g, "")
@@ -3721,7 +3923,7 @@ function renderLobbyUserList() {
   const users = (Array.isArray(lobbyState.users) ? lobbyState.users : [])
     .filter((user) => user?.userId && user.userId !== current.userId);
   if (!users.length) {
-    lobbyUserList.innerHTML = '<p class="tiny-note">No one else is online in Notebook yet. Have them open Notebook, then refresh.</p>';
+    lobbyUserList.innerHTML = '<p class="tiny-note">No one else online.</p>';
     return;
   }
   lobbyUserList.innerHTML = users.map((user) => `
@@ -6857,7 +7059,7 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "ai", "lobbies", "calculator", "settings", "network"],
+      tools: ["browser", "ai", "lobbies", "soundboard", "calculator", "settings", "network"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -9049,6 +9251,20 @@ lobbySketchGallery?.addEventListener("click", (event) => {
   const deleteButton = event.target.closest("[data-lobby-delete-entry]");
   if (!deleteButton) return;
   deleteLobbySketch(deleteButton.dataset.lobbyDeleteEntry || "");
+});
+
+soundboardGrid?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-sound-id]");
+  if (!button) return;
+  playSoundboardSound(button.dataset.soundId || "");
+});
+
+soundboardStop?.addEventListener("click", () => {
+  stopSoundboardSounds();
+});
+
+soundboardVolume?.addEventListener("input", () => {
+  setSoundboardStatus(`Volume ${soundboardVolume.value}%.`);
 });
 
 lobbySketchCanvas?.addEventListener("pointerdown", startLobbyDrawing);
@@ -11728,6 +11944,7 @@ initVelChat();
 updateYouTubeGlobalImportUi();
 renderLobbyState();
 clearLobbyCanvas();
+renderSoundboard();
 initDraggableDrawers();
 initScrollAssist();
 initDraggableLyricsWidget();

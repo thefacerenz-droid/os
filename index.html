@@ -1043,6 +1043,36 @@
         </div>
       </section>
 
+      <section class="drawer" id="soundboardDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close soundboard" data-close-panel="soundboard"></button>
+        <div class="drawer-panel soundboard-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Soundboard</h2>
+              <p class="drawer-copy">Tap clean local sound pads for quick effects. No files or websites needed.</p>
+            </div>
+            <button class="close-button" type="button" data-close-panel="soundboard">Close</button>
+          </header>
+
+          <div class="soundboard-layout">
+            <article class="soundboard-control-card">
+              <div>
+                <p class="section-label">Mixer</p>
+                <h3>Local FX Deck</h3>
+                <p class="tiny-note" id="soundboardStatus">Pick a pad to play a sound.</p>
+              </div>
+              <label class="soundboard-volume">
+                <span>Volume</span>
+                <input id="soundboardVolume" type="range" min="0" max="100" value="72" aria-label="Soundboard volume" />
+              </label>
+              <button class="ghost-button" type="button" id="soundboardStop">Stop All</button>
+            </article>
+            <div class="soundboard-grid" id="soundboardGrid" aria-label="Soundboard pads"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="drawer" id="calculatorDrawer" aria-hidden="true">
         <button class="drawer-scrim" type="button" aria-label="Close calculator" data-close-panel="calculator"></button>
         <div class="drawer-panel calculator-panel">
