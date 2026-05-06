@@ -1806,6 +1806,10 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   transition: transform 170ms ease, border-color 170ms ease, background 170ms ease;
 }
 
+.sound-pad.is-real {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .sound-pad::before {
   content: "";
   position: absolute;
@@ -1829,10 +1833,24 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 }
 
 .sound-pad strong,
-.sound-pad span {
+.sound-pad span,
+.sound-pad em {
   position: relative;
   z-index: 1;
   display: block;
+}
+
+.sound-pad em {
+  width: fit-content;
+  margin-bottom: 0.48rem;
+  padding: 0.16rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.14em;
 }
 
 .sound-pad strong {
@@ -1844,6 +1862,27 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.35;
+}
+
+.soundboard-empty-card {
+  display: grid;
+  align-content: center;
+  min-height: 118px;
+  padding: 0.9rem;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.soundboard-empty-card strong {
+  color: #fff;
+}
+
+.soundboard-empty-card span {
+  margin-top: 0.36rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 
 .secret-vault {

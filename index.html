@@ -1067,6 +1067,9 @@
                 <input id="soundboardVolume" type="range" min="0" max="100" value="72" aria-label="Soundboard volume" />
               </label>
               <button class="ghost-button" type="button" id="soundboardStop">Stop All</button>
+              <button class="ghost-button is-solid" type="button" id="soundboardImport">Import Sounds</button>
+              <input id="soundboardFileInput" type="file" accept="audio/*" multiple hidden />
+              <p class="tiny-note">Permanent sounds live in <code>assets/soundboard</code>. Add MP3/WAV/M4A files there, publish, and they become pads.</p>
             </article>
             <div class="soundboard-grid" id="soundboardGrid" aria-label="Soundboard pads"></div>
           </div>

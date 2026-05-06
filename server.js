@@ -18,6 +18,7 @@ const SECRET_VIDEO_DIR = path.join(__dirname, "assets", "secret-videos");
 const SECRET_VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".ogg", ".mov"]);
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 const handleLobbies = require("./api/lobbies.js");
+const handleSoundboard = require("./api/soundboard.js");
 const sessions = new Map();
 let spotifyToken = null;
 
@@ -31,6 +32,9 @@ const MIME_TYPES = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".ogg": "video/ogg",
@@ -899,6 +903,7 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
     if (url.pathname === "/api/lobbies") return await handleLobbies(req, res);
+    if (url.pathname === "/api/soundboard") return await handleSoundboard(req, res);
     if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res, url);

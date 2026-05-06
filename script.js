@@ -2083,6 +2083,8 @@ const lobbySketchClear = document.getElementById("lobbySketchClear");
 const soundboardGrid = document.getElementById("soundboardGrid");
 const soundboardVolume = document.getElementById("soundboardVolume");
 const soundboardStop = document.getElementById("soundboardStop");
+const soundboardImport = document.getElementById("soundboardImport");
+const soundboardFileInput = document.getElementById("soundboardFileInput");
 const soundboardStatus = document.getElementById("soundboardStatus");
 
 let activeLocalGame = "snake";
@@ -2251,6 +2253,11 @@ const LOBBY_POLL_MS = 6000;
 let lobbyPollTimer = null;
 let soundboardAudioContext = null;
 let soundboardActiveNodes = [];
+let soundboardActiveMedia = [];
+let soundboardRealSounds = [];
+let soundboardImportedSounds = [];
+let soundboardLoading = false;
+let soundboardLoaded = false;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -2797,6 +2804,7 @@ function openPanel(name) {
   if (name === "soundboard") {
     recordRecentApp({ type: "panel", id: "soundboard" });
     renderSoundboard();
+    loadSoundboardFiles();
   }
 
   if (name === "settings") {
@@ -3657,7 +3665,7 @@ function submitCalculator() {
   }
 }
 
-const soundboardSounds = [
+const soundboardGeneratedSounds = [
   { id: "airhorn", title: "Airhorn", detail: "Big two-tone blast", accent: "#f7d45a" },
   { id: "boom", title: "Boom", detail: "Deep impact hit", accent: "#ff6b6b" },
   { id: "laser", title: "Laser", detail: "Arcade zap", accent: "#71e8ff" },
@@ -3671,6 +3679,42 @@ const soundboardSounds = [
   { id: "sad", title: "Sad Trombone", detail: "Womp slide", accent: "#7fa0ff" },
   { id: "glitch", title: "Glitch", detail: "Broken computer chirps", accent: "#d9d9d9" }
 ];
+
+function formatSoundboardSize(bytes = 0) {
+  const value = Number(bytes) || 0;
+  if (value > 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  if (value > 1024) return `${Math.round(value / 1024)} KB`;
+  return `${value} B`;
+}
+
+function getSoundboardAccent(index = 0) {
+  const accents = ["#f7d45a", "#ff6b6b", "#71e8ff", "#c8f7ff", "#bdb7ff", "#a8ffbf", "#ff4f8b"];
+  return accents[index % accents.length];
+}
+
+function normalizeSoundboardFile(item = {}, index = 0, source = "project") {
+  const title = String(item.title || item.name || item.fileName || `Sound ${index + 1}`)
+    .replace(/\.[^.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 48) || `Sound ${index + 1}`;
+  const url = String(item.url || "").trim();
+  if (!url) return null;
+  return {
+    id: `${source}:${item.id || item.fileName || title}:${index}`,
+    title,
+    detail: source === "import" ? `Imported - ${formatSoundboardSize(item.size)}` : `Real file - ${formatSoundboardSize(item.size)}`,
+    url,
+    type: item.type || "audio/mpeg",
+    accent: getSoundboardAccent(index),
+    source
+  };
+}
+
+function getAllSoundboardRealSounds() {
+  return [...soundboardImportedSounds, ...soundboardRealSounds];
+}
 
 function getSoundboardContext() {
   if (!soundboardAudioContext) {
@@ -3691,6 +3735,29 @@ function getSoundboardVolume() {
 
 function setSoundboardStatus(message = "Pick a pad to play a sound.") {
   if (soundboardStatus) soundboardStatus.textContent = message;
+}
+
+async function loadSoundboardFiles() {
+  if (soundboardLoading || soundboardLoaded) return;
+  soundboardLoading = true;
+  setSoundboardStatus("Loading real sound files...");
+  try {
+    const response = await fetch("/api/soundboard", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Soundboard files could not load.");
+    soundboardRealSounds = (Array.isArray(data.sounds) ? data.sounds : [])
+      .map((item, index) => normalizeSoundboardFile(item, index, "project"))
+      .filter(Boolean);
+    soundboardLoaded = true;
+    setSoundboardStatus(soundboardRealSounds.length
+      ? `${soundboardRealSounds.length} real sound${soundboardRealSounds.length === 1 ? "" : "s"} loaded.`
+      : "No real sound files yet. Add MP3/WAV/M4A files to assets/soundboard or import them here.");
+  } catch (error) {
+    setSoundboardStatus(error.message || "Real sound files could not load.");
+  } finally {
+    soundboardLoading = false;
+    renderSoundboard();
+  }
 }
 
 function trackSoundboardNode(node) {
@@ -3758,7 +3825,7 @@ function pulseSoundPad(id = "") {
 }
 
 function playSoundboardSound(id = "") {
-  const sound = soundboardSounds.find((item) => item.id === id);
+  const sound = soundboardGeneratedSounds.find((item) => item.id === id);
   if (!sound) return;
   pulseSoundPad(id);
   setSoundboardStatus(`Playing ${sound.title}.`);
@@ -3803,6 +3870,48 @@ function playSoundboardSound(id = "") {
   }
 }
 
+function playSoundboardFile(id = "") {
+  const sound = getAllSoundboardRealSounds().find((item) => item.id === id);
+  if (!sound?.url) return;
+  const audio = new Audio(sound.url);
+  audio.preload = "auto";
+  audio.volume = getSoundboardVolume();
+  soundboardActiveMedia.push(audio);
+  audio.addEventListener("ended", () => {
+    soundboardActiveMedia = soundboardActiveMedia.filter((item) => item !== audio);
+  }, { once: true });
+  audio.play().catch(() => {
+    setSoundboardStatus("Tap again if the browser blocked autoplay.");
+  });
+  pulseSoundPad(id);
+  setSoundboardStatus(`Playing real sound: ${sound.title}.`);
+}
+
+function importSoundboardFiles(fileList) {
+  const files = [...(fileList || [])].filter((file) => file.type.startsWith("audio/"));
+  if (!files.length) {
+    setSoundboardStatus("Pick MP3, WAV, M4A, OGG, or other audio files.");
+    return;
+  }
+
+  soundboardImportedSounds.forEach((sound) => {
+    if (sound.source === "import" && sound.url?.startsWith("blob:")) {
+      URL.revokeObjectURL(sound.url);
+    }
+  });
+  soundboardImportedSounds = files
+    .map((file, index) => normalizeSoundboardFile({
+      id: `${file.name}-${file.lastModified}`,
+      title: file.name,
+      url: URL.createObjectURL(file),
+      type: file.type,
+      size: file.size
+    }, index, "import"))
+    .filter(Boolean);
+  renderSoundboard();
+  setSoundboardStatus(`${soundboardImportedSounds.length} real imported sound${soundboardImportedSounds.length === 1 ? "" : "s"} ready.`);
+}
+
 function stopSoundboardSounds() {
   soundboardActiveNodes.forEach((node) => {
     try {
@@ -3813,17 +3922,37 @@ function stopSoundboardSounds() {
     }
   });
   soundboardActiveNodes = [];
+  soundboardActiveMedia.forEach((audio) => {
+    audio.pause();
+    audio.currentTime = 0;
+  });
+  soundboardActiveMedia = [];
   setSoundboardStatus("Stopped all soundboard sounds.");
 }
 
 function renderSoundboard() {
   if (!soundboardGrid) return;
-  soundboardGrid.innerHTML = soundboardSounds.map((sound) => `
+  const realSounds = getAllSoundboardRealSounds();
+  const realPads = realSounds.map((sound) => `
+    <button class="sound-pad is-real" type="button" data-sound-file-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Play ${escapeHtml(sound.title)}">
+      <em>REAL</em>
+      <strong>${escapeHtml(sound.title)}</strong>
+      <span>${escapeHtml(sound.detail)}</span>
+    </button>
+  `).join("");
+  const generatedPads = soundboardGeneratedSounds.map((sound) => `
     <button class="sound-pad" type="button" data-sound-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Play ${escapeHtml(sound.title)}">
       <strong>${escapeHtml(sound.title)}</strong>
       <span>${escapeHtml(sound.detail)}</span>
     </button>
   `).join("");
+  const emptyReal = realSounds.length ? "" : `
+    <article class="soundboard-empty-card">
+      <strong>No real sounds added yet.</strong>
+      <span>Drop MP3/WAV/M4A files into assets/soundboard for permanent pads, or press Import Sounds for this session.</span>
+    </article>
+  `;
+  soundboardGrid.innerHTML = `${realPads}${emptyReal}${generatedPads}`;
 }
 
 function cleanLobbyName(value = "") {
@@ -9254,6 +9383,12 @@ lobbySketchGallery?.addEventListener("click", (event) => {
 });
 
 soundboardGrid?.addEventListener("click", (event) => {
+  const fileButton = event.target.closest("[data-sound-file-id]");
+  if (fileButton) {
+    playSoundboardFile(fileButton.dataset.soundFileId || "");
+    return;
+  }
+
   const button = event.target.closest("[data-sound-id]");
   if (!button) return;
   playSoundboardSound(button.dataset.soundId || "");
@@ -9261,6 +9396,15 @@ soundboardGrid?.addEventListener("click", (event) => {
 
 soundboardStop?.addEventListener("click", () => {
   stopSoundboardSounds();
+});
+
+soundboardImport?.addEventListener("click", () => {
+  soundboardFileInput?.click();
+});
+
+soundboardFileInput?.addEventListener("change", () => {
+  importSoundboardFiles(soundboardFileInput.files);
+  if (soundboardFileInput) soundboardFileInput.value = "";
 });
 
 soundboardVolume?.addEventListener("input", () => {
