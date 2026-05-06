@@ -239,10 +239,13 @@
           </div>
 
           <header class="drawer-head youtube-head">
-            <div>
+            <div class="youtube-head-brand">
+              <span class="youtube-head-mark" aria-hidden="true"></span>
+              <div>
               <p class="micro-label">vel.os</p>
               <h2>YouTube</h2>
               <p class="drawer-copy">Search real YouTube results and play videos inside vel.os with official embeds.</p>
+              </div>
             </div>
             <div class="window-actions">
               <button class="close-button youtube-list-toggle" id="youtubeToggleResultsButton" type="button">Hide List</button>
@@ -253,27 +256,35 @@
           </header>
 
           <div class="youtube-toolbar">
+            <div class="youtube-toolbar-logo" aria-hidden="true">
+              <span>YT</span>
+              <strong>YouTube</strong>
+            </div>
+            <form class="url-form youtube-search-form youtube-search-top" id="youtubeSearchForm">
+              <input class="url-input" id="youtubeSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search" aria-label="Search YouTube" />
+              <button class="ghost-button is-solid" type="submit">Search</button>
+            </form>
             <form class="url-form youtube-address-form" id="youtubeAddressForm">
               <input class="url-input" id="youtubeAddressInput" type="search" autocomplete="off" spellcheck="false" value="youtube.com" aria-label="YouTube address" />
               <button class="ghost-button is-solid" type="submit">Go</button>
             </form>
-            <form class="url-form youtube-search-form" id="youtubeSearchForm">
-              <input class="url-input" id="youtubeSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search YouTube" aria-label="Search YouTube" />
-              <button class="ghost-button is-solid" type="submit">Search</button>
-            </form>
           </div>
+          <nav class="youtube-chip-row" aria-label="YouTube filters">
+            <button type="button" data-youtube-home>All</button>
+            <button type="button" data-youtube-topic="Trending music">Trending</button>
+            <button type="button" data-youtube-topic="Gaming videos">Gaming</button>
+            <button type="button" data-youtube-topic="Sports highlights">Sports</button>
+            <button type="button" data-youtube-topic="Learning videos">Learning</button>
+            <button type="button" data-youtube-topic="News today">News</button>
+            <button type="button" data-youtube-movies>Movies</button>
+            <button type="button" data-youtube-favorites>Favorites</button>
+          </nav>
 
           <div class="youtube-shell" id="youtubeShell">
             <aside class="youtube-sidebar" aria-label="YouTube sections">
               <strong class="youtube-logo"><span>YT</span>YouTube</strong>
               <span class="youtube-user-chip" id="youtubeUserChip">Guest</span>
               <button type="button" data-youtube-home>Home</button>
-              <button type="button" data-youtube-topic="Trending music">Trending</button>
-              <button type="button" data-youtube-movies>Movies</button>
-              <button type="button" data-youtube-topic="Gaming videos">Gaming</button>
-              <button type="button" data-youtube-topic="Sports highlights">Sports</button>
-              <button type="button" data-youtube-topic="Learning videos">Learning</button>
-              <button type="button" data-youtube-topic="News today">News</button>
               <button type="button" data-youtube-history>History</button>
               <button type="button" data-youtube-favorites>Favorites</button>
               <button type="button" data-youtube-global>Global</button>

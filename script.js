@@ -4357,6 +4357,30 @@ function renderYouTubeStatus() {
   if (youtubeAddressInput) {
     youtubeAddressInput.value = getYouTubeWatchUrl();
   }
+  updateYouTubeActiveNav();
+}
+
+function updateYouTubeActiveNav() {
+  if (!youtubeDrawer) return;
+  const buttons = [...youtubeDrawer.querySelectorAll(".youtube-chip-row button, .youtube-sidebar button")];
+  let activeSelector = "";
+  if (youtubeAppState.mode === "home") activeSelector = "[data-youtube-home]";
+  if (youtubeAppState.mode === "history") activeSelector = "[data-youtube-history]";
+  if (youtubeAppState.mode === "favorites") activeSelector = "[data-youtube-favorites]";
+  if (youtubeAppState.mode === "global") activeSelector = "[data-youtube-global]";
+  if (youtubeAppState.mode === "movies") activeSelector = "[data-youtube-movies]";
+  buttons.forEach((button) => {
+    const isTopic = youtubeAppState.mode === "search"
+      && button.dataset.youtubeTopic
+      && button.dataset.youtubeTopic.toLowerCase() === String(youtubeAppState.query || "").toLowerCase();
+    const isActive = isTopic || Boolean(activeSelector && button.matches(activeSelector));
+    button.classList.toggle("is-active", isActive);
+    if (isActive) {
+      button.setAttribute("aria-current", "page");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
 }
 
 function toggleYouTubeResultsPanel() {
@@ -6678,7 +6702,7 @@ function showWelcomeGate(step = "") {
     window.setTimeout(() => welcomeNameInput?.focus({ preventScroll: true }), 420);
     return;
   }
-  typeWelcomeText(hasUser ? `Welcome back, ${velChatUser.username}. Enter PIN.` : "Enter PIN to unlock vel.os.");
+  typeWelcomeText(hasUser ? velChatUser.username : "Enter PIN to unlock vel.os.");
   if (welcomePinInput) welcomePinInput.value = "";
   window.setTimeout(() => welcomePinInput?.focus({ preventScroll: true }), 420);
 }
