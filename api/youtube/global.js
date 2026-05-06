@@ -293,6 +293,34 @@ function normalizeGlobalYouTubeItem(input = {}) {
   };
 }
 
+async function readJsonBody(req) {
+  if (typeof req.body === "object" && req.body) return req.body;
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body || "{}");
+    } catch (error) {
+      return {};
+    }
+  }
+
+  if (!req?.[Symbol.asyncIterator]) return {};
+  const chunks = [];
+  for await (const chunk of req) chunks.push(Buffer.from(chunk));
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function getRequestUrl(req) {
+  try {
+    return new URL(req.url || "/", "https://vel.os");
+  } catch (error) {
+    return new URL("/", "https://vel.os");
+  }
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
@@ -305,19 +333,40 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (req.method !== "POST") {
-      res.setHeader("Allow", "GET, POST");
+    if (!["POST", "DELETE"].includes(req.method)) {
+      res.setHeader("Allow", "GET, POST, DELETE");
       return sendJson(res, 405, {
         error: "method_not_allowed",
-        message: "Use GET or POST for global YouTube favorites."
+        message: "Use GET, POST, or DELETE for global YouTube favorites."
       });
     }
 
-    let body = {};
-    try {
-      body = typeof req.body === "object" && req.body ? req.body : JSON.parse(req.body || "{}");
-    } catch (error) {
-      body = {};
+    const body = await readJsonBody(req);
+
+    if (req.method === "DELETE") {
+      const url = getRequestUrl(req);
+      const id = extractYouTubeVideoId(body.id || body.url || url.searchParams.get("id") || url.searchParams.get("url"));
+      if (!id) {
+        return sendJson(res, 400, {
+          error: "invalid_youtube_link",
+          message: "Choose a valid YouTube video to remove from Global Favs."
+        });
+      }
+
+      const store = await readGlobalStore();
+      if (!store.persistent) {
+        return sendJson(res, 503, {
+          error: "missing_storage",
+          message: store.message
+        });
+      }
+      const items = store.items.filter((item) => item.id !== id);
+      const storage = await writeGlobalStore(items);
+      return sendJson(res, 200, {
+        items,
+        storage,
+        deleted: id
+      });
     }
 
     const importType = String(body.importType || "video").toLowerCase();

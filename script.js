@@ -1304,6 +1304,13 @@ const utilityApps = {
     action: "panel",
     panel: "velhub"
   },
+  lobbies: {
+    title: "Lobbies",
+    label: "Lobbies",
+    badgeText: "LB",
+    action: "panel",
+    panel: "lobbies"
+  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1801,6 +1808,7 @@ const drawers = {
   music: document.getElementById("musicDrawer"),
   game: document.getElementById("gameDrawer"),
   network: document.getElementById("networkDrawer"),
+  lobbies: document.getElementById("lobbiesDrawer"),
   calculator: document.getElementById("calculatorDrawer"),
   settings: document.getElementById("settingsDrawer")
 };
@@ -2009,6 +2017,7 @@ const velChat = document.getElementById("velChat");
 const velChatToggle = document.getElementById("velChatToggle");
 const velChatPanel = document.getElementById("velChatPanel");
 const velChatHide = document.getElementById("velChatHide");
+const velChatClearLog = document.getElementById("velChatClearLog");
 const velChatPinForm = document.getElementById("velChatPinForm");
 const velChatPinInput = document.getElementById("velChatPinInput");
 const velChatLoginForm = document.getElementById("velChatLoginForm");
@@ -2034,6 +2043,30 @@ const calculatorKeys = document.getElementById("calculatorKeys");
 const secretVault = document.getElementById("secretVault");
 const secretVaultGrid = document.getElementById("secretVaultGrid");
 const secretVaultRefresh = document.getElementById("secretVaultRefresh");
+const lobbyModeTabs = document.getElementById("lobbyModeTabs");
+const lobbyPills = document.getElementById("lobbyPills");
+const lobbyJoinForm = document.getElementById("lobbyJoinForm");
+const lobbyNameInput = document.getElementById("lobbyNameInput");
+const lobbyStatus = document.getElementById("lobbyStatus");
+const lobbyNotesView = document.getElementById("lobbyNotesView");
+const lobbySketchView = document.getElementById("lobbySketchView");
+const lobbyNoteTitle = document.getElementById("lobbyNoteTitle");
+const lobbyNoteText = document.getElementById("lobbyNoteText");
+const lobbyNoteSave = document.getElementById("lobbyNoteSave");
+const lobbyNoteClear = document.getElementById("lobbyNoteClear");
+const lobbyNoteMeta = document.getElementById("lobbyNoteMeta");
+const lobbyRefreshButton = document.getElementById("lobbyRefreshButton");
+const lobbySketchTitle = document.getElementById("lobbySketchTitle");
+const lobbyPromptForm = document.getElementById("lobbyPromptForm");
+const lobbyPromptInput = document.getElementById("lobbyPromptInput");
+const lobbySketchCanvas = document.getElementById("lobbySketchCanvas");
+const lobbyBrushColor = document.getElementById("lobbyBrushColor");
+const lobbyBrushSize = document.getElementById("lobbyBrushSize");
+const lobbyCanvasClear = document.getElementById("lobbyCanvasClear");
+const lobbySketchSubmitForm = document.getElementById("lobbySketchSubmitForm");
+const lobbySketchCaption = document.getElementById("lobbySketchCaption");
+const lobbySketchGallery = document.getElementById("lobbySketchGallery");
+const lobbySketchClear = document.getElementById("lobbySketchClear");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -2197,6 +2230,15 @@ let welcomeGateStep = "name";
 let secretVaultUnlocked = false;
 let secretVaultLoading = false;
 let secretVaultVideos = [];
+let lobbyState = {
+  mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
+  lobby: storage.get("vel-lobby-name", "Main"),
+  lobbyData: null,
+  lobbies: [],
+  loading: false,
+  drawing: false,
+  lastPoint: null
+};
 let velofySearchQuery = "";
 let velofyPlaylistMode = storage.get("velofy-playlist-mode", "all");
 let velofyShuffleEnabled = storage.get("velofy-shuffle", "0") === "1";
@@ -2218,6 +2260,7 @@ unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", ..
 let installedApps = readStoredJson("vel-installed-apps", [
   "panel:youtube",
   "panel:velhub",
+  "panel:lobbies",
   "panel:music",
   "panel:ai",
   "panel:calculator",
@@ -2225,7 +2268,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:velhub", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
+  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
@@ -2235,6 +2278,11 @@ if (storage.get("vel-installed-apps-v3", "0") !== "1" && !installedApps.includes
   installedApps = ["panel:calculator", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v3", "1");
+}
+if (storage.get("vel-installed-apps-v4", "0") !== "1" && !installedApps.includes("panel:lobbies")) {
+  installedApps = ["panel:lobbies", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v4", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2567,6 +2615,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="velhub"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "lobbies") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="lobbies"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2690,6 +2742,14 @@ function openPanel(name) {
 
   if (name === "velhub") {
     recordRecentApp({ type: "panel", id: "velhub" });
+  }
+
+  if (name === "lobbies") {
+    recordRecentApp({ type: "panel", id: "lobbies" });
+    loadLobbyState();
+    window.requestAnimationFrame(() => {
+      resizeLobbyCanvas();
+    });
   }
 
   if (name === "settings") {
@@ -3234,6 +3294,7 @@ function renderVelChatMessages(forceStick = false) {
           <div class="vel-chat-message-meta">
             <strong>${escapeHtml(message.username || "Guest")}</strong>
             <span>${escapeHtml(formatVelChatTime(message.createdAt))}</span>
+            <button class="vel-chat-delete" type="button" data-chat-delete="${escapeHtml(message.id)}" aria-label="Delete message from ${escapeHtml(message.username || "Guest")}">Delete</button>
           </div>
           ${message.text ? `<p class="vel-chat-message-bubble">${renderChatTextWithLinks(message.text || "")}</p>` : ""}
           ${renderVelChatAttachment(message.attachment)}
@@ -3364,6 +3425,54 @@ async function sendVelChatMessage(text) {
     scheduleVelChatPoll();
     velChatInput?.focus({ preventScroll: true });
   }
+}
+
+async function deleteVelChatMessages(payload = {}, successMessage = "Chat updated.") {
+  if (!velChatUnlocked || velChatLoading) return;
+  velChatLoading = true;
+  renderVelChatAuth();
+  setVelChatStatus("Updating chat...");
+
+  try {
+    const response = await fetch("/api/chat/messages", {
+      method: "DELETE",
+      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      return;
+    }
+    if (!response.ok) {
+      throw new Error(data.message || "Chat could not update.");
+    }
+    velChatItems = normalizeVelChatItems(data.messages);
+    renderVelChatMessages(true);
+    setVelChatStatus(successMessage, data.persistent ? "live" : "warn");
+  } catch (error) {
+    setVelChatStatus(error.message || "Could not update chat.", "error");
+  } finally {
+    velChatLoading = false;
+    renderVelChatAuth();
+    scheduleVelChatPoll();
+  }
+}
+
+function deleteVelChatMessage(messageId = "") {
+  const id = String(messageId || "").trim();
+  if (!id) return;
+  deleteVelChatMessages({ messageId: id }, "Message deleted.");
+}
+
+function clearVelChatLog() {
+  if (!velChatUnlocked) {
+    setVelChatStatus("Enter the startup PIN before clearing chat.", "warn");
+    return;
+  }
+  const shouldClear = window.confirm("Delete the entire Global Chat log for everyone?");
+  if (!shouldClear) return;
+  deleteVelChatMessages({ action: "clear" }, "Global Chat log cleared.");
 }
 
 function initVelChat() {
@@ -3499,6 +3608,288 @@ function submitCalculator() {
   } catch (error) {
     calculatorResult.textContent = error.message || "Error";
   }
+}
+
+function cleanLobbyName(value = "") {
+  return String(value || "")
+    .replace(/[^\w\s.-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 28) || "Main";
+}
+
+function formatLobbyTime(value = 0) {
+  if (!value) return "Not saved yet";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(new Date(value));
+  } catch (error) {
+    return "Recently";
+  }
+}
+
+function setLobbyStatus(message = "", tone = "") {
+  if (!lobbyStatus) return;
+  lobbyStatus.textContent = message;
+  lobbyStatus.dataset.tone = tone;
+}
+
+function getLobbyUserPayload() {
+  const user = normalizeVelChatUser(velChatUser);
+  return {
+    userId: user?.id || "guest",
+    username: user?.username || "Guest"
+  };
+}
+
+function setLobbyMode(mode = "notes") {
+  lobbyState.mode = mode === "sketch" ? "sketch" : "notes";
+  storage.set("vel-lobby-mode", lobbyState.mode);
+  lobbyModeTabs?.querySelectorAll("[data-lobby-mode]").forEach((button) => {
+    const active = button.dataset.lobbyMode === lobbyState.mode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  if (lobbyNotesView) lobbyNotesView.hidden = lobbyState.mode !== "notes";
+  if (lobbySketchView) lobbySketchView.hidden = lobbyState.mode !== "sketch";
+  if (lobbyState.mode === "sketch") {
+    window.requestAnimationFrame(resizeLobbyCanvas);
+  }
+}
+
+function renderLobbyPills() {
+  if (!lobbyPills) return;
+  const names = [...new Set(["Main", "Games", "Memes", cleanLobbyName(lobbyState.lobby), ...lobbyState.lobbies.map((item) => cleanLobbyName(item.name))])].slice(0, 10);
+  lobbyPills.innerHTML = names.map((name) => `
+    <button class="${name.toLowerCase() === cleanLobbyName(lobbyState.lobby).toLowerCase() ? "is-active" : ""}" type="button" data-lobby-name="${escapeHtml(name)}">${escapeHtml(name)}</button>
+  `).join("");
+}
+
+function renderLobbyState() {
+  setLobbyMode(lobbyState.mode);
+  renderLobbyPills();
+  const lobby = lobbyState.lobbyData;
+  const lobbyName = cleanLobbyName(lobby?.name || lobbyState.lobby);
+  if (lobbyNameInput) lobbyNameInput.value = lobbyName;
+  if (lobbyNoteTitle) lobbyNoteTitle.textContent = `${lobbyName} Notes`;
+  if (lobbyNoteText && document.activeElement !== lobbyNoteText) {
+    lobbyNoteText.value = lobby?.note?.content || "";
+  }
+  if (lobbyNoteMeta) {
+    lobbyNoteMeta.textContent = lobby?.note?.updatedAt
+      ? `Last saved by ${lobby.note.updatedBy || "Guest"} on ${formatLobbyTime(lobby.note.updatedAt)}.`
+      : "Notes save for everyone in this room.";
+  }
+  if (lobbySketchTitle) {
+    lobbySketchTitle.textContent = lobby?.sketch?.prompt || "Draw the prompt";
+  }
+  if (lobbyPromptInput && document.activeElement !== lobbyPromptInput) {
+    lobbyPromptInput.value = lobby?.sketch?.prompt || "";
+  }
+  renderLobbyGallery();
+}
+
+async function loadLobbyState() {
+  if (!lobbyPills || lobbyState.loading || !velChatPin) {
+    renderLobbyState();
+    if (!velChatPin) setLobbyStatus("Enter the startup PIN to sync lobbies.", "warn");
+    return;
+  }
+  lobbyState.loading = true;
+  setLobbyStatus("Loading lobby...");
+  try {
+    const params = new URLSearchParams({ lobby: cleanLobbyName(lobbyState.lobby) });
+    const response = await fetch(`/api/lobbies?${params.toString()}`, {
+      cache: "no-store",
+      headers: getVelChatHeaders()
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      return;
+    }
+    if (!response.ok) throw new Error(data.message || "Lobby could not load.");
+    lobbyState.lobbyData = data.lobby || null;
+    lobbyState.lobbies = Array.isArray(data.lobbies) ? data.lobbies : [];
+    setLobbyStatus(data.persistent ? "Lobby synced globally." : "Lobby is temporary until Redis is connected.", data.persistent ? "live" : "warn");
+  } catch (error) {
+    setLobbyStatus(error.message || "Lobby offline.", "error");
+  } finally {
+    lobbyState.loading = false;
+    renderLobbyState();
+  }
+}
+
+async function postLobbyAction(payload = {}, message = "Lobby saved.") {
+  if (!velChatPin) {
+    setLobbyStatus("Enter the startup PIN to use lobbies.", "warn");
+    showWelcomeGate(velChatUser ? "pin" : "name");
+    return null;
+  }
+  setLobbyStatus("Saving lobby...");
+  const body = {
+    lobby: cleanLobbyName(lobbyState.lobby),
+    ...getLobbyUserPayload(),
+    ...payload
+  };
+  try {
+    const response = await fetch("/api/lobbies", {
+      method: "POST",
+      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      return null;
+    }
+    if (!response.ok) throw new Error(data.message || "Lobby could not save.");
+    lobbyState.lobbyData = data.lobby || null;
+    lobbyState.lobbies = Array.isArray(data.lobbies) ? data.lobbies : [];
+    setLobbyStatus(message, data.persistent ? "live" : "warn");
+    renderLobbyState();
+    return data;
+  } catch (error) {
+    setLobbyStatus(error.message || "Lobby save failed.", "error");
+    return null;
+  }
+}
+
+function joinLobby(name = "") {
+  lobbyState.lobby = cleanLobbyName(name);
+  storage.set("vel-lobby-name", lobbyState.lobby);
+  loadLobbyState();
+}
+
+function saveLobbyNote() {
+  postLobbyAction({
+    action: "note",
+    content: lobbyNoteText?.value || ""
+  }, "Note saved for this lobby.");
+}
+
+function clearLobbyNote() {
+  if (!window.confirm(`Clear the note in ${cleanLobbyName(lobbyState.lobby)}?`)) return;
+  postLobbyAction({ action: "clear-note" }, "Lobby note cleared.");
+}
+
+function setLobbyPrompt(prompt = "") {
+  postLobbyAction({
+    action: "prompt",
+    prompt
+  }, "New prompt set. Gallery reset.");
+}
+
+function clearLobbySketchGallery() {
+  if (!window.confirm(`Clear the Sketch Phone gallery in ${cleanLobbyName(lobbyState.lobby)}?`)) return;
+  postLobbyAction({ action: "clear-sketch" }, "Sketch gallery cleared.");
+}
+
+function ensureLobbyCanvasPaper() {
+  if (!lobbySketchCanvas) return;
+  const ctx = lobbySketchCanvas.getContext("2d");
+  const pixel = ctx.getImageData(0, 0, 1, 1).data;
+  if (pixel[3] === 0) {
+    ctx.fillStyle = "#f6f6f6";
+    ctx.fillRect(0, 0, lobbySketchCanvas.width, lobbySketchCanvas.height);
+  }
+}
+
+function clearLobbyCanvas() {
+  if (!lobbySketchCanvas) return;
+  const ctx = lobbySketchCanvas.getContext("2d");
+  ctx.fillStyle = "#f6f6f6";
+  ctx.fillRect(0, 0, lobbySketchCanvas.width, lobbySketchCanvas.height);
+}
+
+function resizeLobbyCanvas() {
+  if (!lobbySketchCanvas) return;
+  ensureLobbyCanvasPaper();
+}
+
+function getLobbyCanvasPoint(event) {
+  const rect = lobbySketchCanvas.getBoundingClientRect();
+  const scaleX = lobbySketchCanvas.width / rect.width;
+  const scaleY = lobbySketchCanvas.height / rect.height;
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY
+  };
+}
+
+function drawLobbyLine(from, to) {
+  if (!lobbySketchCanvas || !from || !to) return;
+  const ctx = lobbySketchCanvas.getContext("2d");
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = lobbyBrushColor?.value || "#050505";
+  ctx.lineWidth = Number(lobbyBrushSize?.value || 8);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+}
+
+function startLobbyDrawing(event) {
+  if (!lobbySketchCanvas) return;
+  event.preventDefault();
+  ensureLobbyCanvasPaper();
+  lobbyState.drawing = true;
+  lobbyState.lastPoint = getLobbyCanvasPoint(event);
+  lobbySketchCanvas.setPointerCapture?.(event.pointerId);
+}
+
+function moveLobbyDrawing(event) {
+  if (!lobbyState.drawing) return;
+  event.preventDefault();
+  const nextPoint = getLobbyCanvasPoint(event);
+  drawLobbyLine(lobbyState.lastPoint, nextPoint);
+  lobbyState.lastPoint = nextPoint;
+}
+
+function stopLobbyDrawing(event) {
+  if (!lobbyState.drawing) return;
+  event.preventDefault();
+  lobbyState.drawing = false;
+  lobbyState.lastPoint = null;
+}
+
+function submitLobbySketch() {
+  if (!lobbySketchCanvas) return;
+  ensureLobbyCanvasPaper();
+  const image = lobbySketchCanvas.toDataURL("image/jpeg", 0.72);
+  postLobbyAction({
+    action: "entry",
+    image,
+    caption: lobbySketchCaption?.value || ""
+  }, "Sketch posted to the lobby.").then((data) => {
+    if (!data) return;
+    if (lobbySketchCaption) lobbySketchCaption.value = "";
+    clearLobbyCanvas();
+  });
+}
+
+function renderLobbyGallery() {
+  if (!lobbySketchGallery) return;
+  const entries = Array.isArray(lobbyState.lobbyData?.sketch?.entries)
+    ? lobbyState.lobbyData.sketch.entries
+    : [];
+  if (!entries.length) {
+    lobbySketchGallery.innerHTML = '<p class="catalog-empty">No sketches yet. Draw one and post it.</p>';
+    return;
+  }
+  lobbySketchGallery.innerHTML = entries.map((entry) => `
+    <article class="lobby-sketch-card">
+      <img src="${escapeHtml(entry.image)}" alt="Sketch by ${escapeHtml(entry.username || "Guest")}" loading="lazy" />
+      <strong>${escapeHtml(entry.username || "Guest")}</strong>
+      ${entry.caption ? `<p>${escapeHtml(entry.caption)}</p>` : ""}
+      <span>${escapeHtml(formatLobbyTime(entry.createdAt))}</span>
+    </article>
+  `).join("");
 }
 
 function formatYouTubeDate(value = "") {
@@ -3764,6 +4155,27 @@ function saveYouTubeFavorite(video) {
   return added;
 }
 
+function removeYouTubeFavorite(videoId) {
+  const id = String(videoId || "");
+  if (!id || !isYouTubeFavorite(id)) return false;
+  youtubeFavorites = youtubeFavorites.filter((item) => item.id !== id);
+  persistYouTubeFavorites();
+  if (youtubeAppState.mode === "favorites") {
+    youtubeAppState.results = [...youtubeFavorites];
+  }
+  renderYouTubeResults();
+  renderYouTubeStatus();
+  return true;
+}
+
+function toggleYouTubeFavorite(video) {
+  const id = video?.id;
+  if (!id) return false;
+  return isYouTubeFavorite(id)
+    ? removeYouTubeFavorite(id)
+    : saveYouTubeFavorite(video);
+}
+
 async function saveYouTubeVideoToGlobal(video, options = {}) {
   const id = video?.id || extractYouTubeId(options.value || "");
   if (!id || youtubeGlobalSavingIds.has(id) || isYouTubeGlobalFavorite(id)) return false;
@@ -3821,6 +4233,56 @@ async function saveYouTubeVideoToGlobal(video, options = {}) {
     renderYouTubeStatus();
     renderYouTubeResults();
   }
+}
+
+async function removeYouTubeVideoFromGlobal(videoId) {
+  const id = String(videoId || "");
+  if (!id || youtubeGlobalSavingIds.has(id)) return false;
+
+  youtubeGlobalSavingIds.add(id);
+  youtubeGlobalMessage = "Removing video from Global Favs...";
+  renderYouTubeStatus();
+  renderYouTubeResults();
+
+  try {
+    const response = await fetch("/api/youtube/global", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = data.message || data.error || "Could not remove that global favorite.";
+      throw new Error(`${detail} (${response.status})`);
+    }
+
+    youtubeGlobalIds.delete(id);
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (items.length || youtubeAppState.mode === "global") {
+      youtubeGlobalIds = new Set(items.map((item) => item?.id).filter(Boolean));
+    }
+    if (youtubeAppState.mode === "global") {
+      youtubeAppState.results = items;
+    }
+    youtubeGlobalMessage = "Removed from Global Favs.";
+    return true;
+  } catch (error) {
+    youtubeGlobalMessage = error.message || "Could not remove that global favorite.";
+    return false;
+  } finally {
+    youtubeGlobalSavingIds.delete(id);
+    renderYouTubeStatus();
+    renderYouTubeResults();
+  }
+}
+
+async function toggleYouTubeGlobalFavorite(video, options = {}) {
+  const id = video?.id || extractYouTubeId(options.value || "");
+  if (!id || youtubeGlobalSavingIds.has(id)) return false;
+  if (isYouTubeGlobalFavorite(id)) {
+    return removeYouTubeVideoFromGlobal(id);
+  }
+  return saveYouTubeVideoToGlobal(video, options);
 }
 
 function getYouTubeDisplayResults() {
@@ -4535,17 +4997,16 @@ function renderYouTubeResults() {
             type="button"
             data-youtube-save-video="${escapeHtml(video.id)}"
             aria-pressed="${isSaved}"
-            aria-label="${isSaved ? "Saved to favorites" : `Save ${escapeHtml(video.title || "video")} to favorites`}"
-            ${isSaved ? "disabled" : ""}
-          >${isSaved ? "Saved" : "Favs"}</button>
+            aria-label="${isSaved ? `Remove ${escapeHtml(video.title || "video")} from favorites` : `Save ${escapeHtml(video.title || "video")} to favorites`}"
+          >${isSaved ? "Unsave" : "Favs"}</button>
           <button
             class="youtube-video-global${isGlobalSaved ? " is-saved" : ""}${isGlobalSaving ? " is-saving" : ""}"
             type="button"
             data-youtube-global-video="${escapeHtml(video.id)}"
             aria-pressed="${isGlobalSaved}"
-            aria-label="${isGlobalSaved ? "Saved to Global Favs" : `Save ${escapeHtml(video.title || "video")} to Global Favs`}"
-            ${isGlobalSaved || isGlobalSaving ? "disabled" : ""}
-          >${isGlobalSaving ? "Saving" : isGlobalSaved ? "Global" : "Global"}</button>
+            aria-label="${isGlobalSaved ? `Remove ${escapeHtml(video.title || "video")} from Global Favs` : `Save ${escapeHtml(video.title || "video")} to Global Favs`}"
+            ${isGlobalSaving ? "disabled" : ""}
+          >${isGlobalSaving ? "Saving" : isGlobalSaved ? "Unsave" : "Global"}</button>
         </div>
       </article>
     `;
@@ -6236,7 +6697,7 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "ai", "calculator", "settings", "network"],
+      tools: ["browser", "ai", "lobbies", "calculator", "settings", "network"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -8251,6 +8712,10 @@ velChatHide?.addEventListener("click", () => {
   setVelChatCollapsed(true);
 });
 
+velChatClearLog?.addEventListener("click", () => {
+  clearVelChatLog();
+});
+
 welcomeNameForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   submitWelcomeName();
@@ -8299,6 +8764,13 @@ velChatForm?.addEventListener("submit", (event) => {
   sendVelChatMessage(velChatInput?.value || "");
 });
 
+velChatMessages?.addEventListener("click", (event) => {
+  const deleteButton = event.target.closest("[data-chat-delete]");
+  if (!deleteButton) return;
+  event.preventDefault();
+  deleteVelChatMessage(deleteButton.dataset.chatDelete || "");
+});
+
 velChatAttachButton?.addEventListener("click", () => {
   velChatAttachmentInput?.click();
 });
@@ -8342,6 +8814,60 @@ secretVaultRefresh?.addEventListener("click", () => {
   if (!secretVaultUnlocked) return;
   loadSecretVaultVideos();
 });
+
+lobbyModeTabs?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-lobby-mode]");
+  if (!button) return;
+  setLobbyMode(button.dataset.lobbyMode);
+});
+
+lobbyPills?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-lobby-name]");
+  if (!button) return;
+  joinLobby(button.dataset.lobbyName || "Main");
+});
+
+lobbyJoinForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  joinLobby(lobbyNameInput?.value || "Main");
+});
+
+lobbyRefreshButton?.addEventListener("click", () => {
+  loadLobbyState();
+});
+
+lobbyNoteSave?.addEventListener("click", () => {
+  saveLobbyNote();
+});
+
+lobbyNoteClear?.addEventListener("click", () => {
+  clearLobbyNote();
+});
+
+lobbyPromptForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  setLobbyPrompt(lobbyPromptInput?.value || "");
+});
+
+lobbySketchClear?.addEventListener("click", () => {
+  clearLobbySketchGallery();
+});
+
+lobbyCanvasClear?.addEventListener("click", () => {
+  clearLobbyCanvas();
+});
+
+lobbySketchSubmitForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitLobbySketch();
+});
+
+lobbySketchCanvas?.addEventListener("pointerdown", startLobbyDrawing);
+lobbySketchCanvas?.addEventListener("pointermove", moveLobbyDrawing);
+lobbySketchCanvas?.addEventListener("pointerup", stopLobbyDrawing);
+lobbySketchCanvas?.addEventListener("pointercancel", stopLobbyDrawing);
+lobbySketchCanvas?.addEventListener("pointerleave", stopLobbyDrawing);
+window.addEventListener("resize", resizeLobbyCanvas);
 
 launcherGameSearch?.addEventListener("input", () => {
   launcherGameQuery = launcherGameSearch.value;
@@ -8425,7 +8951,7 @@ youtubeResultsGrid?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     const video = getYouTubeDisplayResults().find((item) => item.id === saveButton.dataset.youtubeSaveVideo);
-    saveYouTubeFavorite(video);
+    toggleYouTubeFavorite(video);
     return;
   }
 
@@ -8435,7 +8961,7 @@ youtubeResultsGrid?.addEventListener("click", (event) => {
     event.stopPropagation();
     const videoId = globalSaveButton.dataset.youtubeGlobalVideo;
     const video = getYouTubeDisplayResults().find((item) => item.id === videoId) || findKnownYouTubeVideo(videoId);
-    saveYouTubeVideoToGlobal(video || { id: videoId });
+    toggleYouTubeGlobalFavorite(video || { id: videoId });
     return;
   }
 
@@ -11011,6 +11537,8 @@ renderRecentApps();
 renderAiMessages();
 initVelChat();
 updateYouTubeGlobalImportUi();
+renderLobbyState();
+clearLobbyCanvas();
 initDraggableDrawers();
 initScrollAssist();
 initDraggableLyricsWidget();

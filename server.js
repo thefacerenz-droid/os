@@ -17,6 +17,7 @@ const CHAT_ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:
 const SECRET_VIDEO_DIR = path.join(__dirname, "assets", "secret-videos");
 const SECRET_VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".ogg", ".mov"]);
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const handleLobbies = require("./api/lobbies.js");
 const sessions = new Map();
 let spotifyToken = null;
 
@@ -394,7 +395,7 @@ async function handleYoutubeSearch(req, res, url) {
   });
 }
 
-async function handleYoutubeGlobal(req, res) {
+async function handleYoutubeGlobal(req, res, url) {
   if (req.method === "GET") {
     return sendJson(res, 200, {
       items: readGlobalYouTubeFavorites(),
@@ -402,14 +403,34 @@ async function handleYoutubeGlobal(req, res) {
     });
   }
 
-  if (req.method !== "POST") {
+  if (!["POST", "DELETE"].includes(req.method)) {
+    res.setHeader("Allow", "GET, POST, DELETE");
     return sendJson(res, 405, {
       error: "method_not_allowed",
-      message: "Use GET or POST for global YouTube favorites."
+      message: "Use GET, POST, or DELETE for global YouTube favorites."
     });
   }
 
-  const body = JSON.parse(await readBody(req) || "{}");
+  let body = {};
+  try {
+    body = JSON.parse(await readBody(req) || "{}");
+  } catch (error) {
+    body = {};
+  }
+
+  if (req.method === "DELETE") {
+    const id = extractYouTubeVideoId(body.id || body.url || url?.searchParams?.get("id") || url?.searchParams?.get("url"));
+    if (!id) {
+      return sendJson(res, 400, {
+        error: "invalid_youtube_link",
+        message: "Choose a valid YouTube video to remove from Global Favs."
+      });
+    }
+    const items = readGlobalYouTubeFavorites().filter((item) => item.id !== id);
+    writeGlobalYouTubeFavorites(items);
+    return sendJson(res, 200, { items, storage: "file", deleted: id });
+  }
+
   const nextItem = normalizeGlobalYouTubeItem(body);
   if (!nextItem) {
     return sendJson(res, 400, {
@@ -477,6 +498,10 @@ function normalizeIncomingChatMessage(input = {}) {
   };
 }
 
+function getDeleteChatMessageId(input = {}) {
+  return cleanChatText(input.messageId || input.id, 48);
+}
+
 async function handleChatMessages(req, res, url) {
   if (req.method === "GET") {
     if (sendChatPinRequired(req, res, {}, url)) return;
@@ -488,10 +513,10 @@ async function handleChatMessages(req, res, url) {
     });
   }
 
-  if (req.method !== "POST") {
+  if (!["POST", "DELETE"].includes(req.method)) {
     return sendJson(res, 405, {
       error: "method_not_allowed",
-      message: "Use GET or POST for Global Chat."
+      message: "Use GET, POST, or DELETE for Global Chat."
     });
   }
 
@@ -502,6 +527,28 @@ async function handleChatMessages(req, res, url) {
     body = {};
   }
   if (sendChatPinRequired(req, res, body, url)) return;
+
+  if (req.method === "DELETE") {
+    const shouldClear = body.action === "clear" || body.clear === true || url.searchParams.get("action") === "clear";
+    const messageId = getDeleteChatMessageId(body) || cleanChatText(url.searchParams.get("messageId") || "", 48);
+    if (!shouldClear && !messageId) {
+      return sendJson(res, 400, {
+        error: "missing_message_id",
+        message: "Choose a message to delete."
+      });
+    }
+    const messages = shouldClear
+      ? []
+      : readGlobalChatMessages().filter((message) => message.id !== messageId);
+    writeGlobalChatMessages(messages);
+    return sendJson(res, 200, {
+      messages,
+      storage: "file",
+      persistent: true,
+      deleted: shouldClear ? "all" : messageId
+    });
+  }
+
   let nextMessage = null;
   try {
     nextMessage = normalizeIncomingChatMessage(body);
@@ -851,9 +898,10 @@ async function handleRequest(req, res) {
   try {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
+    if (url.pathname === "/api/lobbies") return await handleLobbies(req, res);
     if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
-    if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res);
+    if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/spotify/search") return await handleSpotifySearch(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/start") return await handleTikTokAuthStart(req, res);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/callback") return await handleTikTokCallback(req, res, url);

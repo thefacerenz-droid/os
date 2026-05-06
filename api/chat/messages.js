@@ -272,6 +272,10 @@ function normalizeIncomingMessage(body = {}) {
   };
 }
 
+function getDeleteMessageId(body = {}) {
+  return cleanChatText(body.messageId || body.id, 48);
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
@@ -280,11 +284,11 @@ module.exports = async function handler(req, res) {
       return sendJson(res, 200, store);
     }
 
-    if (req.method !== "POST") {
-      res.setHeader("Allow", "GET, POST");
+    if (!["POST", "DELETE"].includes(req.method)) {
+      res.setHeader("Allow", "GET, POST, DELETE");
       return sendJson(res, 405, {
         error: "method_not_allowed",
-        message: "Use GET or POST for Global Chat."
+        message: "Use GET, POST, or DELETE for Global Chat."
       });
     }
 
@@ -295,6 +299,28 @@ module.exports = async function handler(req, res) {
       body = {};
     }
     if (!hasValidPin(req, body)) return sendPinRequired(res);
+
+    if (req.method === "DELETE") {
+      const store = await readChatStore();
+      const shouldClear = body.action === "clear" || body.clear === true;
+      const messageId = getDeleteMessageId(body);
+      const messages = shouldClear
+        ? []
+        : store.messages.filter((message) => message.id !== messageId);
+      if (!shouldClear && !messageId) {
+        return sendJson(res, 400, {
+          error: "missing_message_id",
+          message: "Choose a message to delete."
+        });
+      }
+      const storage = await writeChatStore(messages);
+      return sendJson(res, 200, {
+        messages,
+        storage,
+        persistent: storage !== "memory",
+        deleted: shouldClear ? "all" : messageId
+      });
+    }
 
     const nextMessage = normalizeIncomingMessage(body);
     if (!nextMessage) {

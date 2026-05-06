@@ -953,6 +953,81 @@
         </div>
       </section>
 
+      <section class="drawer" id="lobbiesDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close lobbies" data-close-panel="lobbies"></button>
+        <div class="drawer-panel lobbies-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>Lobbies</h2>
+              <p class="drawer-copy">Shared rooms for notes and a quick Gartic-style sketch game.</p>
+            </div>
+            <button class="close-button" type="button" data-close-panel="lobbies">Close</button>
+          </header>
+
+          <div class="lobbies-layout">
+            <aside class="lobby-card lobby-control">
+              <div class="lobby-mode-tabs" id="lobbyModeTabs" role="tablist" aria-label="Lobby mode">
+                <button class="is-active" type="button" data-lobby-mode="notes" role="tab" aria-selected="true">Notes</button>
+                <button type="button" data-lobby-mode="sketch" role="tab" aria-selected="false">Sketch Phone</button>
+              </div>
+              <p class="section-label">Rooms</p>
+              <div class="lobby-pills" id="lobbyPills"></div>
+              <form class="lobby-join-form" id="lobbyJoinForm">
+                <input id="lobbyNameInput" type="text" maxlength="28" autocomplete="off" placeholder="Join or create lobby" aria-label="Lobby name" />
+                <button class="ghost-button is-solid" type="submit">Join</button>
+              </form>
+              <p class="tiny-note" id="lobbyStatus">Pick a lobby to start.</p>
+            </aside>
+
+            <section class="lobby-card lobby-notes-view" id="lobbyNotesView">
+              <div class="lobby-card-head">
+                <div>
+                  <p class="section-label">Global Notepad</p>
+                  <h3 id="lobbyNoteTitle">Main Notes</h3>
+                </div>
+                <button class="ghost-button" type="button" id="lobbyRefreshButton">Refresh</button>
+              </div>
+              <textarea id="lobbyNoteText" maxlength="8000" placeholder="Write shared notes for this lobby..." aria-label="Shared lobby notes"></textarea>
+              <div class="lobby-actions">
+                <button class="ghost-button is-solid" type="button" id="lobbyNoteSave">Save Note</button>
+                <button class="ghost-button" type="button" id="lobbyNoteClear">Clear Note</button>
+              </div>
+              <p class="tiny-note" id="lobbyNoteMeta">Notes save for everyone in this room.</p>
+            </section>
+
+            <section class="lobby-card lobby-sketch-view" id="lobbySketchView" hidden>
+              <div class="lobby-card-head">
+                <div>
+                  <p class="section-label">Sketch Phone</p>
+                  <h3 id="lobbySketchTitle">Draw the prompt</h3>
+                </div>
+                <button class="ghost-button" type="button" id="lobbySketchClear">Clear Gallery</button>
+              </div>
+              <form class="lobby-prompt-form" id="lobbyPromptForm">
+                <input id="lobbyPromptInput" type="text" maxlength="140" autocomplete="off" placeholder="Set the drawing prompt" aria-label="Sketch prompt" />
+                <button class="ghost-button is-solid" type="submit">Set Prompt</button>
+              </form>
+              <div class="lobby-canvas-wrap">
+                <canvas id="lobbySketchCanvas" width="640" height="400" aria-label="Sketch canvas"></canvas>
+              </div>
+              <div class="lobby-sketch-tools">
+                <input id="lobbyBrushColor" type="color" value="#050505" aria-label="Brush color" />
+                <input id="lobbyBrushSize" type="range" min="2" max="28" value="8" aria-label="Brush size" />
+                <button class="ghost-button" type="button" id="lobbyCanvasClear">Clear Canvas</button>
+              </div>
+              <form class="lobby-submit-form" id="lobbySketchSubmitForm">
+                <input id="lobbySketchCaption" type="text" maxlength="120" autocomplete="off" placeholder="Caption or guess" aria-label="Sketch caption" />
+                <button class="ghost-button is-solid" type="submit">Post Sketch</button>
+              </form>
+              <div class="lobby-gallery" id="lobbySketchGallery">
+                <p class="catalog-empty">No sketches yet.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
       <section class="drawer" id="calculatorDrawer" aria-hidden="true">
         <button class="drawer-scrim" type="button" aria-label="Close calculator" data-close-panel="calculator"></button>
         <div class="drawer-panel calculator-panel">
@@ -1147,6 +1222,7 @@
               <h2>Global Chat</h2>
             </div>
             <div class="vel-chat-head-actions">
+              <button class="vel-chat-mini-button vel-chat-clear-button" type="button" id="velChatClearLog">Clear</button>
               <button class="vel-chat-user-pill" type="button" id="velChatUserPill">Login</button>
               <button class="vel-chat-mini-button" type="button" id="velChatHide">Hide</button>
             </div>

@@ -559,6 +559,10 @@ body[data-theme-pack="terminal"] .wallpaper-shade {
   width: min(900px, calc(100% - 2.3rem));
 }
 
+.lobbies-panel {
+  width: min(1120px, calc(100% - 2.3rem));
+}
+
 .ai-panel {
   width: min(860px, calc(100% - 2.3rem));
 }
@@ -1436,6 +1440,208 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.32);
   background: rgba(255, 255, 255, 0.11);
+}
+
+.lobbies-layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.48fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.lobby-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.08), transparent 28%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.lobby-control {
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+}
+
+.lobby-mode-tabs,
+.lobby-pills,
+.lobby-actions,
+.lobby-sketch-tools,
+.lobby-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lobby-card-head {
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.lobby-card-head h3 {
+  margin: 0.08rem 0 0;
+}
+
+.lobby-mode-tabs {
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.lobby-mode-tabs button,
+.lobby-pills button,
+.lobby-sketch-tools button,
+.lobby-actions button,
+.lobby-prompt-form button,
+.lobby-submit-form button,
+.lobby-join-form button {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-weight: 900;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.lobby-mode-tabs button {
+  flex: 1 1 0;
+  padding: 0.48rem 0.72rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.lobby-mode-tabs button.is-active,
+.lobby-pills button.is-active {
+  background: #fff;
+  color: #050505;
+}
+
+.lobby-pills {
+  flex-wrap: wrap;
+}
+
+.lobby-pills button {
+  min-height: 32px;
+  padding: 0.38rem 0.64rem;
+  font-size: 0.72rem;
+}
+
+.lobby-join-form,
+.lobby-prompt-form,
+.lobby-submit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+}
+
+.lobby-join-form input,
+.lobby-prompt-form input,
+.lobby-submit-form input,
+.lobby-notes-view textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+  outline: none;
+}
+
+.lobby-join-form input,
+.lobby-prompt-form input,
+.lobby-submit-form input {
+  min-height: 42px;
+  padding: 0.68rem 0.82rem;
+  border-radius: 999px;
+}
+
+.lobby-notes-view textarea {
+  min-height: min(42dvh, 440px);
+  padding: 0.9rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.lobby-actions {
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.lobby-canvas-wrap {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background: #f6f6f6;
+}
+
+#lobbySketchCanvas {
+  display: block;
+  width: 100%;
+  max-height: min(42dvh, 430px);
+  touch-action: none;
+  cursor: crosshair;
+  background: #f6f6f6;
+}
+
+.lobby-sketch-tools {
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.lobby-sketch-tools input[type="color"] {
+  width: 44px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lobby-sketch-tools input[type="range"] {
+  flex: 1 1 160px;
+  accent-color: #fff;
+}
+
+.lobby-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.72rem;
+  margin-top: 0.9rem;
+  max-height: min(34dvh, 360px);
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.lobby-sketch-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.lobby-sketch-card img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f6f6f6;
+}
+
+.lobby-sketch-card strong {
+  color: #fff;
+  font-size: 0.82rem;
+}
+
+.lobby-sketch-card span,
+.lobby-sketch-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .secret-vault {
@@ -6011,6 +6217,7 @@ body.is-booting .vel-chat {
 
 .vel-chat-mini-button,
 .vel-chat-user-pill,
+.vel-chat-delete,
 .vel-chat-login-needed,
 .vel-chat-userbar button,
 .vel-chat-login button,
@@ -6034,6 +6241,10 @@ body.is-booting .vel-chat {
   padding: 0.48rem 0.75rem;
   font-size: 0.72rem;
   text-transform: uppercase;
+}
+
+.vel-chat-clear-button {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .vel-chat-user-pill {
@@ -6272,6 +6483,30 @@ body.is-booting .vel-chat {
   max-width: 86%;
   color: rgba(255, 255, 255, 0.48);
   font-size: 0.66rem;
+}
+
+.vel-chat-delete {
+  min-height: 24px;
+  padding: 0.18rem 0.46rem;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.48;
+}
+
+.vel-chat-message:hover .vel-chat-delete,
+.vel-chat-message:focus-within .vel-chat-delete,
+.vel-chat-delete:focus-visible {
+  opacity: 1;
+}
+
+.vel-chat-delete:hover,
+.vel-chat-delete:focus-visible {
+  color: #050505;
+  background: #fff;
 }
 
 .vel-chat-message-meta strong {
@@ -7642,6 +7877,20 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 }
 
 @media (max-width: 820px) {
+  .lobbies-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-join-form,
+  .lobby-prompt-form,
+  .lobby-submit-form {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-gallery {
+    max-height: min(38dvh, 360px);
+  }
+
   .calculator-layout {
     grid-template-columns: 1fr;
   }
