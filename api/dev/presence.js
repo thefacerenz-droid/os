@@ -2,7 +2,7 @@ const PRESENCE_KEY = "velos:dev-presence-v1";
 const REDIS_CLIENT_KEY = "__velos_dev_presence_redis_client_promise";
 const MEMORY_KEY = "__velos_dev_presence_store";
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
-const ADMIN_CODE = process.env.ADMIN_CODE || "74281";
+const ADMIN_CODE = process.env.ADMIN_CODE || "918273";
 const USER_ACTIVE_MS = 1000 * 60 * 8;
 
 function sendJson(res, statusCode, payload) {
