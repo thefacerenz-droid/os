@@ -1931,8 +1931,7 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
 }
 
-.dev-dashboard-head,
-.dev-user-row {
+.dev-dashboard-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1954,12 +1953,26 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   padding-right: 0.25rem;
 }
 
+.dev-ban-list {
+  display: grid;
+  gap: 0.62rem;
+  margin-top: 1rem;
+}
+
 .dev-user-row {
   position: relative;
+  display: grid;
+  gap: 0.78rem;
   padding: 0.8rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.045);
+}
+
+.dev-user-main {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
 }
 
 .dev-user-dot {
@@ -1971,26 +1984,122 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   box-shadow: 0 0 14px rgba(255, 255, 255, 0.72);
 }
 
-.dev-user-row div {
+.dev-user-copy {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.dev-user-row strong,
-.dev-user-row span {
+.dev-user-copy strong,
+.dev-user-copy span {
   display: block;
 }
 
-.dev-user-row strong {
+.dev-user-copy strong {
   color: #fff;
   font-size: 0.92rem;
 }
 
-.dev-user-row span,
+.dev-user-copy span,
 .dev-user-row em {
   color: var(--muted);
   font-size: 0.72rem;
   font-style: normal;
+}
+
+.dev-user-row small,
+.dev-ban-row small {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.64rem;
+}
+
+.dev-user-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.58rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.dev-user-controls button,
+.dev-user-controls select,
+.dev-ban-row button {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.dev-user-controls button,
+.dev-ban-row button {
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+}
+
+.dev-user-controls select {
+  padding: 0.5rem 1.85rem 0.5rem 0.85rem;
+}
+
+.dev-user-controls button:hover,
+.dev-user-controls button:focus-visible,
+.dev-ban-row button:hover,
+.dev-ban-row button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dev-self-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff !important;
+  font-size: 0.68rem !important;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.dev-action-note {
+  color: var(--muted) !important;
+  font-size: 0.72rem !important;
+}
+
+.dev-ban-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dev-ban-row strong,
+.dev-ban-row span {
+  display: block;
+}
+
+.dev-ban-row strong {
+  color: #fff;
+  font-size: 0.86rem;
+}
+
+.dev-ban-row span {
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .secret-vault {
@@ -8240,13 +8349,18 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .dev-auth-form,
   .dev-dashboard-head,
-  .dev-user-row {
+  .dev-user-main,
+  .dev-ban-row {
     align-items: stretch;
     flex-direction: column;
   }
 
   .dev-auth-form {
     grid-template-columns: 1fr;
+  }
+
+  .dev-user-controls {
+    justify-content: flex-start;
   }
 
   .lobby-join-form,

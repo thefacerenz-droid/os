@@ -890,9 +890,10 @@ function serveStatic(req, res, url) {
       return;
     }
     const ext = path.extname(filePath).toLowerCase();
+    const noStore = new Set([".html", ".js", ".css"]);
     res.writeHead(200, {
       "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": ext === ".html" ? "no-store" : "public, max-age=3600"
+      "Cache-Control": noStore.has(ext) ? "no-store" : "public, max-age=3600"
     });
     fs.createReadStream(filePath).pipe(res);
   });

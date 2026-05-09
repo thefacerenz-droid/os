@@ -2099,6 +2099,7 @@ const devAuthForm = document.getElementById("devAuthForm");
 const devCodeInput = document.getElementById("devCodeInput");
 const devDashboard = document.getElementById("devDashboard");
 const devOnlineList = document.getElementById("devOnlineList");
+const devBanList = document.getElementById("devBanList");
 const devStatus = document.getElementById("devStatus");
 const devRefreshButton = document.getElementById("devRefreshButton");
 const devLockButton = document.getElementById("devLockButton");
@@ -2138,6 +2139,9 @@ const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
 const VEL_CHAT_POLL_MS = 3000;
+const VEL_DEVICE_ID_KEY = "vel-device-id";
+const DEV_ACCESS_CHECK_MS = 5000;
+let velDeviceId = getOrCreateVelDeviceId();
 const VEL_CHAT_ATTACHMENT_LIMIT = 1700000;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
 const YOUTUBE_FAVORITES_KEY = "vel-youtube-favorites";
@@ -2270,6 +2274,7 @@ let lobbyPollTimer = null;
 let devAdminCode = "";
 let devPollTimer = null;
 let devPresenceTimer = null;
+let devAccessTimer = null;
 let devLoading = false;
 let soundboardAudioContext = null;
 let soundboardActiveNodes = [];
@@ -3052,6 +3057,14 @@ function cleanVelChatName(value = "") {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 24);
+}
+
+function getOrCreateVelDeviceId() {
+  const existing = storage.get(VEL_DEVICE_ID_KEY, "").replace(/[^\w.-]/g, "").slice(0, 96);
+  if (existing) return existing;
+  const next = window.crypto?.randomUUID?.() || `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  storage.set(VEL_DEVICE_ID_KEY, next);
+  return next;
 }
 
 function createVelChatUser(name) {
@@ -4035,24 +4048,83 @@ function getActiveDevAppInfo() {
   };
 }
 
+function formatDevBanUntil(value = 0) {
+  if (!value) return "Permanent";
+  const remaining = Number(value) - Date.now();
+  if (remaining <= 0) return "Expired";
+  const minutes = Math.ceil(remaining / 60000);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 48) return `${hours} hr`;
+  return `${Math.ceil(hours / 24)} day`;
+}
+
+function getDevBanDurationOptions() {
+  return `
+    <option value="10m">10m</option>
+    <option value="1h">1h</option>
+    <option value="24h">24h</option>
+    <option value="7d">7d</option>
+    <option value="permanent">Forever</option>
+  `;
+}
+
 function renderDevPanel(users = [], meta = {}) {
   if (!devOnlineList) return;
+  const bans = Array.isArray(meta.bans) ? meta.bans : [];
+  const bannedKeys = new Set(bans.flatMap((ban) => [ban.deviceId && `device:${ban.deviceId}`, ban.userId && `user:${ban.userId}`].filter(Boolean)));
   if (!users.length) {
     devOnlineList.innerHTML = '<p class="catalog-empty">No users online yet.</p>';
   } else {
     devOnlineList.innerHTML = users.map((user) => `
       <article class="dev-user-row">
-        <span class="dev-user-dot" aria-hidden="true"></span>
-        <div>
-          <strong>${escapeHtml(user.username || "Guest")}</strong>
-          <span>${escapeHtml(user.appTitle || "Desktop")}</span>
+        <div class="dev-user-main">
+          <span class="dev-user-dot" aria-hidden="true"></span>
+          <div class="dev-user-copy">
+            <strong>${escapeHtml(user.username || "Guest")}</strong>
+            <span>${escapeHtml(user.appTitle || "Desktop")}</span>
+            <small>${escapeHtml(user.deviceId ? `Device ${user.deviceId.slice(0, 8)}` : "No device ID")}</small>
+          </div>
+          <em>${escapeHtml(formatLobbyTime(user.lastSeen))}</em>
         </div>
-        <em>${escapeHtml(formatLobbyTime(user.lastSeen))}</em>
+        <div class="dev-user-controls">
+          ${user.deviceId === velDeviceId ? `
+            <span class="dev-self-badge">This is you</span>
+            <span class="dev-action-note">Admin controls show on other devices.</span>
+          ` : `
+            <button type="button" data-dev-kick="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Kick off site</button>
+            <select aria-label="Ban duration" data-dev-duration="${escapeHtml(user.userId || "")}">
+              ${getDevBanDurationOptions()}
+            </select>
+            ${user.isBanned || bannedKeys.has(`device:${user.deviceId}`) || bannedKeys.has(`user:${user.userId}`)
+              ? `<button type="button" data-dev-revoke="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Revoke</button>`
+              : `<button type="button" data-dev-ban="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Ban device</button>`}
+          `}
+        </div>
       </article>
     `).join("");
   }
+  renderDevBans(bans);
   const storageLabel = meta.persistent ? "global storage" : "temporary memory";
   setDevStatus(`${users.length} online - ${storageLabel}.`, meta.persistent ? "live" : "warn");
+}
+
+function renderDevBans(bans = []) {
+  if (!devBanList) return;
+  const activeBans = bans.filter((ban) => ban?.deviceId || ban?.userId);
+  devBanList.innerHTML = `
+    <p class="section-label">Ban List${activeBans.length ? ` (${activeBans.length})` : ""}</p>
+    ${activeBans.length ? activeBans.map((ban) => `
+      <article class="dev-ban-row">
+        <div>
+          <strong>${escapeHtml(ban.username || "Unknown")}</strong>
+          <span>${escapeHtml(ban.durationLabel || formatDevBanUntil(ban.expiresAt))} - ${escapeHtml(formatDevBanUntil(ban.expiresAt))}</span>
+          <small>${escapeHtml(ban.deviceId ? `Device ${ban.deviceId.slice(0, 12)}` : `User ${ban.userId || "unknown"}`)}</small>
+        </div>
+        <button type="button" data-dev-revoke-ban="${escapeHtml(ban.userId || "")}" data-dev-device="${escapeHtml(ban.deviceId || "")}">Revoke</button>
+      </article>
+    `).join("") : '<p class="catalog-empty">No active bans.</p>'}
+  `;
 }
 
 function setDevUnlocked(unlocked) {
@@ -4129,6 +4201,118 @@ async function unlockDevPanel(value = "") {
   await fetchDevPresence();
 }
 
+function getDevIdentityPayload() {
+  const user = getLobbyUserPayload();
+  return {
+    ...user,
+    deviceId: velDeviceId
+  };
+}
+
+function clearDevAccessTimer() {
+  window.clearTimeout(devAccessTimer);
+  devAccessTimer = null;
+}
+
+function scheduleDevAccessCheck() {
+  clearDevAccessTimer();
+  devAccessTimer = window.setTimeout(() => checkDevAccess({ silent: true }), DEV_ACCESS_CHECK_MS);
+}
+
+function showDeviceBan(data = {}) {
+  clearDevAccessTimer();
+  setSessionChatPin("");
+  closeAllPanels();
+  setVelChatLocked(true, data.message || "This device is banned.");
+  if (welcomeGate) welcomeGate.hidden = false;
+  document.body.classList.add("is-onboarding", "is-access-blocked");
+  if (welcomeNameForm) welcomeNameForm.hidden = true;
+  if (welcomePinForm) welcomePinForm.hidden = true;
+  typeWelcomeText("Access blocked.");
+  const until = data.until ? ` Ends in ${formatDevBanUntil(data.until)}.` : " Permanent ban.";
+  setWelcomeStatus(`${data.message || "This device cannot access vel.os."}${until}`, "error");
+  scheduleDevAccessCheck();
+}
+
+function clearDeviceBanScreen() {
+  if (!document.body.classList.contains("is-access-blocked")) return;
+  document.body.classList.remove("is-access-blocked");
+  setWelcomeStatus("Ban revoked. Enter the PIN again.", "live");
+  showWelcomeGate("pin");
+}
+
+function handleDevAccessData(data = {}) {
+  if (data.status === "banned") {
+    showDeviceBan(data);
+    return false;
+  }
+  if (data.status === "kicked") {
+    clearVelChatPin(data.message || "Admin kicked this device back to the PIN screen.");
+    closeAllPanels();
+    showWelcomeGate("pin");
+    return false;
+  }
+  if (data.status === "ok") {
+    clearDeviceBanScreen();
+  }
+  return true;
+}
+
+async function checkDevAccess(options = {}) {
+  try {
+    const response = await fetch("/api/dev/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "check",
+        ...getDevIdentityPayload()
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    const allowed = response.ok ? handleDevAccessData(data) : true;
+    if (allowed && !options.once) scheduleDevAccessCheck();
+    return allowed;
+  } catch (error) {
+    if (!options.silent) setDevStatus("Access check offline.", "warn");
+    if (!options.once) scheduleDevAccessCheck();
+    return true;
+  }
+}
+
+async function sendDevControl(command, payload = {}) {
+  if (!devAdminCode) {
+    setDevStatus("Unlock Dev Panel first.", "warn");
+    return;
+  }
+  setDevStatus(`${command === "kick" ? "Kicking" : command === "ban" ? "Banning" : "Revoking"} user...`);
+  try {
+    const response = await fetch("/api/dev/presence", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-vel-admin-code": devAdminCode
+      },
+      body: JSON.stringify({
+        action: "control",
+        command,
+        ...payload
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      devAdminCode = "";
+      setDevUnlocked(false);
+      setDevStatus("Admin code required.", "error");
+      return;
+    }
+    if (!response.ok) throw new Error(data.message || "Dev control failed.");
+    renderDevPanel(Array.isArray(data.users) ? data.users : [], data);
+    setDevStatus(command === "kick" ? "Device kicked." : command === "ban" ? "Device banned." : "Ban revoked.", data.persistent ? "live" : "warn");
+  } catch (error) {
+    setDevStatus(error.message || "Dev control failed.", "error");
+  }
+}
+
 function reportDevPresence() {
   if (!velChatPin || !normalizeVelChatUser(velChatUser)) return;
   const active = getActiveDevAppInfo();
@@ -4136,12 +4320,18 @@ function reportDevPresence() {
     method: "POST",
     headers: getVelChatHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
-      ...getLobbyUserPayload(),
+      ...getDevIdentityPayload(),
       ...active,
       path: window.location.pathname || "/"
     }),
     keepalive: true
-  }).catch(() => {});
+  })
+    .then(async (response) => {
+      if (response.ok) return;
+      const data = await response.json().catch(() => ({}));
+      handleDevAccessData(data);
+    })
+    .catch(() => {});
 }
 
 function cleanLobbyName(value = "") {
@@ -7954,6 +8144,8 @@ async function submitWelcomePin() {
     welcomePinInput?.focus({ preventScroll: true });
     return;
   }
+  const allowed = await checkDevAccess({ once: true });
+  if (!allowed) return;
   setWelcomeStatus(`Welcome, ${velChatUser?.username || "user"}.`);
   window.setTimeout(completeWelcomeGate, 420);
 }
@@ -9674,6 +9866,52 @@ devRefreshButton?.addEventListener("click", () => {
 
 devLockButton?.addEventListener("click", () => {
   lockDevPanel();
+});
+
+devOnlineList?.addEventListener("click", (event) => {
+  const kickButton = event.target.closest("[data-dev-kick]");
+  if (kickButton) {
+    const username = kickButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
+    if (window.confirm(`Kick ${username} back to the PIN screen?`)) {
+      sendDevControl("kick", {
+        targetUserId: kickButton.dataset.devKick || "",
+        targetDeviceId: kickButton.dataset.devDevice || ""
+      });
+    }
+    return;
+  }
+
+  const banButton = event.target.closest("[data-dev-ban]");
+  if (banButton) {
+    const username = banButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
+    const durationSelect = banButton.closest(".dev-user-row")?.querySelector("[data-dev-duration]");
+    const duration = durationSelect?.value || "permanent";
+    if (window.confirm(`Ban ${username} for ${duration === "permanent" ? "forever" : duration}?`)) {
+      sendDevControl("ban", {
+        targetUserId: banButton.dataset.devBan || "",
+        targetDeviceId: banButton.dataset.devDevice || "",
+        duration
+      });
+    }
+    return;
+  }
+
+  const revokeButton = event.target.closest("[data-dev-revoke]");
+  if (revokeButton) {
+    sendDevControl("revoke-ban", {
+      targetUserId: revokeButton.dataset.devRevoke || "",
+      targetDeviceId: revokeButton.dataset.devDevice || ""
+    });
+  }
+});
+
+devBanList?.addEventListener("click", (event) => {
+  const revokeButton = event.target.closest("[data-dev-revoke-ban]");
+  if (!revokeButton) return;
+  sendDevControl("revoke-ban", {
+    targetUserId: revokeButton.dataset.devRevokeBan || "",
+    targetDeviceId: revokeButton.dataset.devDevice || ""
+  });
 });
 
 lobbySketchCanvas?.addEventListener("pointerdown", startLobbyDrawing);
@@ -12376,5 +12614,6 @@ updateNowPlayingUi();
 renderLyricsWidget();
 syncTaskbarState();
 window.setInterval(updateClock, 1000);
+checkDevAccess({ silent: true });
 reportDevPresence();
 devPresenceTimer = window.setInterval(reportDevPresence, 15000);
