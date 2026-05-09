@@ -193,6 +193,8 @@ function normalizeStore(value = {}) {
       deviceId: cleanDeviceId(user),
       app: cleanText(user.app, 40) || "desktop",
       appTitle: cleanText(user.appTitle, 80) || "Desktop",
+      activity: cleanText(user.activity, 120) || "",
+      activityAt: Number(user.activityAt) || Number(user.lastSeen) || 0,
       panel: cleanText(user.panel, 40) || "desktop",
       path: cleanText(user.path, 120) || "/",
       lastSeen: Number(user.lastSeen) || 0
@@ -524,6 +526,8 @@ module.exports = async function handler(req, res) {
         deviceId: cleanDeviceId(body),
         app: cleanText(body.app, 40) || "desktop",
         appTitle: cleanText(body.appTitle, 80) || "Desktop",
+        activity: cleanText(body.activity, 120) || "",
+        activityAt: Date.now(),
         panel: cleanText(body.panel, 40) || "desktop",
         path: cleanText(body.path, 120) || "/",
         lastSeen: Date.now()
