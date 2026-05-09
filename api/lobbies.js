@@ -1,12 +1,16 @@
 const LOBBIES_KEY = "velos:lobbies-v1";
 const REDIS_CLIENT_KEY = "__velos_lobbies_redis_client_promise";
 const MEMORY_KEY = "__velos_lobbies_store";
-const LOBBY_PIN = "3745";
+const LOBBY_PIN = process.env.VEL_OS_PIN || "74281";
 const NOTE_LIMIT = 8000;
 const DRAWING_LIMIT = 700000;
 const ENTRY_LIMIT = 36;
 const INVITE_LIMIT = 80;
 const USER_ACTIVE_MS = 1000 * 60 * 8;
+const STROKE_LIMIT = 900;
+const STROKE_POINT_LIMIT = 180;
+const CANVAS_WIDTH = 640;
+const CANVAS_HEIGHT = 400;
 const ALLOWED_DRAWING = /^data:image\/(?:png|jpe?g|webp);base64,/i;
 
 function sendJson(res, statusCode, payload) {
@@ -179,7 +183,9 @@ function emptyLobby(name = "Main") {
       prompt: "Draw the weirdest creature you can imagine.",
       promptBy: "vel.os",
       promptAt: 0,
+      canvasUpdatedAt: 0,
       collaborators: [],
+      strokes: [],
       entries: []
     }
   };
@@ -203,6 +209,43 @@ function normalizeEntry(entry = {}) {
     caption: cleanText(entry.caption, 120),
     prompt: cleanText(entry.prompt, 140),
     createdAt: Number(entry.createdAt) || Date.now()
+  };
+}
+
+function clampNumber(value, min, max, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function normalizePoint(point = {}) {
+  const x = clampNumber(point.x, 0, CANVAS_WIDTH, NaN);
+  const y = clampNumber(point.y, 0, CANVAS_HEIGHT, NaN);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return {
+    x: Math.round(x * 100) / 100,
+    y: Math.round(y * 100) / 100
+  };
+}
+
+function normalizeStroke(stroke = {}) {
+  const person = cleanPerson(stroke);
+  const points = (Array.isArray(stroke.points) ? stroke.points : [])
+    .map(normalizePoint)
+    .filter(Boolean)
+    .slice(0, STROKE_POINT_LIMIT);
+  if (!person || points.length < 2) return null;
+  const color = /^#[0-9a-f]{6}$/i.test(String(stroke.color || ""))
+    ? String(stroke.color).toLowerCase()
+    : "#050505";
+  return {
+    id: cleanText(stroke.id, 48) || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    userId: person.userId,
+    username: person.username,
+    color,
+    size: Math.round(clampNumber(stroke.size, 2, 28, 8) * 10) / 10,
+    points,
+    createdAt: Number(stroke.createdAt) || Date.now()
   };
 }
 
@@ -241,6 +284,10 @@ function normalizeLobby(lobby = {}, fallbackName = "Main") {
     .filter(Boolean)
     .filter((person, index, people) => people.findIndex((item) => item.userId === person.userId) === index)
     .slice(0, 8);
+  const strokes = (Array.isArray(lobby.sketch?.strokes) ? lobby.sketch.strokes : [])
+    .map(normalizeStroke)
+    .filter(Boolean)
+    .slice(-STROKE_LIMIT);
   return {
     name,
     note: {
@@ -252,7 +299,9 @@ function normalizeLobby(lobby = {}, fallbackName = "Main") {
       prompt: cleanText(lobby.sketch?.prompt, 140) || blank.sketch.prompt,
       promptBy: cleanText(lobby.sketch?.promptBy, 24) || blank.sketch.promptBy,
       promptAt: Number(lobby.sketch?.promptAt) || 0,
+      canvasUpdatedAt: Number(lobby.sketch?.canvasUpdatedAt) || 0,
       collaborators,
+      strokes,
       entries
     }
   };
@@ -392,7 +441,7 @@ function serialize(store, lobbyName, user = null) {
     lobbies: Object.values(store.lobbies)
       .map((item) => ({
         name: item.name,
-        updatedAt: Math.max(item.note?.updatedAt || 0, item.sketch?.promptAt || 0, item.sketch?.entries?.[0]?.createdAt || 0)
+        updatedAt: Math.max(item.note?.updatedAt || 0, item.sketch?.promptAt || 0, item.sketch?.canvasUpdatedAt || 0, item.sketch?.entries?.[0]?.createdAt || 0)
       }))
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       .slice(0, 18),
@@ -449,8 +498,31 @@ module.exports = async function handler(req, res) {
       lobby.sketch.prompt = cleanText(body.prompt, 140) || emptyLobby().sketch.prompt;
       lobby.sketch.promptBy = user.username;
       lobby.sketch.promptAt = Date.now();
+      lobby.sketch.canvasUpdatedAt = Date.now();
       lobby.sketch.collaborators = [user];
+      lobby.sketch.strokes = [];
       lobby.sketch.entries = [];
+    } else if (action === "stroke") {
+      const stroke = normalizeStroke({
+        ...(body.stroke && typeof body.stroke === "object" ? body.stroke : {}),
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        userId: user.userId,
+        username: user.username,
+        createdAt: Date.now()
+      });
+      if (!stroke) {
+        return sendJson(res, 400, {
+          error: "invalid_stroke",
+          message: "That shared stroke could not be synced."
+        });
+      }
+      addCollaborators(lobby, [user]);
+      lobby.sketch.strokes = [...(lobby.sketch.strokes || []), stroke].slice(-STROKE_LIMIT);
+      lobby.sketch.canvasUpdatedAt = Date.now();
+    } else if (action === "clear-canvas") {
+      addCollaborators(lobby, [user]);
+      lobby.sketch.strokes = [];
+      lobby.sketch.canvasUpdatedAt = Date.now();
     } else if (action === "entry") {
       const image = String(body.image || "");
       if (!ALLOWED_DRAWING.test(image) || image.length > DRAWING_LIMIT) {
@@ -470,6 +542,8 @@ module.exports = async function handler(req, res) {
         createdAt: Date.now()
       });
       lobby.sketch.entries = [entry, ...lobby.sketch.entries].filter(Boolean).slice(0, ENTRY_LIMIT);
+      lobby.sketch.strokes = [];
+      lobby.sketch.canvasUpdatedAt = Date.now();
     } else if (action === "delete-entry") {
       const entryId = cleanText(body.entryId, 48);
       const entry = lobby.sketch.entries.find((item) => item.id === entryId);

@@ -11,7 +11,7 @@ const GLOBAL_YOUTUBE_LIMIT = 200;
 const GLOBAL_YOUTUBE_FILE = path.join(__dirname, "data", "global-youtube-favorites.json");
 const GLOBAL_CHAT_LIMIT = 180;
 const GLOBAL_CHAT_FILE = path.join(__dirname, "data", "global-chat-messages.json");
-const GLOBAL_CHAT_PIN = "3745";
+const GLOBAL_CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const CHAT_ATTACHMENT_URL_LIMIT = 2600000;
 const CHAT_ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
 const SECRET_VIDEO_DIR = path.join(__dirname, "assets", "secret-videos");
@@ -19,6 +19,7 @@ const SECRET_VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".ogg", ".mov"]);
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 const handleLobbies = require("./api/lobbies.js");
 const handleSoundboard = require("./api/soundboard.js");
+const handleDevPresence = require("./api/dev/presence.js");
 const sessions = new Map();
 let spotifyToken = null;
 
@@ -904,6 +905,7 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
     if (url.pathname === "/api/lobbies") return await handleLobbies(req, res);
     if (url.pathname === "/api/soundboard") return await handleSoundboard(req, res);
+    if (url.pathname === "/api/dev/presence") return await handleDevPresence(req, res);
     if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res, url);

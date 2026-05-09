@@ -2,7 +2,7 @@ const CHAT_LIMIT = 180;
 const CHAT_KEY = "velos:global-chat-messages";
 const REDIS_CLIENT_KEY = "__velos_chat_redis_client_promise";
 const MEMORY_KEY = "__velos_chat_messages";
-const CHAT_PIN = "3745";
+const CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const ATTACHMENT_URL_LIMIT = 2600000;
 const ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
 

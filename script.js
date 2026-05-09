@@ -1318,6 +1318,13 @@ const utilityApps = {
     action: "panel",
     panel: "soundboard"
   },
+  dev: {
+    title: "Dev Panel",
+    label: "Dev",
+    badgeText: "DV",
+    action: "panel",
+    panel: "dev"
+  },
   settings: {
     title: "Settings",
     label: "Settings",
@@ -1817,6 +1824,7 @@ const drawers = {
   network: document.getElementById("networkDrawer"),
   lobbies: document.getElementById("lobbiesDrawer"),
   soundboard: document.getElementById("soundboardDrawer"),
+  dev: document.getElementById("devDrawer"),
   calculator: document.getElementById("calculatorDrawer"),
   settings: document.getElementById("settingsDrawer")
 };
@@ -2086,6 +2094,14 @@ const soundboardStop = document.getElementById("soundboardStop");
 const soundboardImport = document.getElementById("soundboardImport");
 const soundboardFileInput = document.getElementById("soundboardFileInput");
 const soundboardStatus = document.getElementById("soundboardStatus");
+const devAuthCard = document.getElementById("devAuthCard");
+const devAuthForm = document.getElementById("devAuthForm");
+const devCodeInput = document.getElementById("devCodeInput");
+const devDashboard = document.getElementById("devDashboard");
+const devOnlineList = document.getElementById("devOnlineList");
+const devStatus = document.getElementById("devStatus");
+const devRefreshButton = document.getElementById("devRefreshButton");
+const devLockButton = document.getElementById("devLockButton");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -2249,8 +2265,12 @@ let welcomeGateStep = "name";
 let secretVaultUnlocked = false;
 let secretVaultLoading = false;
 let secretVaultVideos = [];
-const LOBBY_POLL_MS = 6000;
+const LOBBY_POLL_MS = 2500;
 let lobbyPollTimer = null;
+let devAdminCode = "";
+let devPollTimer = null;
+let devPresenceTimer = null;
+let devLoading = false;
 let soundboardAudioContext = null;
 let soundboardActiveNodes = [];
 let soundboardActiveMedia = [];
@@ -2268,7 +2288,9 @@ let lobbyState = {
   inviteOpen: false,
   loading: false,
   drawing: false,
-  lastPoint: null
+  lastPoint: null,
+  currentStroke: null,
+  canvasSignature: ""
 };
 let velofySearchQuery = "";
 let velofyPlaylistMode = storage.get("velofy-playlist-mode", "all");
@@ -2293,6 +2315,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
   "panel:velhub",
   "panel:lobbies",
   "panel:soundboard",
+  "panel:dev",
   "panel:music",
   "panel:ai",
   "panel:calculator",
@@ -2300,7 +2323,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
+  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
@@ -2320,6 +2343,11 @@ if (storage.get("vel-installed-apps-v5", "0") !== "1" && !installedApps.includes
   installedApps = ["panel:soundboard", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v5", "1");
+}
+if (storage.get("vel-installed-apps-v6", "0") !== "1" && !installedApps.includes("panel:dev")) {
+  installedApps = ["panel:dev", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v6", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 let windowPositions = readStoredJson("vel-window-positions", {});
@@ -2660,6 +2688,10 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="soundboard"]')?.classList.add("is-active");
   }
 
+  if (activePanel === "dev") {
+    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="dev"]')?.classList.add("is-active");
+  }
+
   if (activePanel === "settings") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="settings"]')?.classList.add("is-active");
   }
@@ -2750,6 +2782,10 @@ function suspendPanelPlayback(name) {
     stopSoundboardSounds();
   }
 
+  if (name === "dev") {
+    window.clearTimeout(devPollTimer);
+  }
+
   if (name === "calculator") {
     closeSecretVault();
   }
@@ -2807,6 +2843,11 @@ function openPanel(name) {
     loadSoundboardFiles();
   }
 
+  if (name === "dev") {
+    recordRecentApp({ type: "panel", id: "dev" });
+    openDevPanel();
+  }
+
   if (name === "settings") {
     recordRecentApp({ type: "panel", id: "settings" });
   }
@@ -2826,6 +2867,8 @@ function openPanel(name) {
       snake.refresh();
     });
   }
+
+  reportDevPresence();
 }
 
 function closeAllPanels() {
@@ -2838,6 +2881,7 @@ function closeAllPanels() {
   activePanel = "";
   pauseAllFeedMedia();
   syncTaskbarState();
+  reportDevPresence();
 }
 
 function closePanel(name) {
@@ -2847,6 +2891,7 @@ function closePanel(name) {
     activePanel = "";
   }
   syncTaskbarState();
+  reportDevPresence();
 }
 
 function togglePanel(name) {
@@ -3556,6 +3601,7 @@ async function unlockVelChat(pinValue) {
   await fetchVelChatMessages(true);
   if (velChatUnlocked) {
     setVelChatStatus("Chat unlocked.", "live");
+    reportDevPresence();
     velChatInput?.focus({ preventScroll: true });
     return true;
   }
@@ -3955,6 +4001,149 @@ function renderSoundboard() {
   soundboardGrid.innerHTML = `${realPads}${emptyReal}${generatedPads}`;
 }
 
+function setDevStatus(message = "", tone = "") {
+  if (!devStatus) return;
+  devStatus.textContent = message;
+  devStatus.dataset.tone = tone;
+}
+
+function getActiveDevAppInfo() {
+  if (!activePanel) {
+    return { app: "desktop", appTitle: "Desktop", panel: "desktop" };
+  }
+  if (activePanel === "web") {
+    const app = webApps[activeWeb] || utilityApps.browser;
+    return {
+      app: activeWeb || "browser",
+      appTitle: app?.title || "Web Browser",
+      panel: "web"
+    };
+  }
+  if (activePanel === "game") {
+    const game = localGameMeta[activeLocalGame];
+    return {
+      app: activeLocalGame || "game",
+      appTitle: game?.title || "Local Game",
+      panel: "game"
+    };
+  }
+  const app = utilityApps[activePanel] || { title: activePanel };
+  return {
+    app: activePanel,
+    appTitle: app.title || activePanel,
+    panel: activePanel
+  };
+}
+
+function renderDevPanel(users = [], meta = {}) {
+  if (!devOnlineList) return;
+  if (!users.length) {
+    devOnlineList.innerHTML = '<p class="catalog-empty">No users online yet.</p>';
+  } else {
+    devOnlineList.innerHTML = users.map((user) => `
+      <article class="dev-user-row">
+        <span class="dev-user-dot" aria-hidden="true"></span>
+        <div>
+          <strong>${escapeHtml(user.username || "Guest")}</strong>
+          <span>${escapeHtml(user.appTitle || "Desktop")}</span>
+        </div>
+        <em>${escapeHtml(formatLobbyTime(user.lastSeen))}</em>
+      </article>
+    `).join("");
+  }
+  const storageLabel = meta.persistent ? "global storage" : "temporary memory";
+  setDevStatus(`${users.length} online - ${storageLabel}.`, meta.persistent ? "live" : "warn");
+}
+
+function setDevUnlocked(unlocked) {
+  if (devAuthCard) devAuthCard.hidden = unlocked;
+  if (devDashboard) devDashboard.hidden = !unlocked;
+  if (!unlocked && devOnlineList) {
+    devOnlineList.innerHTML = '<p class="catalog-empty">Unlock Dev Panel to view sessions.</p>';
+  }
+}
+
+async function fetchDevPresence() {
+  if (!devAdminCode || devLoading) return;
+  devLoading = true;
+  setDevStatus("Loading online users...");
+  try {
+    const response = await fetch("/api/dev/presence", {
+      cache: "no-store",
+      headers: { "x-vel-admin-code": devAdminCode }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      devAdminCode = "";
+      setDevUnlocked(false);
+      setDevStatus("Admin code required.", "error");
+      devCodeInput?.focus({ preventScroll: true });
+      return;
+    }
+    if (!response.ok) throw new Error(data.message || "Dev Panel could not load.");
+    setDevUnlocked(true);
+    renderDevPanel(Array.isArray(data.users) ? data.users : [], data);
+  } catch (error) {
+    setDevStatus(error.message || "Dev Panel offline.", "error");
+  } finally {
+    devLoading = false;
+    scheduleDevPoll();
+  }
+}
+
+function scheduleDevPoll() {
+  window.clearTimeout(devPollTimer);
+  if (!isDrawerOpen("dev") || !devAdminCode) return;
+  devPollTimer = window.setTimeout(fetchDevPresence, 5000);
+}
+
+function openDevPanel() {
+  if (devAdminCode) {
+    setDevUnlocked(true);
+    fetchDevPresence();
+    return;
+  }
+  setDevUnlocked(false);
+  setDevStatus("Dev Panel locked.");
+  window.requestAnimationFrame(() => devCodeInput?.focus({ preventScroll: true }));
+}
+
+function lockDevPanel() {
+  devAdminCode = "";
+  window.clearTimeout(devPollTimer);
+  setDevUnlocked(false);
+  setDevStatus("Dev Panel locked.");
+  if (devCodeInput) devCodeInput.value = "";
+  devCodeInput?.focus({ preventScroll: true });
+}
+
+async function unlockDevPanel(value = "") {
+  const code = String(value || "").trim();
+  if (!code) {
+    setDevStatus("Enter the admin code.", "warn");
+    devCodeInput?.focus({ preventScroll: true });
+    return;
+  }
+  devAdminCode = code;
+  if (devCodeInput) devCodeInput.value = "";
+  await fetchDevPresence();
+}
+
+function reportDevPresence() {
+  if (!velChatPin || !normalizeVelChatUser(velChatUser)) return;
+  const active = getActiveDevAppInfo();
+  fetch("/api/dev/presence", {
+    method: "POST",
+    headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      ...getLobbyUserPayload(),
+      ...active,
+      path: window.location.pathname || "/"
+    }),
+    keepalive: true
+  }).catch(() => {});
+}
+
 function cleanLobbyName(value = "") {
   return String(value || "")
     .replace(/[^\w\s.-]/g, "")
@@ -4129,6 +4318,7 @@ function renderLobbyState() {
   renderLobbyInviteInbox();
   renderLobbyUserList();
   renderLobbyCollaborators();
+  renderSharedLobbyCanvas();
   renderLobbyGallery();
 }
 
@@ -4173,13 +4363,13 @@ async function loadLobbyState(options = {}) {
   }
 }
 
-async function postLobbyAction(payload = {}, message = "Lobby saved.") {
+async function postLobbyAction(payload = {}, message = "Lobby saved.", options = {}) {
   if (!velChatPin) {
     setLobbyStatus("Enter the startup PIN to use Notebook.", "warn");
     showWelcomeGate(velChatUser ? "pin" : "name");
     return null;
   }
-  setLobbyStatus("Updating Notebook...");
+  if (!options.silent) setLobbyStatus("Updating Notebook...");
   const body = {
     lobby: cleanLobbyName(lobbyState.lobby),
     ...getLobbyUserPayload(),
@@ -4201,8 +4391,8 @@ async function postLobbyAction(payload = {}, message = "Lobby saved.") {
     lobbyState.lobbies = Array.isArray(data.lobbies) ? data.lobbies : [];
     lobbyState.users = Array.isArray(data.users) ? data.users : [];
     lobbyState.invites = Array.isArray(data.invites) ? data.invites : [];
-    setLobbyStatus(message, data.persistent ? "live" : "warn");
-    renderLobbyState();
+    if (!options.silent) setLobbyStatus(message, data.persistent ? "live" : "warn");
+    if (!options.skipRender) renderLobbyState();
     return data;
   } catch (error) {
     setLobbyStatus(error.message || "Notebook update failed.", "error");
@@ -4287,16 +4477,28 @@ function ensureLobbyCanvasPaper() {
   }
 }
 
-function clearLobbyCanvas() {
+function paintLobbyCanvasBlank() {
   if (!lobbySketchCanvas) return;
   const ctx = lobbySketchCanvas.getContext("2d");
   ctx.fillStyle = "#f6f6f6";
   ctx.fillRect(0, 0, lobbySketchCanvas.width, lobbySketchCanvas.height);
 }
 
+function clearLobbyCanvas() {
+  paintLobbyCanvasBlank();
+  lobbyState.canvasSignature = "";
+}
+
 function resizeLobbyCanvas() {
   if (!lobbySketchCanvas) return;
   ensureLobbyCanvasPaper();
+}
+
+function getLobbyStrokeSignature() {
+  const sketch = lobbyState.lobbyData?.sketch || {};
+  const strokes = Array.isArray(sketch.strokes) ? sketch.strokes : [];
+  const lastStroke = strokes[strokes.length - 1];
+  return `${sketch.canvasUpdatedAt || 0}:${strokes.length}:${lastStroke?.id || ""}`;
 }
 
 function getLobbyCanvasPoint(event) {
@@ -4309,17 +4511,44 @@ function getLobbyCanvasPoint(event) {
   };
 }
 
-function drawLobbyLine(from, to) {
+function drawLobbyLineWithStyle(from, to, style = {}) {
   if (!lobbySketchCanvas || !from || !to) return;
   const ctx = lobbySketchCanvas.getContext("2d");
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.strokeStyle = lobbyBrushColor?.value || "#050505";
-  ctx.lineWidth = Number(lobbyBrushSize?.value || 8);
+  ctx.strokeStyle = style.color || "#050505";
+  ctx.lineWidth = Number(style.size || 8);
   ctx.beginPath();
   ctx.moveTo(from.x, from.y);
   ctx.lineTo(to.x, to.y);
   ctx.stroke();
+}
+
+function drawLobbyLine(from, to) {
+  drawLobbyLineWithStyle(from, to, {
+    color: lobbyBrushColor?.value || "#050505",
+    size: Number(lobbyBrushSize?.value || 8)
+  });
+}
+
+function renderSharedLobbyCanvas(force = false) {
+  if (!lobbySketchCanvas || lobbyState.drawing) return;
+  const signature = getLobbyStrokeSignature();
+  if (!force && signature === lobbyState.canvasSignature) return;
+  paintLobbyCanvasBlank();
+  const strokes = Array.isArray(lobbyState.lobbyData?.sketch?.strokes)
+    ? lobbyState.lobbyData.sketch.strokes
+    : [];
+  strokes.forEach((stroke) => {
+    const points = Array.isArray(stroke.points) ? stroke.points : [];
+    for (let index = 1; index < points.length; index += 1) {
+      drawLobbyLineWithStyle(points[index - 1], points[index], {
+        color: stroke.color || "#050505",
+        size: Number(stroke.size || 8)
+      });
+    }
+  });
+  lobbyState.canvasSignature = signature;
 }
 
 function startLobbyDrawing(event) {
@@ -4328,6 +4557,11 @@ function startLobbyDrawing(event) {
   ensureLobbyCanvasPaper();
   lobbyState.drawing = true;
   lobbyState.lastPoint = getLobbyCanvasPoint(event);
+  lobbyState.currentStroke = {
+    color: lobbyBrushColor?.value || "#050505",
+    size: Number(lobbyBrushSize?.value || 8),
+    points: [lobbyState.lastPoint]
+  };
   lobbySketchCanvas.setPointerCapture?.(event.pointerId);
 }
 
@@ -4336,14 +4570,32 @@ function moveLobbyDrawing(event) {
   event.preventDefault();
   const nextPoint = getLobbyCanvasPoint(event);
   drawLobbyLine(lobbyState.lastPoint, nextPoint);
+  if (lobbyState.currentStroke?.points && lobbyState.currentStroke.points.length < 180) {
+    lobbyState.currentStroke.points.push(nextPoint);
+  }
   lobbyState.lastPoint = nextPoint;
 }
 
 function stopLobbyDrawing(event) {
   if (!lobbyState.drawing) return;
   event.preventDefault();
+  const stroke = lobbyState.currentStroke;
   lobbyState.drawing = false;
   lobbyState.lastPoint = null;
+  lobbyState.currentStroke = null;
+  if (stroke?.points?.length > 1) {
+    postLobbyAction({
+      action: "stroke",
+      stroke
+    }, "Shared stroke synced.", { silent: true });
+  }
+}
+
+function clearSharedLobbyCanvas() {
+  clearLobbyCanvas();
+  postLobbyAction({
+    action: "clear-canvas"
+  }, "Shared canvas cleared.");
 }
 
 function submitLobbySketch() {
@@ -7188,7 +7440,7 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "ai", "lobbies", "soundboard", "calculator", "settings", "network"],
+      tools: ["browser", "ai", "lobbies", "soundboard", "dev", "calculator", "settings", "network"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -9368,7 +9620,7 @@ lobbyInviteInbox?.addEventListener("click", (event) => {
 });
 
 lobbyCanvasClear?.addEventListener("click", () => {
-  clearLobbyCanvas();
+  clearSharedLobbyCanvas();
 });
 
 lobbySketchSubmitForm?.addEventListener("submit", (event) => {
@@ -9409,6 +9661,19 @@ soundboardFileInput?.addEventListener("change", () => {
 
 soundboardVolume?.addEventListener("input", () => {
   setSoundboardStatus(`Volume ${soundboardVolume.value}%.`);
+});
+
+devAuthForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  unlockDevPanel(devCodeInput?.value || "");
+});
+
+devRefreshButton?.addEventListener("click", () => {
+  fetchDevPresence();
+});
+
+devLockButton?.addEventListener("click", () => {
+  lockDevPanel();
 });
 
 lobbySketchCanvas?.addEventListener("pointerdown", startLobbyDrawing);
@@ -12111,3 +12376,5 @@ updateNowPlayingUi();
 renderLyricsWidget();
 syncTaskbarState();
 window.setInterval(updateClock, 1000);
+reportDevPresence();
+devPresenceTimer = window.setInterval(reportDevPresence, 15000);

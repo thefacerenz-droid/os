@@ -1076,6 +1076,51 @@
         </div>
       </section>
 
+      <section class="drawer" id="devDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close dev panel" data-close-panel="dev"></button>
+        <div class="drawer-panel dev-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os admin</p>
+              <h2>Dev Panel</h2>
+              <p class="drawer-copy">Admin-only live presence for vel.os sessions.</p>
+            </div>
+            <button class="close-button" type="button" data-close-panel="dev">Close</button>
+          </header>
+
+          <div class="dev-layout">
+            <article class="dev-admin-card" id="devAuthCard">
+              <div>
+                <p class="section-label">Private Access</p>
+                <h3>Unlock Dev Panel</h3>
+                <p class="tiny-note">This panel is checked by the server before it shows online people.</p>
+              </div>
+              <form class="dev-auth-form" id="devAuthForm">
+                <input id="devCodeInput" type="password" inputmode="numeric" autocomplete="off" placeholder="Admin code" aria-label="Admin code" />
+                <button class="ghost-button is-solid" type="submit">Unlock</button>
+              </form>
+            </article>
+
+            <article class="dev-admin-card dev-dashboard" id="devDashboard" hidden>
+              <div class="dev-dashboard-head">
+                <div>
+                  <p class="section-label">Live Users</p>
+                  <h3>Online right now</h3>
+                </div>
+                <div class="dev-actions">
+                  <button class="ghost-button" type="button" id="devRefreshButton">Refresh</button>
+                  <button class="ghost-button" type="button" id="devLockButton">Lock</button>
+                </div>
+              </div>
+              <div class="dev-online-list" id="devOnlineList">
+                <p class="catalog-empty">Unlock Dev Panel to view sessions.</p>
+              </div>
+            </article>
+          </div>
+          <p class="tiny-note" id="devStatus">Dev Panel locked.</p>
+        </div>
+      </section>
+
       <section class="drawer" id="calculatorDrawer" aria-hidden="true">
         <button class="drawer-scrim" type="button" aria-label="Close calculator" data-close-panel="calculator"></button>
         <div class="drawer-panel calculator-panel">
