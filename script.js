@@ -2045,6 +2045,7 @@ const velChatUserPill = document.getElementById("velChatUserPill");
 const velChatLoginNeeded = document.getElementById("velChatLoginNeeded");
 const chatSettingsCard = document.getElementById("chatSettingsCard");
 const velChatMessages = document.getElementById("velChatMessages");
+const velChatTyping = document.getElementById("velChatTyping");
 const velChatForm = document.getElementById("velChatForm");
 const velChatInput = document.getElementById("velChatInput");
 const velChatAttachButton = document.getElementById("velChatAttachButton");
@@ -2097,6 +2098,8 @@ const soundboardStatus = document.getElementById("soundboardStatus");
 const devAuthCard = document.getElementById("devAuthCard");
 const devAuthForm = document.getElementById("devAuthForm");
 const devCodeInput = document.getElementById("devCodeInput");
+const devDeviceReadout = document.getElementById("devDeviceReadout");
+const devCopyDeviceButton = document.getElementById("devCopyDeviceButton");
 const devDashboard = document.getElementById("devDashboard");
 const devOnlineList = document.getElementById("devOnlineList");
 const devBanList = document.getElementById("devBanList");
@@ -2139,8 +2142,12 @@ const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
 const VEL_CHAT_POLL_MS = 3000;
+const VEL_CHAT_TYPING_POLL_MS = 1300;
+const VEL_CHAT_TYPING_IDLE_MS = 2600;
+const VEL_CHAT_TYPING_THROTTLE_MS = 900;
 const VEL_DEVICE_ID_KEY = "vel-device-id";
-const DEV_ACCESS_CHECK_MS = 5000;
+const DEV_ACCESS_CHECK_MS = 4000;
+const DEV_PRESENCE_POLL_MS = 4000;
 let velDeviceId = getOrCreateVelDeviceId();
 const VEL_CHAT_ATTACHMENT_LIMIT = 1700000;
 const YOUTUBE_HISTORY_KEY = "vel-youtube-watch-history";
@@ -2256,9 +2263,14 @@ aiMessages = Array.isArray(aiMessages)
 let aiLoading = false;
 let velChatUser = readStoredJson(VEL_CHAT_USER_KEY, null);
 let velChatItems = [];
+let velChatTypingUsers = [];
 let velChatRenderSignature = "";
 let velChatLoading = false;
 let velChatPollTimer = null;
+let velChatTypingPollTimer = null;
+let velChatTypingStopTimer = null;
+let velChatLastTypingSentAt = 0;
+let velChatIsTyping = false;
 let velChatCollapsed = storage.get(VEL_CHAT_COLLAPSED_KEY, "1") === "1";
 let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
 let velChatUnlocked = false;
@@ -2510,6 +2522,38 @@ function saveInstalledApps() {
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
 }
 
+const DESKTOP_SHORTCUT_ORDER_KEY = "vel-desktop-shortcut-order";
+
+function getDefaultDesktopShortcutRefs() {
+  return [...new Set(["panel:launcher", ...installedApps])].filter((ref) => getAppMetaFromRef(ref));
+}
+
+function getDesktopShortcutOrder() {
+  const savedOrder = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
+  const defaults = getDefaultDesktopShortcutRefs();
+  const ordered = Array.isArray(savedOrder)
+    ? savedOrder.filter((ref) => defaults.includes(ref))
+    : [];
+  return [...ordered, ...defaults.filter((ref) => !ordered.includes(ref))].slice(0, 12);
+}
+
+function saveDesktopShortcutOrder(order = []) {
+  const defaults = getDefaultDesktopShortcutRefs();
+  const nextOrder = [...new Set(order)]
+    .filter((ref) => defaults.includes(ref))
+    .slice(0, 40);
+  storage.set(DESKTOP_SHORTCUT_ORDER_KEY, JSON.stringify(nextOrder));
+}
+
+function syncInstalledAppsFromDesktopOrder(order = []) {
+  const desktopInstalledRefs = order.filter((ref) => ref !== "panel:launcher" && installedApps.includes(ref));
+  installedApps = [
+    ...desktopInstalledRefs,
+    ...installedApps.filter((ref) => !desktopInstalledRefs.includes(ref))
+  ].slice(0, 40);
+  saveInstalledApps();
+}
+
 function getAppMetaFromRef(ref) {
   const [type, id] = String(ref || "").split(":");
   if (type === "panel" && id === "launcher") {
@@ -2590,17 +2634,41 @@ function removeInstalledApp(ref) {
 
 function renderDesktopShortcuts() {
   if (!desktopShortcuts) return;
-  const shortcutRefs = [...new Set(["panel:launcher", ...installedApps])]
+  const shortcutRefs = getDesktopShortcutOrder()
     .map((ref) => ({ ref, meta: getAppMetaFromRef(ref) }))
     .filter((item) => item.meta)
     .slice(0, 12);
+  saveDesktopShortcutOrder(shortcutRefs.map((item) => item.ref));
 
   desktopShortcuts.innerHTML = shortcutRefs.map(({ ref, meta }) => `
-    <button class="desktop-shortcut" type="button" data-app-open-ref="${escapeHtml(ref)}">
+    <button class="desktop-shortcut" type="button" draggable="true" data-desktop-shortcut="${escapeHtml(ref)}" data-app-open-ref="${escapeHtml(ref)}" aria-label="Open ${escapeHtml(meta.title)}. Drag to rearrange.">
       ${renderBadge(meta, `desktop-shortcut-badge${ref === "panel:youtube" ? " youtube-badge" : ""}`)}
       <strong>${escapeHtml(meta.title)}</strong>
     </button>
   `).join("");
+}
+
+let desktopShortcutDragRef = "";
+let desktopShortcutSuppressClick = false;
+
+function clearDesktopShortcutDragState() {
+  desktopShortcuts?.querySelectorAll(".desktop-shortcut").forEach((button) => {
+    button.classList.remove("is-dragging", "is-drop-target");
+    button.setAttribute("aria-grabbed", "false");
+  });
+}
+
+function reorderDesktopShortcut(sourceRef = "", targetRef = "") {
+  if (!sourceRef || !targetRef || sourceRef === targetRef) return;
+  const order = getDesktopShortcutOrder();
+  const sourceIndex = order.indexOf(sourceRef);
+  const targetIndex = order.indexOf(targetRef);
+  if (sourceIndex === -1 || targetIndex === -1) return;
+  const [moved] = order.splice(sourceIndex, 1);
+  order.splice(targetIndex, 0, moved);
+  saveDesktopShortcutOrder(order);
+  syncInstalledAppsFromDesktopOrder(order);
+  renderDesktopShortcuts();
 }
 
 function renderStoreCard({ ref, meta, title, subtitle, openLabel = "Open" }) {
@@ -3156,6 +3224,12 @@ function setVelChatLocked(isLocked, message = "") {
   velChat?.classList.toggle("is-locked", isLocked);
   if (velChatPinForm) velChatPinForm.hidden = true;
   if (!isLocked && velChatPinInput) velChatPinInput.value = "";
+  if (isLocked) {
+    velChatTypingUsers = [];
+    renderVelChatTyping();
+    window.clearTimeout(velChatTypingPollTimer);
+    window.clearTimeout(velChatTypingStopTimer);
+  }
   if (velChatMessages) velChatMessages.hidden = isLocked;
   if (velChatForm) velChatForm.hidden = isLocked;
   if (velChatAttachmentName) velChatAttachmentName.hidden = isLocked || !velChatAttachment;
@@ -3342,6 +3416,30 @@ function renderVelChatUnread() {
   velChatUnread.textContent = count > 99 ? "99+" : String(count);
 }
 
+function renderVelChatTyping() {
+  if (!velChatTyping) return;
+  const names = velChatTypingUsers
+    .filter((user) => user?.userId && user.userId !== velChatUser?.id)
+    .map((user) => cleanVelChatName(user.username))
+    .filter(Boolean)
+    .filter((name, index, list) => list.indexOf(name) === index)
+    .slice(0, 4);
+  if (!names.length) {
+    velChatTyping.hidden = true;
+    velChatTyping.innerHTML = "";
+    return;
+  }
+  const label = names.length === 1
+    ? `${names[0]} is typing`
+    : `${names.slice(0, -1).join(", ")} + ${names[names.length - 1]} are typing`;
+  velChatTyping.hidden = false;
+  velChatTyping.innerHTML = `
+    <span></span>
+    <strong>${escapeHtml(label)}</strong>
+    <em aria-hidden="true"><i></i><i></i><i></i></em>
+  `;
+}
+
 function markVelChatSeen() {
   const last = velChatItems[velChatItems.length - 1];
   if (!last) return;
@@ -3495,6 +3593,86 @@ function scheduleVelChatPoll() {
   velChatPollTimer = window.setTimeout(() => fetchVelChatMessages(false), VEL_CHAT_POLL_MS);
 }
 
+function normalizeVelChatTyping(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((user) => ({
+      userId: String(user?.userId || "").slice(0, 64),
+      username: cleanVelChatName(user?.username),
+      deviceId: String(user?.deviceId || "").slice(0, 96),
+      updatedAt: Number(user?.updatedAt) || Date.now()
+    }))
+    .filter((user) => user.userId && user.username);
+}
+
+function scheduleVelChatTypingPoll() {
+  window.clearTimeout(velChatTypingPollTimer);
+  if (!velChatUnlocked) return;
+  velChatTypingPollTimer = window.setTimeout(fetchVelChatTyping, VEL_CHAT_TYPING_POLL_MS);
+}
+
+async function fetchVelChatTyping() {
+  if (!velChatUnlocked) return;
+  try {
+    const response = await fetch("/api/chat/typing", {
+      cache: "no-store",
+      headers: getVelChatHeaders()
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      return;
+    }
+    if (response.ok) {
+      velChatTypingUsers = normalizeVelChatTyping(data.typing);
+      renderVelChatTyping();
+    }
+  } catch (error) {
+    return;
+  } finally {
+    scheduleVelChatTypingPoll();
+  }
+}
+
+async function sendVelChatTyping(isTyping) {
+  if (!velChatUnlocked || !velChatUser) return;
+  const now = Date.now();
+  if (isTyping && velChatIsTyping && now - velChatLastTypingSentAt < VEL_CHAT_TYPING_THROTTLE_MS) return;
+  velChatIsTyping = Boolean(isTyping);
+  velChatLastTypingSentAt = now;
+  try {
+    const response = await fetch("/api/chat/typing", {
+      method: "POST",
+      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        userId: velChatUser.id,
+        username: velChatUser.username,
+        deviceId: velDeviceId,
+        typing: Boolean(isTyping)
+      }),
+      keepalive: true
+    });
+    if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      velChatTypingUsers = normalizeVelChatTyping(data.typing);
+      renderVelChatTyping();
+    }
+  } catch (error) {
+    return;
+  }
+}
+
+function handleVelChatTypingInput() {
+  const isTyping = Boolean(velChatInput?.value.trim());
+  window.clearTimeout(velChatTypingStopTimer);
+  sendVelChatTyping(isTyping);
+  if (isTyping) {
+    velChatTypingStopTimer = window.setTimeout(() => {
+      sendVelChatTyping(false);
+    }, VEL_CHAT_TYPING_IDLE_MS);
+  }
+  reportDevPresence();
+}
+
 async function sendVelChatMessage(text) {
   const message = String(text || "").trim();
   if ((!message && !velChatAttachment) || !velChatUnlocked || !velChatUser || velChatLoading) return;
@@ -3523,6 +3701,7 @@ async function sendVelChatMessage(text) {
     }
     velChatItems = normalizeVelChatItems(data.messages);
     if (velChatInput) velChatInput.value = "";
+    sendVelChatTyping(false);
     if (velChatAttachmentInput) velChatAttachmentInput.value = "";
     setVelChatAttachment(null);
     renderVelChatMessages(true);
@@ -3600,7 +3779,11 @@ function initVelChat() {
   setVelChatLocked(!velChatUnlocked);
   renderVelChatAuth();
   renderVelChatMessages();
-  if (velChatUnlocked) fetchVelChatMessages(true);
+  renderVelChatTyping();
+  if (velChatUnlocked) {
+    fetchVelChatMessages(true);
+    fetchVelChatTyping();
+  }
 }
 
 async function unlockVelChat(pinValue) {
@@ -3615,6 +3798,7 @@ async function unlockVelChat(pinValue) {
   if (velChatUnlocked) {
     setVelChatStatus("Chat unlocked.", "live");
     reportDevPresence();
+    fetchVelChatTyping();
     velChatInput?.focus({ preventScroll: true });
     return true;
   }
@@ -4021,15 +4205,17 @@ function setDevStatus(message = "", tone = "") {
 }
 
 function getActiveDevAppInfo() {
+  const activity = getDevActivityLabel();
   if (!activePanel) {
-    return { app: "desktop", appTitle: "Desktop", panel: "desktop" };
+    return { app: "desktop", appTitle: "Desktop", panel: "desktop", activity };
   }
   if (activePanel === "web") {
     const app = webApps[activeWeb] || utilityApps.browser;
     return {
       app: activeWeb || "browser",
       appTitle: app?.title || "Web Browser",
-      panel: "web"
+      panel: "web",
+      activity
     };
   }
   if (activePanel === "game") {
@@ -4037,15 +4223,51 @@ function getActiveDevAppInfo() {
     return {
       app: activeLocalGame || "game",
       appTitle: game?.title || "Local Game",
-      panel: "game"
+      panel: "game",
+      activity
     };
   }
   const app = utilityApps[activePanel] || { title: activePanel };
   return {
     app: activePanel,
     appTitle: app.title || activePanel,
-    panel: activePanel
+    panel: activePanel,
+    activity
   };
+}
+
+function getDevActivityLabel() {
+  if (document.activeElement === velChatInput && velChatInput?.value.trim()) {
+    return "Typing in Global Chat";
+  }
+  if (!activePanel) return "On desktop";
+  if (activePanel === "youtube") {
+    if (youtubeAppState.currentVideo?.title) return `Watching YouTube: ${youtubeAppState.currentVideo.title}`;
+    if (youtubeAppState.query) return `Browsing YouTube: ${youtubeAppState.query}`;
+    return "Browsing YouTube";
+  }
+  if (activePanel === "music") {
+    const localTrack = playlist[currentTrackIndex];
+    if (currentSpotifyTrack?.title) return `Velofy Spotify: ${currentSpotifyTrack.title}`;
+    if (localTrack?.title) return `Velofy: ${localTrack.title}`;
+    return "Using Velofy";
+  }
+  if (activePanel === "game") {
+    return `Playing ${localGameMeta[activeLocalGame]?.title || "a local game"}`;
+  }
+  if (activePanel === "web") {
+    return `Using web app: ${webApps[activeWeb]?.title || currentWebUrl || "Browser"}`;
+  }
+  if (activePanel === "velhub") {
+    return velHubState.currentItem?.title ? `Watching Vel Hub: ${velHubState.currentItem.title}` : "Browsing Vel Hub";
+  }
+  if (activePanel === "lobbies") return `Notebook: ${lobbyState.mode === "sketch" ? "Sketching" : "Writing notes"}`;
+  if (activePanel === "soundboard") return "Using Soundboard";
+  if (activePanel === "ai") return aiLoading ? "Asking Vel AI" : "Using Vel AI";
+  if (activePanel === "calculator") return secretVaultUnlocked ? "In secret vault" : "Using Calculator";
+  if (activePanel === "settings") return "Changing settings";
+  if (activePanel === "network") return "Checking Network";
+  return `Using ${utilityApps[activePanel]?.title || activePanel}`;
 }
 
 function formatDevBanUntil(value = 0) {
@@ -4083,6 +4305,7 @@ function renderDevPanel(users = [], meta = {}) {
           <div class="dev-user-copy">
             <strong>${escapeHtml(user.username || "Guest")}</strong>
             <span>${escapeHtml(user.appTitle || "Desktop")}</span>
+            <b class="dev-activity">${escapeHtml(user.activity || "Live on vel.os")}</b>
             <small>${escapeHtml(user.deviceId ? `Device ${user.deviceId.slice(0, 8)}` : "No device ID")}</small>
           </div>
           <em>${escapeHtml(formatLobbyTime(user.lastSeen))}</em>
@@ -4142,7 +4365,10 @@ async function fetchDevPresence() {
   try {
     const response = await fetch("/api/dev/presence", {
       cache: "no-store",
-      headers: { "x-vel-admin-code": devAdminCode }
+      headers: {
+        "x-vel-admin-code": devAdminCode,
+        "x-vel-device-id": velDeviceId
+      }
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
@@ -4166,10 +4392,13 @@ async function fetchDevPresence() {
 function scheduleDevPoll() {
   window.clearTimeout(devPollTimer);
   if (!isDrawerOpen("dev") || !devAdminCode) return;
-  devPollTimer = window.setTimeout(fetchDevPresence, 5000);
+  devPollTimer = window.setTimeout(fetchDevPresence, DEV_PRESENCE_POLL_MS);
 }
 
 function openDevPanel() {
+  if (devDeviceReadout) {
+    devDeviceReadout.textContent = `This device ID: ${velDeviceId}`;
+  }
   if (devAdminCode) {
     setDevUnlocked(true);
     fetchDevPresence();
@@ -4290,7 +4519,8 @@ async function sendDevControl(command, payload = {}) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-vel-admin-code": devAdminCode
+        "x-vel-admin-code": devAdminCode,
+        "x-vel-device-id": velDeviceId
       },
       body: JSON.stringify({
         action: "control",
@@ -9566,9 +9796,61 @@ startButton?.addEventListener("click", () => {
 });
 
 desktopShortcuts?.addEventListener("click", (event) => {
+  if (desktopShortcutSuppressClick) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   const button = event.target.closest("button[data-app-open-ref]");
   if (!button) return;
   openAppRef(button.dataset.appOpenRef);
+});
+
+desktopShortcuts?.addEventListener("dragstart", (event) => {
+  const button = event.target.closest("button[data-desktop-shortcut]");
+  if (!button) return;
+  desktopShortcutDragRef = button.dataset.desktopShortcut || "";
+  button.classList.add("is-dragging");
+  button.setAttribute("aria-grabbed", "true");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", desktopShortcutDragRef);
+});
+
+desktopShortcuts?.addEventListener("dragover", (event) => {
+  const button = event.target.closest("button[data-desktop-shortcut]");
+  if (!button || !desktopShortcutDragRef || button.dataset.desktopShortcut === desktopShortcutDragRef) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  desktopShortcuts.querySelectorAll(".desktop-shortcut.is-drop-target").forEach((item) => {
+    if (item !== button) item.classList.remove("is-drop-target");
+  });
+  button.classList.add("is-drop-target");
+});
+
+desktopShortcuts?.addEventListener("dragleave", (event) => {
+  const button = event.target.closest("button[data-desktop-shortcut]");
+  if (!button || button.contains(event.relatedTarget)) return;
+  button.classList.remove("is-drop-target");
+});
+
+desktopShortcuts?.addEventListener("drop", (event) => {
+  const button = event.target.closest("button[data-desktop-shortcut]");
+  if (!button) return;
+  event.preventDefault();
+  const sourceRef = event.dataTransfer.getData("text/plain") || desktopShortcutDragRef;
+  const targetRef = button.dataset.desktopShortcut || "";
+  reorderDesktopShortcut(sourceRef, targetRef);
+  desktopShortcutSuppressClick = true;
+  window.setTimeout(() => {
+    desktopShortcutSuppressClick = false;
+  }, 180);
+  desktopShortcutDragRef = "";
+  clearDesktopShortcutDragState();
+});
+
+desktopShortcuts?.addEventListener("dragend", () => {
+  desktopShortcutDragRef = "";
+  clearDesktopShortcutDragState();
 });
 
 openMusicButton?.addEventListener("click", () => {
@@ -9697,6 +9979,15 @@ velChatLogout?.addEventListener("click", () => {
 velChatForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   sendVelChatMessage(velChatInput?.value || "");
+});
+
+velChatInput?.addEventListener("input", () => {
+  handleVelChatTypingInput();
+});
+
+velChatInput?.addEventListener("blur", () => {
+  window.clearTimeout(velChatTypingStopTimer);
+  sendVelChatTyping(false);
 });
 
 velChatMessages?.addEventListener("click", (event) => {
@@ -9866,6 +10157,15 @@ devRefreshButton?.addEventListener("click", () => {
 
 devLockButton?.addEventListener("click", () => {
   lockDevPanel();
+});
+
+devCopyDeviceButton?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard?.writeText(velDeviceId);
+    setDevStatus("Device ID copied. Add it to ADMIN_DEVICE_ID in Vercel.", "live");
+  } catch (error) {
+    setDevStatus(`Device ID: ${velDeviceId}`, "warn");
+  }
 });
 
 devOnlineList?.addEventListener("click", (event) => {
@@ -12616,4 +12916,4 @@ syncTaskbarState();
 window.setInterval(updateClock, 1000);
 checkDevAccess({ silent: true });
 reportDevPresence();
-devPresenceTimer = window.setInterval(reportDevPresence, 15000);
+devPresenceTimer = window.setInterval(reportDevPresence, DEV_PRESENCE_POLL_MS);

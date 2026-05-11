@@ -11,7 +11,7 @@
     <title>vel.os</title>
     <link rel="icon" type="image/svg+xml" href="./assets/images/favicon.svg" />
     <link rel="shortcut icon" href="./assets/images/favicon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=dev-controls-v2" />
+    <link rel="stylesheet" href="./styles.css?v=desktop-drag-admin-device-v1" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -1094,9 +1094,13 @@
                 <p class="section-label">Private Access</p>
                 <h3>Unlock Dev Panel</h3>
                 <p class="tiny-note">This panel is checked by the server before it shows online people.</p>
+                <div class="dev-device-box">
+                  <span id="devDeviceReadout">Device ID loading...</span>
+                  <button type="button" id="devCopyDeviceButton">Copy ID</button>
+                </div>
               </div>
               <form class="dev-auth-form" id="devAuthForm">
-                <input id="devCodeInput" type="password" inputmode="numeric" autocomplete="off" placeholder="Admin code" aria-label="Admin code" />
+                <input id="devCodeInput" type="password" autocomplete="off" placeholder="Admin code" aria-label="Admin code" />
                 <button class="ghost-button is-solid" type="submit">Unlock</button>
               </form>
             </article>
@@ -1328,6 +1332,7 @@
           <button class="vel-chat-login-needed" type="button" id="velChatLoginNeeded">Login to chat</button>
 
           <div class="vel-chat-messages" id="velChatMessages" role="log" aria-live="polite" aria-relevant="additions text"></div>
+          <div class="vel-chat-typing" id="velChatTyping" aria-live="polite" hidden></div>
 
           <form class="vel-chat-form" id="velChatForm">
             <button class="vel-chat-attach-button" type="button" id="velChatAttachButton" aria-label="Attach picture or video">Media</button>
@@ -1342,6 +1347,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=dev-controls-v2"></script>
+    <script src="./script.js?v=desktop-drag-admin-device-v1"></script>
   </body>
 </html>

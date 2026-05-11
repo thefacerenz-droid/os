@@ -3,7 +3,8 @@ const LEGACY_PRESENCE_KEY = "velos:dev-presence-v1";
 const REDIS_CLIENT_KEY = "__velos_dev_presence_redis_client_promise";
 const MEMORY_KEY = "__velos_dev_presence_store";
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
-const ADMIN_CODE = process.env.ADMIN_CODE || "918273";
+const ADMIN_CODE = process.env.ADMIN_CODE || "admin7945";
+const ADMIN_DEVICE_ID = cleanId(process.env.ADMIN_DEVICE_ID || "", 96);
 const USER_ACTIVE_MS = 1000 * 60 * 8;
 const KICK_ACTIVE_MS = 1000 * 60 * 15;
 const CONTROL_LIMIT = 300;
@@ -55,12 +56,17 @@ function getAdminCode(req, body = {}) {
   return cleanText(req.headers?.["x-vel-admin-code"] || body.adminCode || getQueryValue(req, "adminCode"), 64);
 }
 
+function getAdminDeviceId(req, body = {}) {
+  return cleanId(req.headers?.["x-vel-device-id"] || body.adminDeviceId || getQueryValue(req, "adminDeviceId"), 96);
+}
+
 function hasSitePin(req, body = {}) {
   return getPin(req, body) === SITE_PIN;
 }
 
 function hasAdminAccess(req, body = {}) {
-  return getAdminCode(req, body) === ADMIN_CODE;
+  if (getAdminCode(req, body) !== ADMIN_CODE) return false;
+  return !ADMIN_DEVICE_ID || getAdminDeviceId(req, body) === ADMIN_DEVICE_ID;
 }
 
 async function readRequestBody(req) {

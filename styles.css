@@ -300,6 +300,22 @@ body[data-theme-pack="terminal"] .wallpaper-shade {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.desktop-shortcut[draggable="true"] {
+  cursor: grab;
+}
+
+.desktop-shortcut.is-dragging {
+  cursor: grabbing;
+  opacity: 0.48;
+  transform: scale(0.94);
+}
+
+.desktop-shortcut.is-drop-target {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 18px 34px rgba(0, 0, 0, 0.28);
+}
+
 .desktop-shortcut-badge {
   display: grid;
   place-items: center;
@@ -1931,6 +1947,38 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
 }
 
+.dev-device-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+  padding: 0.58rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dev-device-box span {
+  min-width: 0;
+  flex: 1 1 220px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.dev-device-box button {
+  min-height: 30px;
+  padding: 0.35rem 0.62rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .dev-dashboard-head {
   display: flex;
   align-items: center;
@@ -1990,7 +2038,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 }
 
 .dev-user-copy strong,
-.dev-user-copy span {
+.dev-user-copy span,
+.dev-user-copy b {
   display: block;
 }
 
@@ -2004,6 +2053,14 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   color: var(--muted);
   font-size: 0.72rem;
   font-style: normal;
+}
+
+.dev-activity {
+  margin-top: 0.18rem;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1.25;
 }
 
 .dev-user-row small,
@@ -6922,6 +6979,75 @@ body.is-booting .vel-chat {
   font-size: 0.82rem;
   line-height: 1.5;
   text-align: center;
+}
+
+.vel-chat-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: -0.12rem 0 0.2rem;
+  padding: 0.46rem 0.66rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.vel-chat-typing[hidden] {
+  display: none !important;
+}
+
+.vel-chat-typing > span {
+  width: 0.46rem;
+  height: 0.46rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.72);
+}
+
+.vel-chat-typing strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+
+.vel-chat-typing em {
+  display: inline-flex;
+  gap: 0.18rem;
+  font-style: normal;
+}
+
+.vel-chat-typing i {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.42;
+  animation: vel-chat-typing-dot 900ms ease-in-out infinite;
+}
+
+.vel-chat-typing i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.vel-chat-typing i:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes vel-chat-typing-dot {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.36;
+  }
+  50% {
+    transform: translateY(-2px);
+    opacity: 1;
+  }
 }
 
 .vel-chat-message {

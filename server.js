@@ -20,6 +20,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 const handleLobbies = require("./api/lobbies.js");
 const handleSoundboard = require("./api/soundboard.js");
 const handleDevPresence = require("./api/dev/presence.js");
+const handleChatTyping = require("./api/chat/typing.js");
 const sessions = new Map();
 let spotifyToken = null;
 
@@ -904,6 +905,7 @@ async function handleRequest(req, res) {
   try {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
+    if (url.pathname === "/api/chat/typing") return await handleChatTyping(req, res);
     if (url.pathname === "/api/lobbies") return await handleLobbies(req, res);
     if (url.pathname === "/api/soundboard") return await handleSoundboard(req, res);
     if (url.pathname === "/api/dev/presence") return await handleDevPresence(req, res);
