@@ -11,7 +11,7 @@
     <title>vel.os</title>
     <link rel="icon" type="image/svg+xml" href="./assets/images/favicon.svg" />
     <link rel="shortcut icon" href="./assets/images/favicon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=admin-device-prefix-v2" />
+    <link rel="stylesheet" href="./styles.css?v=owner-controls-v3" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -47,10 +47,6 @@
         <button class="desktop-shortcut" type="button" data-open-panel="music">
           <span class="desktop-shortcut-badge">VF</span>
           <strong>Velofy</strong>
-        </button>
-        <button class="desktop-shortcut" type="button" data-open-panel="ai">
-          <span class="desktop-shortcut-badge">AI</span>
-          <strong>Vel AI</strong>
         </button>
         <button class="desktop-shortcut" type="button" data-open-panel="settings">
           <span class="desktop-shortcut-badge">ST</span>
@@ -160,11 +156,6 @@
                 <span class="app-badge badge-text">VF</span>
                 <span class="icon-title">Velofy</span>
                 <span class="icon-meta">Music</span>
-              </button>
-              <button class="app-icon" type="button" data-open-panel="ai">
-                <span class="app-badge badge-text">AI</span>
-                <span class="icon-title">Vel AI</span>
-                <span class="icon-meta">Assistant</span>
               </button>
               <button class="app-icon" type="button" data-open-web="browser">
                 <img class="app-badge" src="./assets/images/apps/web-browser.svg" alt="Web Browser" />
@@ -1258,6 +1249,18 @@
               <p class="tiny-note settings-note">Earn Vel Credits by opening apps, playing games, and using Velofy. Unlocks save on this device.</p>
             </article>
             <article class="settings-card">
+              <p class="section-label">Custom Theme</p>
+              <h3>Camera Roll Theme</h3>
+              <p class="settings-card-copy">Create a personal theme with your own wallpaper for 500 VC.</p>
+              <div class="custom-theme-actions">
+                <input id="customThemeName" type="text" maxlength="24" autocomplete="off" placeholder="Theme name" aria-label="Custom theme name" />
+                <button class="ghost-button" type="button" id="customThemePick">Pick Image</button>
+                <button class="ghost-button is-solid" type="button" id="customThemeCreate">Create - 500 VC</button>
+                <input id="customThemeInput" type="file" accept="image/*" hidden />
+              </div>
+              <p class="tiny-note settings-note" id="customThemeStatus">No image selected.</p>
+            </article>
+            <article class="settings-card">
               <p class="section-label">Layout</p>
               <div class="font-picker">
                 <button class="font-option" type="button" data-density-option="roomy"><strong>Roomy</strong><span>Bigger panels and spacing</span><span class="font-sample">Best for desktop and iPad.</span></button>
@@ -1270,12 +1273,29 @@
                 <button class="font-option" type="button" data-zoom-option="mini"><strong>80%</strong><span>Extra small</span><span class="font-sample">Maximum screen room.</span></button>
                 <button class="font-option" type="button" data-zoom-option="ipad"><strong>iPad Air</strong><span>Tablet spacious mode</span><span class="font-sample">Zooms the whole OS out and keeps panels organized.</span></button>
               </div>
+              <p class="section-label settings-sub-label">Taskbar</p>
+              <div class="font-picker">
+                <button class="font-option" type="button" data-taskbar-position="bottom"><strong>Bottom</strong><span>Classic dock</span><span class="font-sample">Apps sit along the bottom.</span></button>
+                <button class="font-option" type="button" data-taskbar-position="left"><strong>Left Side</strong><span>Vertical dock</span><span class="font-sample">More room for windows.</span></button>
+                <button class="font-option" type="button" data-taskbar-position="right"><strong>Right Side</strong><span>Vertical dock</span><span class="font-sample">Keeps the desktop clean.</span></button>
+              </div>
               <button class="ghost-button settings-action" type="button" data-reset-windows>Reset Window Positions</button>
+              <button class="ghost-button settings-action" type="button" id="homeEditButton">Homescreen Change</button>
               <p class="tiny-note settings-note">Drag any window by its top bar. Positions save after refresh.</p>
             </article>
           </div>
         </div>
       </section>
+
+      <aside class="home-edit-toolbar" id="homeEditToolbar" hidden>
+        <strong>Homescreen Change</strong>
+        <span>Drag the clock and app icons. Move the taskbar anywhere.</span>
+        <button type="button" data-home-taskbar="bottom">Bottom</button>
+        <button type="button" data-home-taskbar="left">Left</button>
+        <button type="button" data-home-taskbar="right">Right</button>
+        <button type="button" id="homeEditReset">Reset</button>
+        <button type="button" id="homeEditDone">Done</button>
+      </aside>
 
       <footer class="taskbar" aria-label="vel.os taskbar">
         <div class="taskbar-left">
@@ -1339,6 +1359,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=admin-device-prefix-v2"></script>
+    <script src="./script.js?v=owner-controls-v3"></script>
   </body>
 </html>

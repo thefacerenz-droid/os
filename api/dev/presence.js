@@ -4,8 +4,8 @@ const REDIS_CLIENT_KEY = "__velos_dev_presence_redis_client_promise";
 const MEMORY_KEY = "__velos_dev_presence_store";
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = "admin7945";
-// Hard-bind Dev Panel access to the iPad's vel.os device ID.
-const ADMIN_DEVICE_ID = cleanId("3fa56c0a", 96);
+// Hard-bind Dev Panel access to the iPad/browser IDs the owner provided.
+const ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2"].map((id) => cleanId(id, 96)).filter(Boolean);
 const USER_ACTIVE_MS = 1000 * 60 * 8;
 const KICK_ACTIVE_MS = 1000 * 60 * 15;
 const CONTROL_LIMIT = 300;
@@ -40,6 +40,10 @@ function cleanDeviceId(input = {}) {
   return cleanId(input.deviceId || input.device || "", 96);
 }
 
+function cleanAppId(value = "") {
+  return cleanId(value, 48);
+}
+
 function getQueryValue(req, key) {
   try {
     const url = new URL(req.url || "/", "http://localhost");
@@ -67,8 +71,8 @@ function hasSitePin(req, body = {}) {
 
 function isAllowedAdminDevice(deviceId = "") {
   const currentDeviceId = cleanId(deviceId, 96);
-  if (!ADMIN_DEVICE_ID) return true;
-  return currentDeviceId === ADMIN_DEVICE_ID || currentDeviceId.startsWith(ADMIN_DEVICE_ID);
+  if (!ADMIN_DEVICE_IDS.length) return true;
+  return ADMIN_DEVICE_IDS.some((adminDeviceId) => currentDeviceId === adminDeviceId || currentDeviceId.startsWith(adminDeviceId));
 }
 
 function getAdminAccessError(req, body = {}) {
@@ -219,6 +223,7 @@ function normalizeStore(value = {}) {
     users[person.userId] = {
       ...person,
       deviceId: cleanDeviceId(user),
+      deviceName: cleanText(user.deviceName, 60) || "Unknown device",
       app: cleanText(user.app, 40) || "desktop",
       appTitle: cleanText(user.appTitle, 80) || "Desktop",
       activity: cleanText(user.activity, 120) || "",
@@ -241,7 +246,40 @@ function normalizeStore(value = {}) {
     if (normalized) kicks[normalized.id || key] = normalized;
   });
 
-  return { users, bans, kicks };
+  const locks = {};
+  Object.entries(value?.locks || {}).forEach(([key, lock]) => {
+    const deviceId = cleanDeviceId(lock);
+    const userId = cleanId(lock.userId, 64);
+    if (!deviceId && !userId) return;
+    locks[key] = {
+      id: cleanText(lock.id, 120) || key,
+      deviceId,
+      userId,
+      username: cleanText(lock.username, 24) || "Unknown",
+      siteLocked: Boolean(lock.siteLocked),
+      lockedApps: Array.isArray(lock.lockedApps)
+        ? [...new Set(lock.lockedApps.map(cleanAppId).filter(Boolean))].slice(0, 30)
+        : [],
+      screenRequestAt: Number(lock.screenRequestAt) || 0,
+      updatedAt: Number(lock.updatedAt) || Date.now()
+    };
+  });
+
+  const grants = {};
+  Object.entries(value?.grants || {}).forEach(([key, grant]) => {
+    const amount = Math.max(0, Math.min(5000, Number.parseInt(grant.amount, 10) || 0));
+    if (!amount) return;
+    grants[key] = {
+      id: cleanText(grant.id, 120) || key,
+      deviceId: cleanDeviceId(grant),
+      userId: cleanId(grant.userId, 64),
+      username: cleanText(grant.username, 24) || "Unknown",
+      amount,
+      createdAt: Number(grant.createdAt) || Date.now()
+    };
+  });
+
+  return { users, bans, kicks, locks, grants };
 }
 
 function prunePresence(store) {
@@ -326,6 +364,18 @@ function matchesControl(control, identity = {}) {
   );
 }
 
+function findActiveLock(store, identity) {
+  prunePresence(store);
+  return Object.values(store.locks || {}).find((lock) => matchesControl(lock, identity)) || null;
+}
+
+function consumeGrant(store, identity) {
+  const entry = Object.entries(store.grants || {}).find(([, grant]) => matchesControl(grant, identity));
+  if (!entry) return null;
+  delete store.grants[entry[0]];
+  return entry[1];
+}
+
 function findActiveBan(store, identity) {
   prunePresence(store);
   return Object.values(store.bans || {}).find((ban) => matchesControl(ban, identity)) || null;
@@ -360,10 +410,15 @@ function getDuration(body = {}) {
   }
   const duration = cleanText(body.duration, 24).toLowerCase();
   const presets = {
+    "5m": [1000 * 60 * 5, "5 minutes"],
     "10m": [1000 * 60 * 10, "10 minutes"],
+    "30m": [1000 * 60 * 30, "30 minutes"],
     "1h": [1000 * 60 * 60, "1 hour"],
+    "12h": [1000 * 60 * 60 * 12, "12 hours"],
     "24h": [1000 * 60 * 60 * 24, "24 hours"],
+    "3d": [1000 * 60 * 60 * 24 * 3, "3 days"],
     "7d": [1000 * 60 * 60 * 24 * 7, "7 days"],
+    "30d": [1000 * 60 * 60 * 24 * 30, "30 days"],
     permanent: [0, "Permanent"]
   };
   const [durationMs, label] = presets[duration] || presets.permanent;
@@ -394,16 +449,20 @@ function serialize(store) {
     users: Object.values(store.users || {})
       .map((user) => {
         const ban = findActiveBan(store, user);
+        const lock = findActiveLock(store, user);
         return {
           ...user,
           isBanned: Boolean(ban),
           banExpiresAt: ban?.expiresAt || 0,
-          banDurationLabel: ban?.durationLabel || ""
+          banDurationLabel: ban?.durationLabel || "",
+          siteLocked: Boolean(lock?.siteLocked),
+          lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : []
         };
       })
       .sort((left, right) => (right.lastSeen || 0) - (left.lastSeen || 0))
       .slice(0, 80),
     bans,
+    locks: Object.values(store.locks || {}).slice(0, CONTROL_LIMIT),
     storage: store.storage || "memory",
     persistent: Boolean(store.persistent)
   };
@@ -450,10 +509,77 @@ async function handleControl(req, res, body) {
     Object.entries(store.bans || {}).forEach(([id, ban]) => {
       if (id === key || matchesControl(ban, target)) delete store.bans[id];
     });
+  } else if (command === "lock-site") {
+    const existing = store.locks[key] || {};
+    store.locks[key] = {
+      id: key,
+      ...target,
+      siteLocked: true,
+      lockedApps: Array.isArray(existing.lockedApps) ? existing.lockedApps : [],
+      updatedAt: Date.now()
+    };
+  } else if (command === "unlock-site") {
+    const existing = store.locks[key] || {};
+    store.locks[key] = {
+      id: key,
+      ...target,
+      siteLocked: false,
+      lockedApps: Array.isArray(existing.lockedApps) ? existing.lockedApps : [],
+      updatedAt: Date.now()
+    };
+    if (!store.locks[key].lockedApps.length) delete store.locks[key];
+  } else if (command === "lock-app") {
+    const app = cleanAppId(body.app || body.targetApp);
+    if (!app) {
+      return sendJson(res, 400, {
+        error: "missing_app",
+        message: "Choose an app to lock."
+      });
+    }
+    const existing = store.locks[key] || {};
+    const lockedApps = new Set(Array.isArray(existing.lockedApps) ? existing.lockedApps : []);
+    lockedApps.add(app);
+    store.locks[key] = {
+      id: key,
+      ...target,
+      siteLocked: Boolean(existing.siteLocked),
+      lockedApps: [...lockedApps].slice(0, 30),
+      updatedAt: Date.now()
+    };
+  } else if (command === "unlock-app") {
+    const app = cleanAppId(body.app || body.targetApp);
+    const existing = store.locks[key] || {};
+    const lockedApps = (Array.isArray(existing.lockedApps) ? existing.lockedApps : []).filter((item) => item !== app);
+    store.locks[key] = {
+      id: key,
+      ...target,
+      siteLocked: Boolean(existing.siteLocked),
+      lockedApps,
+      updatedAt: Date.now()
+    };
+    if (!store.locks[key].siteLocked && !store.locks[key].lockedApps.length) delete store.locks[key];
+  } else if (command === "grant-vc") {
+    const amount = Math.max(1, Math.min(5000, Number.parseInt(body.amount, 10) || 0));
+    store.grants[key] = {
+      id: key,
+      ...target,
+      amount,
+      createdAt: Date.now()
+    };
+  } else if (command === "screen-request") {
+    const existing = store.locks[key] || {};
+    store.locks[key] = {
+      id: key,
+      ...target,
+      siteLocked: Boolean(existing.siteLocked),
+      lockedApps: Array.isArray(existing.lockedApps) ? existing.lockedApps : [],
+      screenRequestAt: Date.now(),
+      updatedAt: Date.now()
+    };
   } else {
     return sendJson(res, 400, {
       error: "bad_command",
-      message: "Choose kick, ban, or revoke-ban."
+      message: "Choose a valid Dev Panel action."
     });
   }
   const saved = await writeStore(store);
@@ -477,16 +603,33 @@ async function handleAccessCheck(res, body) {
     });
   }
   const kick = consumeKick(store, identity);
-  const saved = await writeStore(store);
   if (kick) {
+    const saved = await writeStore(store);
     return sendJson(res, 200, {
       ...accessPayload("kicked", kick),
       storage: saved.storage,
       persistent: Boolean(saved.persistent)
     });
   }
+  const lock = findActiveLock(store, identity);
+  const grant = consumeGrant(store, identity);
+  const saved = await writeStore(store);
+  if (lock?.siteLocked) {
+    return sendJson(res, 200, {
+      status: "locked",
+      ok: false,
+      message: "Locked by owner.",
+      lockedApps: Array.isArray(lock.lockedApps) ? lock.lockedApps : [],
+      vcGrant: grant ? { amount: grant.amount } : null,
+      storage: saved.storage,
+      persistent: Boolean(saved.persistent)
+    });
+  }
   return sendJson(res, 200, {
     ...accessPayload("ok"),
+    lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : [],
+    screenRequestAt: Number(lock?.screenRequestAt) || 0,
+    vcGrant: grant ? { amount: grant.amount } : null,
     storage: saved.storage,
     persistent: Boolean(saved.persistent)
   });
@@ -548,6 +691,7 @@ module.exports = async function handler(req, res) {
       store.users[user.userId] = {
         ...user,
         deviceId: cleanDeviceId(body),
+        deviceName: cleanText(body.deviceName, 60) || "Unknown device",
         app: cleanText(body.app, 40) || "desktop",
         appTitle: cleanText(body.appTitle, 80) || "Desktop",
         activity: cleanText(body.activity, 120) || "",

@@ -1832,6 +1832,7 @@ const drawers = {
 const clockDay = document.getElementById("clockDay");
 const clockTime = document.getElementById("clockTime");
 const clockDate = document.getElementById("clockDate");
+const heroClock = document.querySelector(".hero-clock");
 const bootScreen = document.getElementById("bootScreen");
 const welcomeGate = document.getElementById("welcomeGate");
 const welcomeGateTitle = document.getElementById("welcomeGateTitle");
@@ -2021,8 +2022,19 @@ const settingsWallpaperButtons = [...document.querySelectorAll("[data-wallpaper-
 const settingsFontButtons = [...document.querySelectorAll("[data-font-option]")];
 const settingsDensityButtons = [...document.querySelectorAll("[data-density-option]")];
 const settingsZoomButtons = [...document.querySelectorAll("[data-zoom-option]")];
+const settingsTaskbarButtons = [...document.querySelectorAll("[data-taskbar-position]")];
 const themePackButtons = [...document.querySelectorAll("[data-theme-pack]")];
 const themeCreditBalance = document.getElementById("themeCreditBalance");
+const customThemeName = document.getElementById("customThemeName");
+const customThemePick = document.getElementById("customThemePick");
+const customThemeCreate = document.getElementById("customThemeCreate");
+const customThemeInput = document.getElementById("customThemeInput");
+const customThemeStatus = document.getElementById("customThemeStatus");
+const homeEditButton = document.getElementById("homeEditButton");
+const homeEditToolbar = document.getElementById("homeEditToolbar");
+const homeEditDone = document.getElementById("homeEditDone");
+const homeEditReset = document.getElementById("homeEditReset");
+const homeTaskbarButtons = [...document.querySelectorAll("[data-home-taskbar]")];
 const resetWindowsButton = document.querySelector("[data-reset-windows]");
 const desktopNetworkStatus = document.getElementById("desktopNetworkStatus");
 const networkVpnButton = document.getElementById("networkVpnButton");
@@ -2116,6 +2128,7 @@ let currentFontKey = storage.get("vel-font", "system");
 let currentDensityKey = storage.get("vel-density", "roomy");
 let currentZoomKey = storage.get("vel-zoom", "normal");
 let currentThemePackKey = storage.get("vel-theme-pack", "noir");
+let currentTaskbarPosition = storage.get("vel-taskbar-position", "bottom");
 let currentWebUrl = "https://rocketgoal.io/";
 let currentWebMirrorIndex = 0;
 let feedVideoObserver = null;
@@ -2146,6 +2159,9 @@ const VEL_CHAT_TYPING_POLL_MS = 1300;
 const VEL_CHAT_TYPING_IDLE_MS = 2600;
 const VEL_CHAT_TYPING_THROTTLE_MS = 900;
 const VEL_DEVICE_ID_KEY = "vel-device-id";
+const VEL_TASKBAR_POSITION_KEY = "vel-taskbar-position";
+const VEL_CUSTOM_THEME_KEY = "vel-custom-theme";
+const VEL_HOME_CLOCK_POSITION_KEY = "vel-home-clock-position";
 const DEV_ACCESS_CHECK_MS = 4000;
 const DEV_PRESENCE_POLL_MS = 4000;
 let velDeviceId = getOrCreateVelDeviceId();
@@ -2276,6 +2292,11 @@ let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
 let velChatUnlocked = false;
 let velChatPin = "";
 let velChatAttachment = null;
+const storedDevLockedApps = readStoredJson("vel-dev-locked-apps", []);
+let devLockedApps = new Set(Array.isArray(storedDevLockedApps) ? storedDevLockedApps : []);
+let lastDevScreenRequestAt = Number.parseInt(storage.get("vel-dev-screen-request-at", "0"), 10) || 0;
+let customThemeDraft = null;
+let homeEditMode = false;
 let welcomeTypeTimer = null;
 let welcomeGateStep = "name";
 let secretVaultUnlocked = false;
@@ -2334,13 +2355,14 @@ let installedApps = readStoredJson("vel-installed-apps", [
   "panel:soundboard",
   "panel:dev",
   "panel:music",
-  "panel:ai",
   "panel:calculator",
   "panel:settings"
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:ai", "panel:calculator", "panel:settings"];
+  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
+installedApps = installedApps.filter((item) => item !== "panel:ai");
+storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
@@ -2367,6 +2389,8 @@ if (storage.get("vel-installed-apps-v6", "0") !== "1" && !installedApps.includes
   storage.set("vel-installed-apps-v6", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
+recentApps = Array.isArray(recentApps) ? recentApps.filter((item) => !(item?.type === "panel" && item?.id === "ai")) : [];
+storage.set("vel-recent-apps", JSON.stringify(recentApps.slice(0, 7)));
 let windowPositions = readStoredJson("vel-window-positions", {});
 let lyricsLibrary = readStoredJson("vel-lyrics-library", {});
 let lyricsSyncOffsets = readStoredJson("vel-lyrics-sync-offsets", {});
@@ -2650,6 +2674,8 @@ function renderDesktopShortcuts() {
 
 let desktopShortcutDragRef = "";
 let desktopShortcutSuppressClick = false;
+let desktopShortcutPointerRef = "";
+let desktopShortcutPointerMoved = false;
 
 function clearDesktopShortcutDragState() {
   desktopShortcuts?.querySelectorAll(".desktop-shortcut").forEach((button) => {
@@ -2866,6 +2892,10 @@ function suspendPanelPlayback(name) {
 }
 
 function openPanel(name) {
+  if (isDevAppLocked(name)) {
+    showDevAppLocked(name);
+    return false;
+  }
   pauseAllFeedMedia();
 
   Object.keys(drawers).forEach((key) => {
@@ -2942,6 +2972,7 @@ function openPanel(name) {
   }
 
   reportDevPresence();
+  return true;
 }
 
 function closeAllPanels() {
@@ -3133,6 +3164,20 @@ function getOrCreateVelDeviceId() {
   const next = window.crypto?.randomUUID?.() || `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
   storage.set(VEL_DEVICE_ID_KEY, next);
   return next;
+}
+
+function getVelDeviceName() {
+  const ua = navigator.userAgent || "";
+  const isIpad = /iPad/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isIphone = /iPhone/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isChrome = /CriOS|Chrome/i.test(ua);
+  const isFirefox = /FxiOS|Firefox/i.test(ua);
+  const browser = isFirefox ? "Firefox" : isChrome ? "Chrome" : /Safari/i.test(ua) ? "Safari" : "Browser";
+  if (isIpad) return `iPad ${browser}`;
+  if (isIphone) return `iPhone ${browser}`;
+  if (isAndroid) return `Android ${browser}`;
+  return `${navigator.platform || "Device"} ${browser}`;
 }
 
 function createVelChatUser(name) {
@@ -4274,6 +4319,7 @@ function formatDevBanUntil(value = 0) {
   if (!value) return "Permanent";
   const remaining = Number(value) - Date.now();
   if (remaining <= 0) return "Expired";
+  if (remaining < 60000) return `${Math.ceil(remaining / 1000)} sec`;
   const minutes = Math.ceil(remaining / 60000);
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.ceil(minutes / 60);
@@ -4281,14 +4327,71 @@ function formatDevBanUntil(value = 0) {
   return `${Math.ceil(hours / 24)} day`;
 }
 
+function persistDevLockedApps() {
+  storage.set("vel-dev-locked-apps", JSON.stringify([...devLockedApps].slice(0, 40)));
+}
+
+function updateDevLockedApps(apps = []) {
+  devLockedApps = new Set((Array.isArray(apps) ? apps : []).map((item) => String(item || "").trim()).filter(Boolean));
+  persistDevLockedApps();
+}
+
+function isDevAppLocked(name = "") {
+  const key = String(name || "").trim();
+  if (!key || key === "dev") return false;
+  return devLockedApps.has(key);
+}
+
+function showDevAppLocked(name = "app") {
+  const title = utilityApps[name]?.title || webApps[name]?.title || localGameMeta[name]?.title || name;
+  setWelcomeStatus(`${title} is locked by owner.`, "error");
+  if (welcomeGate) {
+    welcomeGate.hidden = false;
+    document.body.classList.add("is-onboarding");
+    if (welcomeNameForm) welcomeNameForm.hidden = true;
+    if (welcomePinForm) welcomePinForm.hidden = true;
+    typeWelcomeText("Locked by owner.");
+    window.setTimeout(() => {
+      if (!document.body.classList.contains("is-access-blocked")) {
+        completeWelcomeGate();
+      }
+    }, 1600);
+  }
+}
+
 function getDevBanDurationOptions() {
   return `
+    <option value="5m">5m</option>
     <option value="10m">10m</option>
+    <option value="30m">30m</option>
     <option value="1h">1h</option>
+    <option value="12h">12h</option>
     <option value="24h">24h</option>
+    <option value="3d">3d</option>
     <option value="7d">7d</option>
+    <option value="30d">30d</option>
     <option value="permanent">Forever</option>
   `;
+}
+
+function getDevAppLockOptions(activeApp = "") {
+  const options = [
+    ["youtube", "YouTube"],
+    ["music", "Velofy"],
+    ["game", "Local Games"],
+    ["web", "Web"],
+    ["velhub", "Vel Hub"],
+    ["lobbies", "Notebook"],
+    ["soundboard", "Soundboard"],
+    ["calculator", "Calculator"],
+    ["settings", "Settings"],
+    ["network", "Network"]
+  ];
+  const normalizedActive = String(activeApp || "").trim();
+  if (normalizedActive && !options.some(([id]) => id === normalizedActive)) {
+    options.unshift([normalizedActive, `Current: ${normalizedActive}`]);
+  }
+  return options.map(([id, label]) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join("");
 }
 
 function renderDevPanel(users = [], meta = {}) {
@@ -4306,7 +4409,10 @@ function renderDevPanel(users = [], meta = {}) {
             <strong>${escapeHtml(user.username || "Guest")}</strong>
             <span>${escapeHtml(user.appTitle || "Desktop")}</span>
             <b class="dev-activity">${escapeHtml(user.activity || "Live on vel.os")}</b>
+            <small>${escapeHtml(user.deviceName || "Unknown device")}</small>
             <small>${escapeHtml(user.deviceId ? `Device ${user.deviceId.slice(0, 8)}` : "No device ID")}</small>
+            ${user.siteLocked ? '<small class="dev-lock-note">Site locked by owner</small>' : ""}
+            ${Array.isArray(user.lockedApps) && user.lockedApps.length ? `<small class="dev-lock-note">Locked apps: ${escapeHtml(user.lockedApps.join(", "))}</small>` : ""}
           </div>
           <em>${escapeHtml(formatLobbyTime(user.lastSeen))}</em>
         </div>
@@ -4319,9 +4425,19 @@ function renderDevPanel(users = [], meta = {}) {
             <select aria-label="Ban duration" data-dev-duration="${escapeHtml(user.userId || "")}">
               ${getDevBanDurationOptions()}
             </select>
+            <input type="number" min="1" max="525600" placeholder="Custom min" aria-label="Custom ban minutes" data-dev-custom-minutes="${escapeHtml(user.userId || "")}" />
             ${user.isBanned || bannedKeys.has(`device:${user.deviceId}`) || bannedKeys.has(`user:${user.userId}`)
               ? `<button type="button" data-dev-revoke="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Revoke</button>`
               : `<button type="button" data-dev-ban="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Ban device</button>`}
+            <button type="button" data-dev-lock-site="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">${user.siteLocked ? "Unlock site" : "Lock site"}</button>
+            <select aria-label="App lock target" data-dev-app-target="${escapeHtml(user.userId || "")}">
+              ${getDevAppLockOptions(user.panel || user.app)}
+            </select>
+            <button type="button" data-dev-lock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Lock app</button>
+            <button type="button" data-dev-unlock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Unlock app</button>
+            <input type="number" min="1" max="5000" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
+            <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
+            <button type="button" data-dev-screen-request="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Request screen</button>
           `}
         </div>
       </article>
@@ -4434,7 +4550,8 @@ function getDevIdentityPayload() {
   const user = getLobbyUserPayload();
   return {
     ...user,
-    deviceId: velDeviceId
+    deviceId: velDeviceId,
+    deviceName: getVelDeviceName()
   };
 }
 
@@ -4458,21 +4575,46 @@ function showDeviceBan(data = {}) {
   if (welcomeNameForm) welcomeNameForm.hidden = true;
   if (welcomePinForm) welcomePinForm.hidden = true;
   typeWelcomeText("Access blocked.");
-  const until = data.until ? ` Ends in ${formatDevBanUntil(data.until)}.` : " Permanent ban.";
+  const until = data.until ? ` Time left: ${formatDevBanUntil(data.until)}.` : " Permanent ban.";
   setWelcomeStatus(`${data.message || "This device cannot access vel.os."}${until}`, "error");
+  scheduleDevAccessCheck();
+}
+
+function showDeviceSiteLock(data = {}) {
+  clearDevAccessTimer();
+  closeAllPanels();
+  if (welcomeGate) welcomeGate.hidden = false;
+  document.body.classList.add("is-onboarding", "is-access-blocked");
+  if (welcomeNameForm) welcomeNameForm.hidden = true;
+  if (welcomePinForm) welcomePinForm.hidden = true;
+  typeWelcomeText("Locked by owner.");
+  setWelcomeStatus(data.message || "This site is locked by owner.", "error");
   scheduleDevAccessCheck();
 }
 
 function clearDeviceBanScreen() {
   if (!document.body.classList.contains("is-access-blocked")) return;
   document.body.classList.remove("is-access-blocked");
-  setWelcomeStatus("Ban revoked. Enter the PIN again.", "live");
+  setWelcomeStatus("Access restored. Enter the PIN again.", "live");
   showWelcomeGate("pin");
 }
 
 function handleDevAccessData(data = {}) {
+  updateDevLockedApps(data.lockedApps || []);
+  if (data.vcGrant?.amount) {
+    awardVelCredits(Number(data.vcGrant.amount) || 0);
+  }
+  if (data.screenRequestAt && Number(data.screenRequestAt) > lastDevScreenRequestAt) {
+    lastDevScreenRequestAt = Number(data.screenRequestAt);
+    storage.set("vel-dev-screen-request-at", String(lastDevScreenRequestAt));
+    window.alert("Owner requested screen sharing. Browser privacy requires you to choose what to share before anything can be viewed.");
+  }
   if (data.status === "banned") {
     showDeviceBan(data);
+    return false;
+  }
+  if (data.status === "locked") {
+    showDeviceSiteLock(data);
     return false;
   }
   if (data.status === "kicked") {
@@ -4513,7 +4655,18 @@ async function sendDevControl(command, payload = {}) {
     setDevStatus("Unlock Dev Panel first.", "warn");
     return;
   }
-  setDevStatus(`${command === "kick" ? "Kicking" : command === "ban" ? "Banning" : "Revoking"} user...`);
+  const labels = {
+    kick: "Kicking",
+    ban: "Banning",
+    "revoke-ban": "Revoking",
+    "lock-site": "Locking site",
+    "unlock-site": "Unlocking site",
+    "lock-app": "Locking app",
+    "unlock-app": "Unlocking app",
+    "grant-vc": "Granting VC",
+    "screen-request": "Requesting screen share"
+  };
+  setDevStatus(`${labels[command] || "Updating"}...`);
   try {
     const response = await fetch("/api/dev/presence", {
       method: "POST",
@@ -4537,7 +4690,18 @@ async function sendDevControl(command, payload = {}) {
     }
     if (!response.ok) throw new Error(data.message || "Dev control failed.");
     renderDevPanel(Array.isArray(data.users) ? data.users : [], data);
-    setDevStatus(command === "kick" ? "Device kicked." : command === "ban" ? "Device banned." : "Ban revoked.", data.persistent ? "live" : "warn");
+    const doneLabels = {
+      kick: "Device kicked.",
+      ban: "Device banned.",
+      "revoke-ban": "Ban revoked.",
+      "lock-site": "Site locked.",
+      "unlock-site": "Site unlocked.",
+      "lock-app": "App locked.",
+      "unlock-app": "App unlocked.",
+      "grant-vc": "VC grant sent.",
+      "screen-request": "Screen request sent."
+    };
+    setDevStatus(doneLabels[command] || "Dev control updated.", data.persistent ? "live" : "warn");
   } catch (error) {
     setDevStatus(error.message || "Dev control failed.", "error");
   }
@@ -6234,7 +6398,7 @@ async function searchYouTubeApp({ append = false } = {}) {
 
 function openYouTubeApp() {
   const wasOpen = isDrawerOpen("youtube");
-  openPanel("youtube");
+  if (openPanel("youtube") === false) return;
   if (!wasOpen) {
     showYouTubeLaunch();
   }
@@ -6852,7 +7016,85 @@ function awardVelCredits(amount = 4) {
   renderThemeStore();
 }
 
+function setCustomThemeStatus(message = "", tone = "") {
+  if (!customThemeStatus) return;
+  customThemeStatus.textContent = message;
+  customThemeStatus.dataset.tone = tone;
+}
+
+function applyCustomWallpaper(theme = readStoredJson(VEL_CUSTOM_THEME_KEY, null)) {
+  if (!theme?.image) return false;
+  currentWallpaperKey = "custom";
+  currentThemePackKey = "custom";
+  document.documentElement.style.setProperty("--wallpaper-image", `url("${theme.image}")`);
+  document.body.dataset.themePack = "custom";
+  document.body.dataset.taskbarStyle = "glass";
+  document.body.dataset.iconPack = "mono";
+  document.body.dataset.bootStyle = "classic";
+  velofyArtwork.src = theme.image;
+  velofyArtwork.alt = `${theme.name || "Custom"} wallpaper`;
+  storage.set("vel-wallpaper", "custom");
+  storage.set("vel-theme-pack", "custom");
+  settingsWallpaperButtons.forEach((button) => button.classList.remove("is-active"));
+  setCustomThemeStatus(`${theme.name || "Custom theme"} active.`, "live");
+  return true;
+}
+
+function getCurrentWallpaperInfo() {
+  if (currentWallpaperKey === "custom") {
+    const theme = readStoredJson(VEL_CUSTOM_THEME_KEY, null);
+    if (theme?.image) {
+      return {
+        label: theme.name || "Custom Theme",
+        path: theme.image
+      };
+    }
+  }
+  return wallpaperOptions[currentWallpaperKey] || wallpaperOptions.vel;
+}
+
+function createCustomTheme() {
+  if (!customThemeDraft?.image) {
+    setCustomThemeStatus("Pick an image first.", "warn");
+    return;
+  }
+  if (velCredits < 500) {
+    setCustomThemeStatus(`Need ${500 - velCredits} more VC.`, "warn");
+    return;
+  }
+  velCredits -= 500;
+  storage.set("vel-theme-credits", String(velCredits));
+  const theme = {
+    name: cleanVelChatName(customThemeName?.value || "") || "Custom Theme",
+    image: customThemeDraft.image,
+    createdAt: Date.now()
+  };
+  storage.set(VEL_CUSTOM_THEME_KEY, JSON.stringify(theme));
+  applyCustomWallpaper(theme);
+  renderThemeStore();
+}
+
+function readCustomThemeFile(file) {
+  if (!file) return;
+  if (!/^image\//i.test(file.type)) {
+    setCustomThemeStatus("Pick an image file.", "warn");
+    return;
+  }
+  if (file.size > 2_800_000) {
+    setCustomThemeStatus("Image is too large. Pick a smaller wallpaper.", "warn");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    customThemeDraft = { image: String(reader.result || "") };
+    setCustomThemeStatus(`${file.name} selected. Create costs 500 VC.`, "live");
+  };
+  reader.onerror = () => setCustomThemeStatus("Could not read that image.", "error");
+  reader.readAsDataURL(file);
+}
+
 function applyWallpaper(key) {
+  if (key === "custom" && applyCustomWallpaper()) return;
   const nextKey = wallpaperOptions[key] ? key : "vel";
   const choice = wallpaperOptions[nextKey];
   currentWallpaperKey = nextKey;
@@ -7709,7 +7951,7 @@ function createVelofyPlaylist() {
 }
 
 function setVelofyArtworkBackground(url) {
-  const safeUrl = url || (wallpaperOptions[currentWallpaperKey] || wallpaperOptions.vel).path;
+  const safeUrl = url || getCurrentWallpaperInfo().path;
   drawers.music?.querySelector(".music-player-card")?.style.setProperty("--velofy-artwork-image", `url("${safeUrl}")`);
 }
 
@@ -7717,7 +7959,7 @@ function loadTrack(index, shouldPlay = false) {
   showLocalVelofyPlayer();
   currentTrackIndex = (index + velofyTracks.length) % velofyTracks.length;
   const track = velofyTracks[currentTrackIndex];
-  const wallpaper = wallpaperOptions[currentWallpaperKey] || wallpaperOptions.vel;
+  const wallpaper = getCurrentWallpaperInfo();
   velofyArtwork.src = wallpaper.path;
   velofyArtwork.alt = `${wallpaper.label} wallpaper`;
   setVelofyArtworkBackground(wallpaper.path);
@@ -7842,7 +8084,7 @@ function renderLauncherCatalog() {
   const categoryMeta = {
     games: ["Featured Games", "Big web catalog with source filters and quick-open recent apps."],
     local: ["Local Arcade", "Offline games that run directly inside vel.os."],
-    tools: ["System Tools", "Utilities, settings, network status, AI, and browser tools."],
+    tools: ["System Tools", "Utilities, settings, network status, and browser tools."],
     music: ["Music", "Velofy and music tools in one clean section."],
     movies: ["Movies", "Install Vel Hub for a huge in-app cinema catalog."],
     youtube: ["YouTube", "YouTube search, player, favorites, and Global Favs."]
@@ -7860,7 +8102,7 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "ai", "lobbies", "soundboard", "dev", "calculator", "settings", "network"],
+      tools: ["browser", "lobbies", "soundboard", "dev", "calculator", "settings", "network"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -8004,6 +8246,93 @@ function applyZoom(key) {
     button.classList.toggle("is-active", button.dataset.zoomOption === currentZoomKey);
   });
   storage.set("vel-zoom", currentZoomKey);
+}
+
+function applyTaskbarPosition(position = "bottom") {
+  const nextPosition = ["bottom", "left", "right"].includes(position) ? position : "bottom";
+  currentTaskbarPosition = nextPosition;
+  document.body.dataset.taskbarPosition = nextPosition;
+  storage.set(VEL_TASKBAR_POSITION_KEY, nextPosition);
+  settingsTaskbarButtons.forEach((button) => {
+    const active = button.dataset.taskbarPosition === nextPosition;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  homeTaskbarButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.homeTaskbar === nextPosition);
+  });
+}
+
+function applyHomeClockPosition() {
+  if (!heroClock) return;
+  const position = readStoredJson(VEL_HOME_CLOCK_POSITION_KEY, { x: 0, y: 0 });
+  heroClock.style.setProperty("--home-clock-x", `${Number(position?.x) || 0}px`);
+  heroClock.style.setProperty("--home-clock-y", `${Number(position?.y) || 0}px`);
+}
+
+function saveHomeClockPosition(x = 0, y = 0) {
+  storage.set(VEL_HOME_CLOCK_POSITION_KEY, JSON.stringify({ x: Math.round(x), y: Math.round(y) }));
+}
+
+function setHomeEditMode(active) {
+  homeEditMode = Boolean(active);
+  document.body.classList.toggle("is-home-editing", homeEditMode);
+  if (homeEditToolbar) homeEditToolbar.hidden = !homeEditMode;
+  if (homeEditMode) {
+    closePanel("settings");
+    setWelcomeStatus("Homescreen edit mode on. Drag the clock and app icons.", "live");
+  }
+}
+
+function resetHomeLayout() {
+  saveHomeClockPosition(0, 0);
+  applyHomeClockPosition();
+  saveDesktopShortcutOrder(getDefaultDesktopShortcutRefs());
+  applyTaskbarPosition("bottom");
+  renderDesktopShortcuts();
+}
+
+function initHomeClockDrag() {
+  if (!heroClock) return;
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let originX = 0;
+  let originY = 0;
+
+  const move = (event) => {
+    if (!dragging) return;
+    const nextX = clampNumber(originX + (event.clientX - startX), -30, window.innerWidth - 120);
+    const nextY = clampNumber(originY + (event.clientY - startY), -30, window.innerHeight - 160);
+    heroClock.style.setProperty("--home-clock-x", `${nextX}px`);
+    heroClock.style.setProperty("--home-clock-y", `${nextY}px`);
+  };
+
+  const stop = () => {
+    if (!dragging) return;
+    dragging = false;
+    heroClock.classList.remove("is-dragging");
+    saveHomeClockPosition(
+      Number.parseFloat(heroClock.style.getPropertyValue("--home-clock-x")) || 0,
+      Number.parseFloat(heroClock.style.getPropertyValue("--home-clock-y")) || 0
+    );
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+  };
+
+  heroClock.addEventListener("pointerdown", (event) => {
+    if (!homeEditMode || event.target.closest("button, input")) return;
+    dragging = true;
+    heroClock.classList.add("is-dragging");
+    startX = event.clientX;
+    startY = event.clientY;
+    originX = Number.parseFloat(heroClock.style.getPropertyValue("--home-clock-x")) || 0;
+    originY = Number.parseFloat(heroClock.style.getPropertyValue("--home-clock-y")) || 0;
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  });
 }
 
 function applyWindowPosition(name) {
@@ -8416,6 +8745,10 @@ function setActiveLocalGame(gameId, displayMeta = null) {
 }
 
 function openGame(gameId, displayMeta = null) {
+  if (isDevAppLocked("game") || isDevAppLocked(gameId)) {
+    showDevAppLocked(localGameMeta[gameId]?.title || "game");
+    return;
+  }
   setActiveLocalGame(gameId, displayMeta);
   recordRecentApp({ type: "game", id: gameId });
   openPanel("game");
@@ -8674,7 +9007,7 @@ function showVelHubLaunch() {
 }
 
 function openVelHubApp() {
-  openPanel("velhub");
+  if (openPanel("velhub") === false) return;
   setVelHubCinema(true);
   showVelHubLaunch();
   if (!velHubState.movies.length && !velHubState.loading) {
@@ -9748,6 +10081,10 @@ function setWebWindow(app, url, mirrorIndex = 0) {
 function openWebApp(appId) {
   const app = webApps[appId];
   if (!app) return;
+  if (isDevAppLocked("web") || isDevAppLocked(appId)) {
+    showDevAppLocked(app.title || "web");
+    return;
+  }
 
   activeWeb = appId;
   recordRecentApp({ type: "web", id: appId });
@@ -9766,6 +10103,10 @@ function openNextMirror() {
 }
 
 function openCustomWebUrl(value) {
+  if (isDevAppLocked("web")) {
+    showDevAppLocked("web");
+    return;
+  }
   const url = normalizeUrl(value);
   activeWeb = "browser";
   recordRecentApp({ type: "web", id: "browser" });
@@ -9796,7 +10137,7 @@ startButton?.addEventListener("click", () => {
 });
 
 desktopShortcuts?.addEventListener("click", (event) => {
-  if (desktopShortcutSuppressClick) {
+  if (homeEditMode || desktopShortcutSuppressClick) {
     event.preventDefault();
     event.stopPropagation();
     return;
@@ -9850,6 +10191,46 @@ desktopShortcuts?.addEventListener("drop", (event) => {
 
 desktopShortcuts?.addEventListener("dragend", () => {
   desktopShortcutDragRef = "";
+  clearDesktopShortcutDragState();
+});
+
+desktopShortcuts?.addEventListener("pointerdown", (event) => {
+  if (!homeEditMode) return;
+  const button = event.target.closest("button[data-desktop-shortcut]");
+  if (!button) return;
+  desktopShortcutPointerRef = button.dataset.desktopShortcut || "";
+  desktopShortcutPointerMoved = false;
+  button.classList.add("is-dragging");
+  button.setPointerCapture?.(event.pointerId);
+});
+
+desktopShortcuts?.addEventListener("pointermove", (event) => {
+  if (!homeEditMode || !desktopShortcutPointerRef) return;
+  desktopShortcutPointerMoved = true;
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("button[data-desktop-shortcut]");
+  desktopShortcuts.querySelectorAll(".desktop-shortcut.is-drop-target").forEach((item) => {
+    if (item !== target) item.classList.remove("is-drop-target");
+  });
+  if (target && target.dataset.desktopShortcut !== desktopShortcutPointerRef) {
+    target.classList.add("is-drop-target");
+  }
+});
+
+desktopShortcuts?.addEventListener("pointerup", (event) => {
+  if (!homeEditMode || !desktopShortcutPointerRef) return;
+  const sourceRef = desktopShortcutPointerRef;
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("button[data-desktop-shortcut]");
+  if (target && target.dataset.desktopShortcut !== sourceRef) {
+    reorderDesktopShortcut(sourceRef, target.dataset.desktopShortcut || "");
+  }
+  if (desktopShortcutPointerMoved) {
+    desktopShortcutSuppressClick = true;
+    window.setTimeout(() => {
+      desktopShortcutSuppressClick = false;
+    }, 180);
+  }
+  desktopShortcutPointerRef = "";
+  desktopShortcutPointerMoved = false;
   clearDesktopShortcutDragState();
 });
 
@@ -10162,7 +10543,7 @@ devLockButton?.addEventListener("click", () => {
 devCopyDeviceButton?.addEventListener("click", async () => {
   try {
     await navigator.clipboard?.writeText(velDeviceId);
-    setDevStatus("Device ID copied. Add it to ADMIN_DEVICE_ID in Vercel.", "live");
+    setDevStatus("Device ID copied.", "live");
   } catch (error) {
     setDevStatus(`Device ID: ${velDeviceId}`, "warn");
   }
@@ -10184,13 +10565,83 @@ devOnlineList?.addEventListener("click", (event) => {
   const banButton = event.target.closest("[data-dev-ban]");
   if (banButton) {
     const username = banButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
-    const durationSelect = banButton.closest(".dev-user-row")?.querySelector("[data-dev-duration]");
+    const row = banButton.closest(".dev-user-row");
+    const durationSelect = row?.querySelector("[data-dev-duration]");
+    const customMinutesInput = row?.querySelector("[data-dev-custom-minutes]");
     const duration = durationSelect?.value || "permanent";
+    const customMinutes = Number.parseInt(customMinutesInput?.value || "", 10);
     if (window.confirm(`Ban ${username} for ${duration === "permanent" ? "forever" : duration}?`)) {
       sendDevControl("ban", {
         targetUserId: banButton.dataset.devBan || "",
         targetDeviceId: banButton.dataset.devDevice || "",
-        duration
+        duration,
+        durationMs: Number.isFinite(customMinutes) && customMinutes > 0 ? customMinutes * 60000 : 0,
+        durationLabel: Number.isFinite(customMinutes) && customMinutes > 0 ? `${customMinutes} minutes` : ""
+      });
+    }
+    return;
+  }
+
+  const siteLockButton = event.target.closest("[data-dev-lock-site]");
+  if (siteLockButton) {
+    const username = siteLockButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
+    const unlock = siteLockButton.textContent.toLowerCase().includes("unlock");
+    if (window.confirm(`${unlock ? "Unlock" : "Lock"} the whole site for ${username}?`)) {
+      sendDevControl(unlock ? "unlock-site" : "lock-site", {
+        targetUserId: siteLockButton.dataset.devLockSite || "",
+        targetDeviceId: siteLockButton.dataset.devDevice || ""
+      });
+    }
+    return;
+  }
+
+  const lockAppButton = event.target.closest("[data-dev-lock-app]");
+  if (lockAppButton) {
+    const row = lockAppButton.closest(".dev-user-row");
+    const app = row?.querySelector("[data-dev-app-target]")?.value || "";
+    sendDevControl("lock-app", {
+      targetUserId: lockAppButton.dataset.devLockApp || "",
+      targetDeviceId: lockAppButton.dataset.devDevice || "",
+      app
+    });
+    return;
+  }
+
+  const unlockAppButton = event.target.closest("[data-dev-unlock-app]");
+  if (unlockAppButton) {
+    const row = unlockAppButton.closest(".dev-user-row");
+    const app = row?.querySelector("[data-dev-app-target]")?.value || "";
+    sendDevControl("unlock-app", {
+      targetUserId: unlockAppButton.dataset.devUnlockApp || "",
+      targetDeviceId: unlockAppButton.dataset.devDevice || "",
+      app
+    });
+    return;
+  }
+
+  const grantButton = event.target.closest("[data-dev-grant-vc]");
+  if (grantButton) {
+    const row = grantButton.closest(".dev-user-row");
+    const amount = Number.parseInt(row?.querySelector("[data-dev-vc-amount]")?.value || "0", 10) || 0;
+    if (amount <= 0) {
+      setDevStatus("Type a VC amount first.", "warn");
+      return;
+    }
+    sendDevControl("grant-vc", {
+      targetUserId: grantButton.dataset.devGrantVc || "",
+      targetDeviceId: grantButton.dataset.devDevice || "",
+      amount
+    });
+    return;
+  }
+
+  const screenButton = event.target.closest("[data-dev-screen-request]");
+  if (screenButton) {
+    const username = screenButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
+    if (window.confirm(`Ask ${username} to share their screen? They must approve it on their device.`)) {
+      sendDevControl("screen-request", {
+        targetUserId: screenButton.dataset.devScreenRequest || "",
+        targetDeviceId: screenButton.dataset.devDevice || ""
       });
     }
     return;
@@ -10693,6 +11144,43 @@ settingsDensityButtons.forEach((button) => {
 settingsZoomButtons.forEach((button) => {
   button.addEventListener("click", () => {
     applyZoom(button.dataset.zoomOption);
+  });
+});
+
+settingsTaskbarButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    applyTaskbarPosition(button.dataset.taskbarPosition);
+  });
+});
+
+customThemePick?.addEventListener("click", () => {
+  customThemeInput?.click();
+});
+
+customThemeInput?.addEventListener("change", () => {
+  readCustomThemeFile(customThemeInput.files?.[0]);
+  if (customThemeInput) customThemeInput.value = "";
+});
+
+customThemeCreate?.addEventListener("click", () => {
+  createCustomTheme();
+});
+
+homeEditButton?.addEventListener("click", () => {
+  setHomeEditMode(true);
+});
+
+homeEditDone?.addEventListener("click", () => {
+  setHomeEditMode(false);
+});
+
+homeEditReset?.addEventListener("click", () => {
+  resetHomeLayout();
+});
+
+homeTaskbarButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    applyTaskbarPosition(button.dataset.homeTaskbar);
   });
 });
 
@@ -12875,11 +13363,18 @@ diceDuel.reset();
 casinoWallet.render();
 renderPlaylist();
 loadTrack(0, false);
-applyWallpaper(currentWallpaperKey);
-applyThemePack(currentThemePackKey, false);
+if (currentThemePackKey === "custom" || currentWallpaperKey === "custom") {
+  applyCustomWallpaper() || applyWallpaper("vel");
+} else {
+  applyWallpaper(currentWallpaperKey);
+  applyThemePack(currentThemePackKey, false);
+}
 applyFont(currentFontKey);
 applyDensity(currentDensityKey);
 applyZoom(currentZoomKey);
+applyTaskbarPosition(currentTaskbarPosition);
+applyHomeClockPosition();
+initHomeClockDrag();
 if (velofySpotifySearch) {
   velofySpotifySearch.value = velofySpotifySearchQuery;
 }

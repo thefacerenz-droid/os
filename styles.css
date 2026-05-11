@@ -165,6 +165,18 @@ body[data-theme-pack="terminal"] .wallpaper-shade {
   gap: 0.25rem;
   max-width: min(420px, calc(100% - 2rem));
   color: #fff;
+  transform: translate(var(--home-clock-x, 0px), var(--home-clock-y, 0px));
+  touch-action: none;
+}
+
+body.is-home-editing .hero-clock {
+  cursor: grab;
+  outline: 1px dashed rgba(255, 255, 255, 0.42);
+  outline-offset: 10px;
+}
+
+body.is-home-editing .hero-clock.is-dragging {
+  cursor: grabbing;
 }
 
 .clock-day,
@@ -302,6 +314,11 @@ body[data-theme-pack="terminal"] .wallpaper-shade {
 
 .desktop-shortcut[draggable="true"] {
   cursor: grab;
+}
+
+body.is-home-editing .desktop-shortcut {
+  outline: 1px dashed rgba(255, 255, 255, 0.28);
+  outline-offset: 3px;
 }
 
 .desktop-shortcut.is-dragging {
@@ -2085,6 +2102,7 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 
 .dev-user-controls button,
 .dev-user-controls select,
+.dev-user-controls input,
 .dev-ban-row button {
   min-height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.13);
@@ -2100,6 +2118,20 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .dev-ban-row button {
   padding: 0.5rem 0.85rem;
   cursor: pointer;
+}
+
+.dev-user-controls select {
+  max-width: 132px;
+}
+
+.dev-user-controls input {
+  width: 106px;
+  padding: 0.5rem 0.7rem;
+  outline: none;
+}
+
+.dev-lock-note {
+  color: rgba(255, 255, 255, 0.76) !important;
 }
 
 .dev-user-controls select {
@@ -3372,6 +3404,85 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 
 .settings-sub-label {
   margin-top: 1rem;
+}
+
+.custom-theme-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.custom-theme-actions input[type="text"] {
+  flex: 1 1 180px;
+  min-height: 42px;
+  padding: 0.62rem 0.82rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--text);
+  outline: none;
+}
+
+.settings-note[data-tone="live"] {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.settings-note[data-tone="warn"],
+.settings-note[data-tone="error"] {
+  color: #fff;
+}
+
+.home-edit-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 0.52rem;
+  max-width: min(94vw, 760px);
+  padding: 0.58rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(6, 6, 6, 0.82);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(22px);
+  transform: translateX(-50%);
+}
+
+.home-edit-toolbar strong,
+.home-edit-toolbar span {
+  white-space: nowrap;
+}
+
+.home-edit-toolbar strong {
+  padding: 0 0.4rem;
+  color: #fff;
+}
+
+.home-edit-toolbar span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.home-edit-toolbar button {
+  min-height: 34px;
+  padding: 0.42rem 0.68rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.home-edit-toolbar button.is-active,
+.home-edit-toolbar button:hover,
+.home-edit-toolbar button:focus-visible {
+  background: #fff;
+  color: #050505;
 }
 
 .album-art img {
@@ -6360,6 +6471,65 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   backdrop-filter: blur(24px) saturate(1.1);
 }
 
+body[data-taskbar-position="left"] .taskbar,
+body[data-taskbar-position="right"] .taskbar {
+  top: 50%;
+  bottom: auto;
+  width: 88px;
+  max-height: calc(100dvh - 2rem);
+  min-height: 0;
+  padding: 0.6rem 0.36rem;
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
+  align-content: center;
+  justify-items: center;
+  border-top: 0;
+  border-radius: 24px;
+  transform: translateY(-50%);
+}
+
+body[data-taskbar-position="left"] .taskbar {
+  left: 0.75rem;
+  right: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+body[data-taskbar-position="right"] .taskbar {
+  left: auto;
+  right: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+body[data-taskbar-position="left"] .taskbar-left,
+body[data-taskbar-position="left"] .taskbar-center,
+body[data-taskbar-position="left"] .taskbar-right,
+body[data-taskbar-position="right"] .taskbar-left,
+body[data-taskbar-position="right"] .taskbar-center,
+body[data-taskbar-position="right"] .taskbar-right,
+body[data-taskbar-position="left"] .recent-apps-tray,
+body[data-taskbar-position="right"] .recent-apps-tray {
+  flex-direction: column;
+}
+
+body[data-taskbar-position="left"] .taskbar-search strong,
+body[data-taskbar-position="left"] .start-button span:last-child,
+body[data-taskbar-position="left"] .taskbar-label,
+body[data-taskbar-position="left"] .taskbar-now-playing,
+body[data-taskbar-position="left"] .taskbar-clock span,
+body[data-taskbar-position="right"] .taskbar-search strong,
+body[data-taskbar-position="right"] .start-button span:last-child,
+body[data-taskbar-position="right"] .taskbar-label,
+body[data-taskbar-position="right"] .taskbar-now-playing,
+body[data-taskbar-position="right"] .taskbar-clock span {
+  display: none;
+}
+
+body[data-taskbar-position="left"] .taskbar-center,
+body[data-taskbar-position="right"] .taskbar-center {
+  width: auto;
+  padding: 0.24rem;
+}
+
 body[data-taskbar-style="frost"] .taskbar {
   border-top-color: rgba(222, 242, 255, 0.22);
   background:
@@ -7128,14 +7298,20 @@ body.is-booting .vel-chat {
   text-underline-offset: 3px;
 }
 
+.vel-chat-media-link {
+  display: block;
+  max-width: min(100%, 360px, 72vw);
+}
+
 .vel-chat-media {
   display: block;
-  max-width: min(100%, 250px);
-  max-height: 250px;
+  width: auto;
+  max-width: min(100%, 360px, 72vw);
+  max-height: min(42dvh, 360px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   background: #000;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .vel-chat-message.is-own .vel-chat-media {
