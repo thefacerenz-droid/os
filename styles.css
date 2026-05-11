@@ -98,6 +98,12 @@ a {
   min-height: 100dvh;
 }
 
+body.is-owner-locked .desktop-shell > :not(.owner-lock-overlay):not(.screen-share-request):not(.screen-viewer) {
+  filter: blur(10px) saturate(0.75) brightness(0.72);
+  pointer-events: none;
+  user-select: none;
+}
+
 .desktop-wallpaper,
 .wallpaper-shade,
 .wallpaper-grain {
@@ -138,6 +144,206 @@ body[data-theme-pack="violet"] .wallpaper-shade {
   background:
     radial-gradient(circle at 68% 22%, rgba(135, 115, 255, 0.18), transparent 32%),
     linear-gradient(180deg, rgba(30, 20, 70, 0.06), rgba(0, 0, 0, 0.6));
+}
+
+.owner-lock-overlay,
+.screen-viewer {
+  position: fixed;
+  z-index: 118;
+}
+
+.owner-lock-overlay[hidden],
+.screen-share-request[hidden],
+.screen-viewer[hidden] {
+  display: none !important;
+}
+
+.owner-lock-overlay {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.08), transparent 34%),
+    rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(12px);
+}
+
+.owner-lock-card {
+  width: min(410px, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(27, 27, 27, 0.94), rgba(4, 4, 4, 0.96));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.56);
+  text-align: center;
+  animation: lockCardIn 280ms ease both;
+}
+
+.owner-lock-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(255, 255, 255, 0.12);
+}
+
+.owner-lock-icon::before {
+  content: "";
+  width: 28px;
+  height: 22px;
+  border: 4px solid #050505;
+  border-top: 0;
+  border-radius: 5px;
+  box-shadow: 0 -17px 0 -7px #050505;
+}
+
+.owner-lock-card h2 {
+  margin: 0.2rem 0 0.45rem;
+  font-size: clamp(1.65rem, 5vw, 2.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.owner-lock-card p:not(.micro-label) {
+  margin: 0 auto 1rem;
+  max-width: 29ch;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.screen-share-request {
+  position: fixed;
+  right: clamp(0.85rem, 2vw, 1.4rem);
+  bottom: clamp(5.3rem, 9vw, 6.4rem);
+  z-index: 122;
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  width: min(520px, calc(100vw - 1.5rem));
+  padding: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(4, 4, 4, 0.96));
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.44);
+  backdrop-filter: blur(18px);
+}
+
+.screen-share-request div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.screen-share-request strong,
+.screen-share-request span {
+  display: block;
+}
+
+.screen-share-request strong {
+  color: #fff;
+  font-size: 0.84rem;
+}
+
+.screen-share-request span {
+  margin-top: 0.16rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.screen-share-request button,
+.screen-viewer button {
+  min-height: 34px;
+  padding: 0.42rem 0.66rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 900;
+}
+
+.screen-share-request button:first-of-type {
+  background: #fff;
+  color: #050505;
+}
+
+.screen-viewer {
+  right: clamp(1rem, 3vw, 2rem);
+  top: clamp(1rem, 3vw, 2rem);
+  width: min(720px, calc(100vw - 2rem));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 26px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.92);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.56);
+}
+
+.screen-viewer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.78rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.screen-viewer-head strong,
+.screen-viewer-head span {
+  display: block;
+}
+
+.screen-viewer-head strong {
+  color: #fff;
+  font-size: 0.94rem;
+}
+
+.screen-viewer-head span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.screen-viewer video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #050505;
+  object-fit: contain;
+}
+
+@media (max-width: 680px) {
+  .screen-share-request {
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    flex-wrap: wrap;
+  }
+
+  .screen-share-request div {
+    flex-basis: 100%;
+  }
+
+  .screen-viewer {
+    inset: 0.75rem 0.75rem auto;
+    width: auto;
+  }
+}
+
+@keyframes lockCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 body[data-theme-pack="terminal"] .wallpaper-shade {
@@ -299,6 +505,7 @@ body.is-home-editing .hero-clock.is-dragging {
   background: rgba(0, 0, 0, 0.06);
   color: #fff;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  transform: translate(var(--shortcut-x, 0px), var(--shortcut-y, 0px));
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -307,7 +514,7 @@ body.is-home-editing .hero-clock.is-dragging {
 
 .desktop-shortcut:hover,
 .desktop-shortcut:focus-visible {
-  transform: translateY(-3px);
+  transform: translate(var(--shortcut-x, 0px), calc(var(--shortcut-y, 0px) - 3px));
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -319,12 +526,14 @@ body.is-home-editing .hero-clock.is-dragging {
 body.is-home-editing .desktop-shortcut {
   outline: 1px dashed rgba(255, 255, 255, 0.28);
   outline-offset: 3px;
+  cursor: grab;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .desktop-shortcut.is-dragging {
   cursor: grabbing;
   opacity: 0.48;
-  transform: scale(0.94);
+  transform: translate(var(--shortcut-x, 0px), var(--shortcut-y, 0px)) scale(0.94);
 }
 
 .desktop-shortcut.is-drop-target {
@@ -3450,6 +3659,10 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(22px);
   transform: translateX(-50%);
+}
+
+.home-edit-toolbar[hidden] {
+  display: none;
 }
 
 .home-edit-toolbar strong,

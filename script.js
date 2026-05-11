@@ -2028,6 +2028,7 @@ const themeCreditBalance = document.getElementById("themeCreditBalance");
 const customThemeName = document.getElementById("customThemeName");
 const customThemePick = document.getElementById("customThemePick");
 const customThemeCreate = document.getElementById("customThemeCreate");
+const customThemeApply = document.getElementById("customThemeApply");
 const customThemeInput = document.getElementById("customThemeInput");
 const customThemeStatus = document.getElementById("customThemeStatus");
 const homeEditButton = document.getElementById("homeEditButton");
@@ -2118,6 +2119,18 @@ const devBanList = document.getElementById("devBanList");
 const devStatus = document.getElementById("devStatus");
 const devRefreshButton = document.getElementById("devRefreshButton");
 const devLockButton = document.getElementById("devLockButton");
+const ownerLockOverlay = document.getElementById("ownerLockOverlay");
+const ownerLockTitle = document.getElementById("ownerLockTitle");
+const ownerLockMessage = document.getElementById("ownerLockMessage");
+const ownerLockDismiss = document.getElementById("ownerLockDismiss");
+const screenShareRequest = document.getElementById("screenShareRequest");
+const screenShareAccept = document.getElementById("screenShareAccept");
+const screenShareDismiss = document.getElementById("screenShareDismiss");
+const screenViewer = document.getElementById("screenViewer");
+const screenViewerTitle = document.getElementById("screenViewerTitle");
+const screenViewerStatus = document.getElementById("screenViewerStatus");
+const screenViewerVideo = document.getElementById("screenViewerVideo");
+const screenViewerClose = document.getElementById("screenViewerClose");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
@@ -2309,6 +2322,14 @@ let devPollTimer = null;
 let devPresenceTimer = null;
 let devAccessTimer = null;
 let devLoading = false;
+let ownerLockMode = "";
+let pendingScreenShare = null;
+let activeScreenShareStream = null;
+let screenSharePeer = null;
+let screenSharePollTimer = null;
+let screenShareLastSignalId = 0;
+let screenShareRemoteReady = false;
+let screenShareQueuedIce = [];
 let soundboardAudioContext = null;
 let soundboardActiveNodes = [];
 let soundboardActiveMedia = [];
@@ -2547,6 +2568,27 @@ function saveInstalledApps() {
 }
 
 const DESKTOP_SHORTCUT_ORDER_KEY = "vel-desktop-shortcut-order";
+const DESKTOP_SHORTCUT_POSITIONS_KEY = "vel-desktop-shortcut-positions";
+
+function getDesktopShortcutPositions() {
+  const positions = readStoredJson(DESKTOP_SHORTCUT_POSITIONS_KEY, {});
+  return positions && typeof positions === "object" && !Array.isArray(positions) ? positions : {};
+}
+
+function saveDesktopShortcutPositions(positions = {}) {
+  storage.set(DESKTOP_SHORTCUT_POSITIONS_KEY, JSON.stringify(positions));
+}
+
+function applyDesktopShortcutPositions() {
+  if (!desktopShortcuts) return;
+  const positions = getDesktopShortcutPositions();
+  desktopShortcuts.querySelectorAll("button[data-desktop-shortcut]").forEach((button) => {
+    const ref = button.dataset.desktopShortcut || "";
+    const position = positions[ref] || { x: 0, y: 0 };
+    button.style.setProperty("--shortcut-x", `${Number(position.x) || 0}px`);
+    button.style.setProperty("--shortcut-y", `${Number(position.y) || 0}px`);
+  });
+}
 
 function getDefaultDesktopShortcutRefs() {
   return [...new Set(["panel:launcher", ...installedApps])].filter((ref) => getAppMetaFromRef(ref));
@@ -2665,17 +2707,23 @@ function renderDesktopShortcuts() {
   saveDesktopShortcutOrder(shortcutRefs.map((item) => item.ref));
 
   desktopShortcuts.innerHTML = shortcutRefs.map(({ ref, meta }) => `
-    <button class="desktop-shortcut" type="button" draggable="true" data-desktop-shortcut="${escapeHtml(ref)}" data-app-open-ref="${escapeHtml(ref)}" aria-label="Open ${escapeHtml(meta.title)}. Drag to rearrange.">
+    <button class="desktop-shortcut" type="button" draggable="true" data-desktop-shortcut="${escapeHtml(ref)}" data-app-open-ref="${escapeHtml(ref)}" aria-label="Open ${escapeHtml(meta.title)}. Drag in Homescreen Change mode to move.">
       ${renderBadge(meta, `desktop-shortcut-badge${ref === "panel:youtube" ? " youtube-badge" : ""}`)}
       <strong>${escapeHtml(meta.title)}</strong>
     </button>
   `).join("");
+  applyDesktopShortcutPositions();
 }
 
 let desktopShortcutDragRef = "";
 let desktopShortcutSuppressClick = false;
 let desktopShortcutPointerRef = "";
 let desktopShortcutPointerMoved = false;
+let desktopShortcutPointerButton = null;
+let desktopShortcutStartX = 0;
+let desktopShortcutStartY = 0;
+let desktopShortcutOriginX = 0;
+let desktopShortcutOriginY = 0;
 
 function clearDesktopShortcutDragState() {
   desktopShortcuts?.querySelectorAll(".desktop-shortcut").forEach((button) => {
@@ -4342,21 +4390,33 @@ function isDevAppLocked(name = "") {
   return devLockedApps.has(key);
 }
 
+function showOwnerLockOverlay(title = "Locked by owner", message = "This area is temporarily locked.", options = {}) {
+  if (!ownerLockOverlay) return;
+  ownerLockMode = options.mode || "app";
+  if (ownerLockTitle) ownerLockTitle.textContent = title;
+  if (ownerLockMessage) ownerLockMessage.textContent = message;
+  if (ownerLockDismiss) {
+    ownerLockDismiss.hidden = ownerLockMode === "site";
+    ownerLockDismiss.textContent = ownerLockMode === "site" ? "Locked" : "Back";
+  }
+  ownerLockOverlay.hidden = false;
+  document.body.classList.add("is-owner-locked");
+  if (ownerLockMode === "site") {
+    document.body.classList.add("is-access-blocked");
+  }
+}
+
+function hideOwnerLockOverlay(options = {}) {
+  if (ownerLockMode === "site" && !options.force) return;
+  ownerLockMode = "";
+  if (ownerLockOverlay) ownerLockOverlay.hidden = true;
+  document.body.classList.remove("is-owner-locked");
+  if (options.clearAccess) document.body.classList.remove("is-access-blocked");
+}
+
 function showDevAppLocked(name = "app") {
   const title = utilityApps[name]?.title || webApps[name]?.title || localGameMeta[name]?.title || name;
-  setWelcomeStatus(`${title} is locked by owner.`, "error");
-  if (welcomeGate) {
-    welcomeGate.hidden = false;
-    document.body.classList.add("is-onboarding");
-    if (welcomeNameForm) welcomeNameForm.hidden = true;
-    if (welcomePinForm) welcomePinForm.hidden = true;
-    typeWelcomeText("Locked by owner.");
-    window.setTimeout(() => {
-      if (!document.body.classList.contains("is-access-blocked")) {
-        completeWelcomeGate();
-      }
-    }, 1600);
-  }
+  showOwnerLockOverlay("App locked", `${title} is locked by owner.`, { mode: "app" });
 }
 
 function getDevBanDurationOptions() {
@@ -4437,7 +4497,7 @@ function renderDevPanel(users = [], meta = {}) {
             <button type="button" data-dev-unlock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Unlock app</button>
             <input type="number" min="1" max="5000" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
-            <button type="button" data-dev-screen-request="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Request screen</button>
+            <button type="button" data-dev-screen-request="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Watch screen</button>
           `}
         </div>
       </article>
@@ -4582,19 +4642,15 @@ function showDeviceBan(data = {}) {
 
 function showDeviceSiteLock(data = {}) {
   clearDevAccessTimer();
-  closeAllPanels();
-  if (welcomeGate) welcomeGate.hidden = false;
-  document.body.classList.add("is-onboarding", "is-access-blocked");
-  if (welcomeNameForm) welcomeNameForm.hidden = true;
-  if (welcomePinForm) welcomePinForm.hidden = true;
-  typeWelcomeText("Locked by owner.");
-  setWelcomeStatus(data.message || "This site is locked by owner.", "error");
+  showOwnerLockOverlay("Locked by owner", data.message || "This site is locked by owner.", { mode: "site" });
   scheduleDevAccessCheck();
 }
 
 function clearDeviceBanScreen() {
-  if (!document.body.classList.contains("is-access-blocked")) return;
-  document.body.classList.remove("is-access-blocked");
+  const wasBlocked = document.body.classList.contains("is-access-blocked");
+  const wasOwnerLock = ownerLockMode === "site";
+  hideOwnerLockOverlay({ force: true, clearAccess: true });
+  if (!wasBlocked || wasOwnerLock) return;
   setWelcomeStatus("Access restored. Enter the PIN again.", "live");
   showWelcomeGate("pin");
 }
@@ -4607,7 +4663,10 @@ function handleDevAccessData(data = {}) {
   if (data.screenRequestAt && Number(data.screenRequestAt) > lastDevScreenRequestAt) {
     lastDevScreenRequestAt = Number(data.screenRequestAt);
     storage.set("vel-dev-screen-request-at", String(lastDevScreenRequestAt));
-    window.alert("Owner requested screen sharing. Browser privacy requires you to choose what to share before anything can be viewed.");
+    showScreenShareRequest({
+      sessionId: data.screenSessionId || "",
+      requestedAt: lastDevScreenRequestAt
+    });
   }
   if (data.status === "banned") {
     showDeviceBan(data);
@@ -4709,6 +4768,7 @@ async function sendDevControl(command, payload = {}) {
 
 function reportDevPresence() {
   if (!velChatPin || !normalizeVelChatUser(velChatUser)) return;
+  if (document.visibilityState === "hidden") return;
   const active = getActiveDevAppInfo();
   fetch("/api/dev/presence", {
     method: "POST",
@@ -4726,6 +4786,302 @@ function reportDevPresence() {
       handleDevAccessData(data);
     })
     .catch(() => {});
+}
+
+function sendDevPresenceLeave() {
+  if (!velChatPin || !normalizeVelChatUser(velChatUser)) return;
+  const payload = {
+    action: "leave",
+    pin: velChatPin,
+    ...getDevIdentityPayload()
+  };
+  const body = JSON.stringify(payload);
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon("/api/dev/presence", new Blob([body], { type: "application/json" }));
+    return;
+  }
+  fetch("/api/dev/presence", {
+    method: "POST",
+    headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+    body,
+    keepalive: true
+  }).catch(() => {});
+}
+
+function createScreenSessionId() {
+  return `screen-${velDeviceId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getScreenHeaders(admin = false) {
+  return admin
+    ? {
+      "Content-Type": "application/json",
+      "x-vel-admin-code": devAdminCode,
+      "x-vel-device-id": velDeviceId
+    }
+    : getVelChatHeaders({ "Content-Type": "application/json" });
+}
+
+async function screenApi(payload = {}, options = {}) {
+  const response = await fetch("/api/dev/screen", {
+    method: "POST",
+    headers: getScreenHeaders(Boolean(options.admin)),
+    body: JSON.stringify({
+      ...payload,
+      ...(options.admin ? { adminDeviceId: velDeviceId } : { pin: velChatPin })
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || "Screen sharing failed.");
+  return data;
+}
+
+function setScreenViewerStatus(message = "") {
+  if (screenViewerStatus) screenViewerStatus.textContent = message;
+}
+
+function stopScreenShare(options = {}) {
+  const sessionId = options.sessionId || screenViewer?.dataset.sessionId || pendingScreenShare?.sessionId || "";
+  const role = options.role || screenViewer?.dataset.role || (activeScreenShareStream ? "target" : "");
+  const admin = role === "admin";
+  window.clearInterval(screenSharePollTimer);
+  screenSharePollTimer = null;
+  if (sessionId && role && !options.silent) {
+    screenApi({ action: "signal", sessionId, role, type: "stopped", payload: { reason: options.reason || "ended" } }, { admin }).catch(() => {});
+  }
+  if (screenSharePeer) {
+    screenSharePeer.onicecandidate = null;
+    screenSharePeer.ontrack = null;
+    screenSharePeer.close();
+  }
+  screenSharePeer = null;
+  screenShareRemoteReady = false;
+  screenShareQueuedIce = [];
+  screenShareLastSignalId = 0;
+  if (activeScreenShareStream) {
+    activeScreenShareStream.getTracks().forEach((track) => track.stop());
+  }
+  activeScreenShareStream = null;
+  pendingScreenShare = null;
+  if (screenShareRequest) screenShareRequest.hidden = true;
+  if (screenViewer) {
+    screenViewer.hidden = true;
+    delete screenViewer.dataset.sessionId;
+    delete screenViewer.dataset.role;
+  }
+  if (screenViewerVideo) screenViewerVideo.srcObject = null;
+}
+
+async function sendScreenSignal(sessionId, role, type, payload = null, admin = false) {
+  if (!sessionId || !role || !type) return;
+  await screenApi({
+    action: "signal",
+    sessionId,
+    role,
+    type,
+    payload
+  }, { admin });
+}
+
+async function addQueuedScreenIce() {
+  if (!screenSharePeer || !screenShareRemoteReady) return;
+  const queue = [...screenShareQueuedIce];
+  screenShareQueuedIce = [];
+  for (const candidate of queue) {
+    try {
+      await screenSharePeer.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+      screenShareQueuedIce.push(candidate);
+    }
+  }
+}
+
+async function handleScreenSignal(message, role, sessionId, admin) {
+  if (!message?.type || !screenSharePeer) return;
+  screenShareLastSignalId = Math.max(screenShareLastSignalId, Number(message.id) || 0);
+  if (message.type === "offer" && role === "target") {
+    await screenSharePeer.setRemoteDescription(new RTCSessionDescription(message.payload));
+    screenShareRemoteReady = true;
+    await addQueuedScreenIce();
+    const answer = await screenSharePeer.createAnswer();
+    await screenSharePeer.setLocalDescription(answer);
+    await sendScreenSignal(sessionId, "target", "answer", screenSharePeer.localDescription, false);
+    return;
+  }
+  if (message.type === "answer" && role === "admin") {
+    await screenSharePeer.setRemoteDescription(new RTCSessionDescription(message.payload));
+    screenShareRemoteReady = true;
+    await addQueuedScreenIce();
+    setScreenViewerStatus("Screen connected.");
+    return;
+  }
+  if (message.type === "ice" && message.payload) {
+    if (!screenShareRemoteReady) {
+      screenShareQueuedIce.push(message.payload);
+      return;
+    }
+    try {
+      await screenSharePeer.addIceCandidate(new RTCIceCandidate(message.payload));
+    } catch (error) {
+      screenShareQueuedIce.push(message.payload);
+    }
+    return;
+  }
+  if (message.type === "accepted" && role === "admin") {
+    setScreenViewerStatus("Approved. Connecting...");
+    return;
+  }
+  if (message.type === "stopped") {
+    setScreenViewerStatus("Screen sharing stopped.");
+    if (role === "target") stopScreenShare({ silent: true });
+  }
+}
+
+async function pollScreenSession(sessionId, role, admin = false) {
+  if (!sessionId || !screenSharePeer) return;
+  try {
+    const data = await screenApi({
+      action: "poll",
+      sessionId,
+      role,
+      after: screenShareLastSignalId
+    }, { admin });
+    for (const message of data.messages || []) {
+      await handleScreenSignal(message, role, sessionId, admin);
+    }
+    if (role === "admin" && data.status === "requested") {
+      setScreenViewerStatus("Waiting for approval...");
+    }
+  } catch (error) {
+    if (role === "admin") setScreenViewerStatus(error.message || "Screen connection waiting...");
+  }
+}
+
+function startScreenPolling(sessionId, role, admin = false) {
+  window.clearInterval(screenSharePollTimer);
+  screenSharePollTimer = window.setInterval(() => {
+    pollScreenSession(sessionId, role, admin);
+  }, 900);
+  pollScreenSession(sessionId, role, admin);
+}
+
+async function startAdminScreenViewer(target = {}) {
+  if (!devAdminCode) {
+    setDevStatus("Unlock Dev Panel first.", "warn");
+    return;
+  }
+  if (!("RTCPeerConnection" in window)) {
+    setDevStatus("This browser cannot watch screen shares.", "error");
+    return;
+  }
+  stopScreenShare({ silent: true });
+  const sessionId = createScreenSessionId();
+  const targetName = target.username || "this device";
+  try {
+    await screenApi({
+      action: "reset",
+      sessionId,
+      targetUserId: target.userId || "",
+      targetDeviceId: target.deviceId || "",
+      targetName
+    }, { admin: true });
+    if (screenViewer) {
+      screenViewer.hidden = false;
+      screenViewer.dataset.sessionId = sessionId;
+      screenViewer.dataset.role = "admin";
+    }
+    if (screenViewerTitle) screenViewerTitle.textContent = `Watching ${targetName}`;
+    setScreenViewerStatus("Waiting for approval...");
+    screenSharePeer = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+    screenSharePeer.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendScreenSignal(sessionId, "admin", "ice", event.candidate.toJSON(), true).catch(() => {});
+      }
+    };
+    screenSharePeer.ontrack = (event) => {
+      if (screenViewerVideo && event.streams?.[0]) {
+        screenViewerVideo.srcObject = event.streams[0];
+        screenViewerVideo.play?.().catch(() => {});
+      }
+      setScreenViewerStatus("Screen connected.");
+    };
+    screenSharePeer.onconnectionstatechange = () => {
+      const state = screenSharePeer?.connectionState || "";
+      if (state === "connected") setScreenViewerStatus("Screen connected.");
+      if (state === "failed" || state === "disconnected") setScreenViewerStatus("Connection dropped.");
+    };
+    const offer = await screenSharePeer.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
+    await screenSharePeer.setLocalDescription(offer);
+    await sendScreenSignal(sessionId, "admin", "offer", screenSharePeer.localDescription, true);
+    startScreenPolling(sessionId, "admin", true);
+    await sendDevControl("screen-request", {
+      targetUserId: target.userId || "",
+      targetDeviceId: target.deviceId || "",
+      sessionId
+    });
+  } catch (error) {
+    stopScreenShare({ silent: true });
+    setDevStatus(error.message || "Could not start screen watch.", "error");
+  }
+}
+
+function showScreenShareRequest(details = {}) {
+  pendingScreenShare = {
+    sessionId: details.sessionId || "",
+    requestedAt: details.requestedAt || Date.now()
+  };
+  if (!screenShareRequest) return;
+  screenShareRequest.hidden = false;
+}
+
+async function acceptScreenShareRequest() {
+  if (!pendingScreenShare?.sessionId) {
+    if (screenShareRequest) screenShareRequest.hidden = true;
+    return;
+  }
+  if (!navigator.mediaDevices?.getDisplayMedia || !("RTCPeerConnection" in window)) {
+    window.alert("This device does not support browser screen sharing.");
+    return;
+  }
+  const sessionId = pendingScreenShare.sessionId;
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false
+    });
+    stopScreenShare({ silent: true });
+    activeScreenShareStream = stream;
+    if (screenShareRequest) screenShareRequest.hidden = true;
+    screenSharePeer = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+    stream.getTracks().forEach((track) => {
+      track.addEventListener("ended", () => stopScreenShare({ sessionId, role: "target", reason: "stopped-sharing" }));
+      screenSharePeer.addTrack(track, stream);
+    });
+    screenSharePeer.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendScreenSignal(sessionId, "target", "ice", event.candidate.toJSON(), false).catch(() => {});
+      }
+    };
+    await sendScreenSignal(sessionId, "target", "accepted", { deviceId: velDeviceId }, false);
+    startScreenPolling(sessionId, "target", false);
+  } catch (error) {
+    if (String(error?.name || "").toLowerCase() !== "notallowederror") {
+      window.alert(error.message || "Could not share the screen.");
+    }
+  }
+}
+
+function dismissScreenShareRequest() {
+  const sessionId = pendingScreenShare?.sessionId || "";
+  if (sessionId) {
+    sendScreenSignal(sessionId, "target", "stopped", { reason: "dismissed" }, false).catch(() => {});
+  }
+  pendingScreenShare = null;
+  if (screenShareRequest) screenShareRequest.hidden = true;
 }
 
 function cleanLobbyName(value = "") {
@@ -8288,6 +8644,7 @@ function resetHomeLayout() {
   saveHomeClockPosition(0, 0);
   applyHomeClockPosition();
   saveDesktopShortcutOrder(getDefaultDesktopShortcutRefs());
+  saveDesktopShortcutPositions({});
   applyTaskbarPosition("bottom");
   renderDesktopShortcuts();
 }
@@ -10198,38 +10555,48 @@ desktopShortcuts?.addEventListener("pointerdown", (event) => {
   if (!homeEditMode) return;
   const button = event.target.closest("button[data-desktop-shortcut]");
   if (!button) return;
+  event.preventDefault();
   desktopShortcutPointerRef = button.dataset.desktopShortcut || "";
+  desktopShortcutPointerButton = button;
   desktopShortcutPointerMoved = false;
+  desktopShortcutStartX = event.clientX;
+  desktopShortcutStartY = event.clientY;
+  desktopShortcutOriginX = Number.parseFloat(button.style.getPropertyValue("--shortcut-x")) || 0;
+  desktopShortcutOriginY = Number.parseFloat(button.style.getPropertyValue("--shortcut-y")) || 0;
   button.classList.add("is-dragging");
   button.setPointerCapture?.(event.pointerId);
 });
 
 desktopShortcuts?.addEventListener("pointermove", (event) => {
-  if (!homeEditMode || !desktopShortcutPointerRef) return;
+  if (!homeEditMode || !desktopShortcutPointerRef || !desktopShortcutPointerButton) return;
+  const deltaX = event.clientX - desktopShortcutStartX;
+  const deltaY = event.clientY - desktopShortcutStartY;
+  if (Math.abs(deltaX) < 3 && Math.abs(deltaY) < 3) return;
   desktopShortcutPointerMoved = true;
-  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("button[data-desktop-shortcut]");
-  desktopShortcuts.querySelectorAll(".desktop-shortcut.is-drop-target").forEach((item) => {
-    if (item !== target) item.classList.remove("is-drop-target");
-  });
-  if (target && target.dataset.desktopShortcut !== desktopShortcutPointerRef) {
-    target.classList.add("is-drop-target");
-  }
+  const nextX = clampNumber(desktopShortcutOriginX + deltaX, -180, window.innerWidth - 130);
+  const nextY = clampNumber(desktopShortcutOriginY + deltaY, -260, window.innerHeight - 140);
+  desktopShortcutPointerButton.style.setProperty("--shortcut-x", `${nextX}px`);
+  desktopShortcutPointerButton.style.setProperty("--shortcut-y", `${nextY}px`);
+  event.preventDefault();
 });
 
 desktopShortcuts?.addEventListener("pointerup", (event) => {
-  if (!homeEditMode || !desktopShortcutPointerRef) return;
+  if (!homeEditMode || !desktopShortcutPointerRef || !desktopShortcutPointerButton) return;
   const sourceRef = desktopShortcutPointerRef;
-  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("button[data-desktop-shortcut]");
-  if (target && target.dataset.desktopShortcut !== sourceRef) {
-    reorderDesktopShortcut(sourceRef, target.dataset.desktopShortcut || "");
-  }
   if (desktopShortcutPointerMoved) {
+    const positions = getDesktopShortcutPositions();
+    positions[sourceRef] = {
+      x: Number.parseFloat(desktopShortcutPointerButton.style.getPropertyValue("--shortcut-x")) || 0,
+      y: Number.parseFloat(desktopShortcutPointerButton.style.getPropertyValue("--shortcut-y")) || 0
+    };
+    saveDesktopShortcutPositions(positions);
     desktopShortcutSuppressClick = true;
     window.setTimeout(() => {
       desktopShortcutSuppressClick = false;
     }, 180);
   }
   desktopShortcutPointerRef = "";
+  desktopShortcutPointerButton = null;
   desktopShortcutPointerMoved = false;
   clearDesktopShortcutDragState();
 });
@@ -10639,9 +11006,10 @@ devOnlineList?.addEventListener("click", (event) => {
   if (screenButton) {
     const username = screenButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
     if (window.confirm(`Ask ${username} to share their screen? They must approve it on their device.`)) {
-      sendDevControl("screen-request", {
-        targetUserId: screenButton.dataset.devScreenRequest || "",
-        targetDeviceId: screenButton.dataset.devDevice || ""
+      startAdminScreenViewer({
+        username,
+        userId: screenButton.dataset.devScreenRequest || "",
+        deviceId: screenButton.dataset.devDevice || ""
       });
     }
     return;
@@ -11164,6 +11532,29 @@ customThemeInput?.addEventListener("change", () => {
 
 customThemeCreate?.addEventListener("click", () => {
   createCustomTheme();
+});
+
+customThemeApply?.addEventListener("click", () => {
+  if (!applyCustomWallpaper()) {
+    setCustomThemeStatus("Create a custom theme first.", "warn");
+  }
+  renderThemeStore();
+});
+
+ownerLockDismiss?.addEventListener("click", () => {
+  hideOwnerLockOverlay({ force: true });
+});
+
+screenShareAccept?.addEventListener("click", () => {
+  acceptScreenShareRequest();
+});
+
+screenShareDismiss?.addEventListener("click", () => {
+  dismissScreenShareRequest();
+});
+
+screenViewerClose?.addEventListener("click", () => {
+  stopScreenShare({ reason: "owner-stopped" });
 });
 
 homeEditButton?.addEventListener("click", () => {
@@ -13412,3 +13803,21 @@ window.setInterval(updateClock, 1000);
 checkDevAccess({ silent: true });
 reportDevPresence();
 devPresenceTimer = window.setInterval(reportDevPresence, DEV_PRESENCE_POLL_MS);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    sendDevPresenceLeave();
+    return;
+  }
+  checkDevAccess({ silent: true, once: true });
+  reportDevPresence();
+});
+
+window.addEventListener("pagehide", () => {
+  sendDevPresenceLeave();
+  stopScreenShare({ silent: true });
+});
+
+window.addEventListener("beforeunload", () => {
+  sendDevPresenceLeave();
+});

@@ -72,6 +72,37 @@
         </div>
       </section>
 
+      <section class="owner-lock-overlay" id="ownerLockOverlay" aria-modal="true" role="dialog" aria-labelledby="ownerLockTitle" hidden>
+        <div class="owner-lock-card">
+          <span class="owner-lock-icon" aria-hidden="true"></span>
+          <p class="micro-label">vel.os owner</p>
+          <h2 id="ownerLockTitle">Locked by owner</h2>
+          <p id="ownerLockMessage">This area is temporarily locked.</p>
+          <button class="ghost-button is-solid" type="button" id="ownerLockDismiss">Back</button>
+        </div>
+      </section>
+
+      <section class="screen-share-request" id="screenShareRequest" aria-live="polite" hidden>
+        <div>
+          <strong>Owner requested screen sharing</strong>
+          <span>You choose what to share. Nothing starts without your approval.</span>
+        </div>
+        <button type="button" id="screenShareAccept">Accept</button>
+        <button type="button" id="screenShareDismiss">Dismiss</button>
+      </section>
+
+      <section class="screen-viewer" id="screenViewer" aria-live="polite" hidden>
+        <div class="screen-viewer-head">
+          <div>
+            <p class="micro-label">Dev Panel</p>
+            <strong id="screenViewerTitle">Screen mirror</strong>
+            <span id="screenViewerStatus">Waiting for approval...</span>
+          </div>
+          <button type="button" id="screenViewerClose">Stop</button>
+        </div>
+        <video id="screenViewerVideo" autoplay playsinline></video>
+      </section>
+
       <section class="lyrics-widget" id="lyricsWidget" aria-label="Lyrics panel">
         <header class="lyrics-widget-head" id="lyricsWidgetHead">
           <div>
@@ -1256,6 +1287,7 @@
                 <input id="customThemeName" type="text" maxlength="24" autocomplete="off" placeholder="Theme name" aria-label="Custom theme name" />
                 <button class="ghost-button" type="button" id="customThemePick">Pick Image</button>
                 <button class="ghost-button is-solid" type="button" id="customThemeCreate">Create - 500 VC</button>
+                <button class="ghost-button" type="button" id="customThemeApply">Apply Saved</button>
                 <input id="customThemeInput" type="file" accept="image/*" hidden />
               </div>
               <p class="tiny-note settings-note" id="customThemeStatus">No image selected.</p>

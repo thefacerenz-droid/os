@@ -6,7 +6,7 @@ const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = "admin7945";
 // Hard-bind Dev Panel access to the iPad/browser IDs the owner provided.
 const ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2"].map((id) => cleanId(id, 96)).filter(Boolean);
-const USER_ACTIVE_MS = 1000 * 60 * 8;
+const USER_ACTIVE_MS = 1000 * 18;
 const KICK_ACTIVE_MS = 1000 * 60 * 15;
 const CONTROL_LIMIT = 300;
 
@@ -261,6 +261,7 @@ function normalizeStore(value = {}) {
         ? [...new Set(lock.lockedApps.map(cleanAppId).filter(Boolean))].slice(0, 30)
         : [],
       screenRequestAt: Number(lock.screenRequestAt) || 0,
+      screenSessionId: cleanId(lock.screenSessionId, 96),
       updatedAt: Number(lock.updatedAt) || Date.now()
     };
   });
@@ -459,7 +460,11 @@ function serialize(store) {
           lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : []
         };
       })
-      .sort((left, right) => (right.lastSeen || 0) - (left.lastSeen || 0))
+      .sort((left, right) => {
+        const nameSort = String(left.username || "").localeCompare(String(right.username || ""));
+        if (nameSort) return nameSort;
+        return String(left.userId || "").localeCompare(String(right.userId || ""));
+      })
       .slice(0, 80),
     bans,
     locks: Object.values(store.locks || {}).slice(0, CONTROL_LIMIT),
@@ -574,6 +579,7 @@ async function handleControl(req, res, body) {
       siteLocked: Boolean(existing.siteLocked),
       lockedApps: Array.isArray(existing.lockedApps) ? existing.lockedApps : [],
       screenRequestAt: Date.now(),
+      screenSessionId: cleanId(body.sessionId, 96),
       updatedAt: Date.now()
     };
   } else {
@@ -614,12 +620,16 @@ async function handleAccessCheck(res, body) {
   const lock = findActiveLock(store, identity);
   const grant = consumeGrant(store, identity);
   const saved = await writeStore(store);
+  const screenRequestAt = Number(lock?.screenRequestAt) || 0;
+  const hasFreshScreenRequest = screenRequestAt && Date.now() - screenRequestAt < 1000 * 60 * 5;
   if (lock?.siteLocked) {
     return sendJson(res, 200, {
       status: "locked",
       ok: false,
       message: "Locked by owner.",
       lockedApps: Array.isArray(lock.lockedApps) ? lock.lockedApps : [],
+      screenRequestAt: hasFreshScreenRequest ? screenRequestAt : 0,
+      screenSessionId: hasFreshScreenRequest ? cleanId(lock.screenSessionId, 96) : "",
       vcGrant: grant ? { amount: grant.amount } : null,
       storage: saved.storage,
       persistent: Boolean(saved.persistent)
@@ -628,10 +638,32 @@ async function handleAccessCheck(res, body) {
   return sendJson(res, 200, {
     ...accessPayload("ok"),
     lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : [],
-    screenRequestAt: Number(lock?.screenRequestAt) || 0,
+    screenRequestAt: hasFreshScreenRequest ? screenRequestAt : 0,
+    screenSessionId: hasFreshScreenRequest ? cleanId(lock?.screenSessionId, 96) : "",
     vcGrant: grant ? { amount: grant.amount } : null,
     storage: saved.storage,
     persistent: Boolean(saved.persistent)
+  });
+}
+
+async function handleLeave(req, res, body) {
+  if (!hasSitePin(req, body)) {
+    return sendJson(res, 401, {
+      error: "pin_required",
+      message: "Startup PIN required."
+    });
+  }
+  const identity = getIdentity(body);
+  const store = await readStore();
+  Object.entries(store.users || {}).forEach(([id, user]) => {
+    const sameUser = identity.userId && user.userId === identity.userId;
+    const sameDevice = identity.deviceId && user.deviceId === identity.deviceId;
+    if (sameUser || sameDevice) delete store.users[id];
+  });
+  const saved = await writeStore(store);
+  return sendJson(res, 200, {
+    ...serialize(saved),
+    ok: true
   });
 }
 
@@ -653,6 +685,7 @@ module.exports = async function handler(req, res) {
 
       if (action === "control") return handleControl(req, res, body);
       if (action === "check") return handleAccessCheck(res, body);
+      if (action === "leave") return handleLeave(req, res, body);
 
       if (!hasSitePin(req, body)) {
         return sendJson(res, 401, {
