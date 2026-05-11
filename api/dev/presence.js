@@ -65,9 +65,30 @@ function hasSitePin(req, body = {}) {
   return getPin(req, body) === SITE_PIN;
 }
 
+function isAllowedAdminDevice(deviceId = "") {
+  const currentDeviceId = cleanId(deviceId, 96);
+  if (!ADMIN_DEVICE_ID) return true;
+  return currentDeviceId === ADMIN_DEVICE_ID || currentDeviceId.startsWith(ADMIN_DEVICE_ID);
+}
+
+function getAdminAccessError(req, body = {}) {
+  if (getAdminCode(req, body) !== ADMIN_CODE) {
+    return {
+      error: "admin_required",
+      message: "Admin code required."
+    };
+  }
+  if (!isAllowedAdminDevice(getAdminDeviceId(req, body))) {
+    return {
+      error: "device_required",
+      message: "Dev Panel is locked to your iPad."
+    };
+  }
+  return null;
+}
+
 function hasAdminAccess(req, body = {}) {
-  if (getAdminCode(req, body) !== ADMIN_CODE) return false;
-  return !ADMIN_DEVICE_ID || getAdminDeviceId(req, body) === ADMIN_DEVICE_ID;
+  return !getAdminAccessError(req, body);
 }
 
 async function readRequestBody(req) {
@@ -389,11 +410,9 @@ function serialize(store) {
 }
 
 async function handleControl(req, res, body) {
-  if (!hasAdminAccess(req, body)) {
-    return sendJson(res, 401, {
-      error: "admin_required",
-      message: "Admin code required."
-    });
+  const adminError = getAdminAccessError(req, body);
+  if (adminError) {
+    return sendJson(res, 401, adminError);
   }
   const command = cleanText(body.command, 32);
   const store = await readStore();
@@ -476,11 +495,9 @@ async function handleAccessCheck(res, body) {
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      if (!hasAdminAccess(req)) {
-        return sendJson(res, 401, {
-          error: "admin_required",
-          message: "Admin code required."
-        });
+      const adminError = getAdminAccessError(req);
+      if (adminError) {
+        return sendJson(res, 401, adminError);
       }
       const store = await readStore();
       const saved = await writeStore(store);

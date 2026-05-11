@@ -3040,7 +3040,7 @@ function renderAiMessages() {
     aiMessagesEl.innerHTML = `
       <article class="ai-message is-assistant">
         <strong>Vel AI</strong>
-        <p>Ask me anything. I can help with vel.os ideas, homework-style explanations, code, writing, or planning.</p>
+        <p>No messages yet.</p>
       </article>
     `;
   } else {
@@ -4374,7 +4374,7 @@ async function fetchDevPresence() {
     if (response.status === 401) {
       devAdminCode = "";
       setDevUnlocked(false);
-      setDevStatus("Admin code required.", "error");
+      setDevStatus(data.message || "Admin code required.", "error");
       devCodeInput?.focus({ preventScroll: true });
       return;
     }
@@ -4532,7 +4532,7 @@ async function sendDevControl(command, payload = {}) {
     if (response.status === 401) {
       devAdminCode = "";
       setDevUnlocked(false);
-      setDevStatus("Admin code required.", "error");
+      setDevStatus(data.message || "Admin code required.", "error");
       return;
     }
     if (!response.ok) throw new Error(data.message || "Dev control failed.");

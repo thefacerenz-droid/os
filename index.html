@@ -11,7 +11,7 @@
     <title>vel.os</title>
     <link rel="icon" type="image/svg+xml" href="./assets/images/favicon.svg" />
     <link rel="shortcut icon" href="./assets/images/favicon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=desktop-drag-admin-device-v1" />
+    <link rel="stylesheet" href="./styles.css?v=admin-device-prefix-v2" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -193,7 +193,7 @@
             <div>
               <p class="micro-label">vel.os</p>
               <h2>Vel AI</h2>
-              <p class="drawer-copy">A private server-powered assistant built into the desktop.</p>
+              <p class="drawer-copy">Built into the desktop.</p>
             </div>
             <div class="window-actions">
               <button class="close-button" id="aiClearButton" type="button">Clear</button>
@@ -209,18 +209,10 @@
               </div>
               <div class="ai-messages" id="aiMessages" aria-live="polite"></div>
               <form class="ai-form" id="aiChatForm">
-                <textarea id="aiInput" rows="2" maxlength="1200" placeholder="Ask Vel AI something..." aria-label="Ask Vel AI"></textarea>
+                <textarea id="aiInput" rows="2" maxlength="1200" placeholder="Type a message..." aria-label="Type a message"></textarea>
                 <button class="ghost-button is-solid" type="submit">Send</button>
               </form>
             </section>
-
-            <aside class="ai-side-card">
-              <p class="section-label">Try These</p>
-              <button type="button" data-ai-prompt="Give me 5 game ideas I can add to vel.os.">Game ideas</button>
-              <button type="button" data-ai-prompt="Help me make my website look cleaner on iPad.">iPad polish</button>
-              <button type="button" data-ai-prompt="Explain how to use Velofy and YouTube in vel.os.">How vel.os works</button>
-              <p class="tiny-note">Vel AI uses your server route, so the OpenAI key stays out of the browser.</p>
-            </aside>
           </div>
         </div>
       </section>
@@ -1347,6 +1339,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=desktop-drag-admin-device-v1"></script>
+    <script src="./script.js?v=admin-device-prefix-v2"></script>
   </body>
 </html>

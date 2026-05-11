@@ -2340,7 +2340,7 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 
 .ai-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.85rem;
   margin-top: 0.85rem;
 }
