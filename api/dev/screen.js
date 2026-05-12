@@ -171,7 +171,9 @@ async function resetSession(req, res, body) {
   if (!hasAdminAccess(req, body)) {
     return sendJson(res, 401, {
       error: "admin_required",
-      message: "Admin code required."
+      message: getAdminCode(req, body) === ADMIN_CODE
+        ? "You're not whitelisted for Dev Panel."
+        : "Admin code required."
     });
   }
   const sessionId = cleanId(body.sessionId, 96);

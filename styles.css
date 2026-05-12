@@ -2227,7 +2227,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   padding-right: 0.25rem;
 }
 
-.dev-ban-list {
+.dev-ban-list,
+.dev-whitelist-list {
   display: grid;
   gap: 0.62rem;
   margin-top: 1rem;
@@ -2290,7 +2291,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 }
 
 .dev-user-row small,
-.dev-ban-row small {
+.dev-ban-row small,
+.dev-whitelist-row small {
   display: block;
   margin-top: 0.2rem;
   color: rgba(255, 255, 255, 0.42);
@@ -2312,7 +2314,9 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .dev-user-controls button,
 .dev-user-controls select,
 .dev-user-controls input,
-.dev-ban-row button {
+.dev-ban-row button,
+.dev-whitelist-row button,
+.dev-whitelist-row em {
   min-height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 999px;
@@ -2324,7 +2328,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 }
 
 .dev-user-controls button,
-.dev-ban-row button {
+.dev-ban-row button,
+.dev-whitelist-row button {
   padding: 0.5rem 0.85rem;
   cursor: pointer;
 }
@@ -2350,7 +2355,9 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .dev-user-controls button:hover,
 .dev-user-controls button:focus-visible,
 .dev-ban-row button:hover,
-.dev-ban-row button:focus-visible {
+.dev-ban-row button:focus-visible,
+.dev-whitelist-row button:hover,
+.dev-whitelist-row button:focus-visible {
   border-color: rgba(255, 255, 255, 0.34);
   background: rgba(255, 255, 255, 0.14);
 }
@@ -2374,7 +2381,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   font-size: 0.72rem !important;
 }
 
-.dev-ban-row {
+.dev-ban-row,
+.dev-whitelist-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2386,18 +2394,32 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 }
 
 .dev-ban-row strong,
-.dev-ban-row span {
+.dev-ban-row span,
+.dev-whitelist-row strong,
+.dev-whitelist-row span {
   display: block;
 }
 
-.dev-ban-row strong {
+.dev-ban-row strong,
+.dev-whitelist-row strong {
   color: #fff;
   font-size: 0.86rem;
 }
 
-.dev-ban-row span {
+.dev-ban-row span,
+.dev-whitelist-row span {
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.dev-whitelist-row em {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .secret-vault {

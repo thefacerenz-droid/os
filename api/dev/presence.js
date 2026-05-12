@@ -72,30 +72,67 @@ function hasSitePin(req, body = {}) {
   return getPin(req, body) === SITE_PIN;
 }
 
-function isAllowedAdminDevice(deviceId = "") {
-  const currentDeviceId = cleanId(deviceId, 96);
-  if (!ADMIN_DEVICE_IDS.length) return true;
-  return ADMIN_DEVICE_IDS.some((adminDeviceId) => currentDeviceId === adminDeviceId || currentDeviceId.startsWith(adminDeviceId));
+function normalizeAdminDevice(input = {}) {
+  const raw = typeof input === "string" ? { deviceId: input } : input || {};
+  const deviceId = cleanId(raw.deviceId || raw.id, 96);
+  if (!deviceId) return null;
+  return {
+    deviceId,
+    username: cleanText(raw.username, 24) || "Whitelisted",
+    deviceName: cleanText(raw.deviceName, 60) || "Unknown device",
+    addedAt: Number(raw.addedAt) || Date.now(),
+    addedBy: cleanText(raw.addedBy, 24) || "Owner"
+  };
 }
 
-function getAdminAccessError(req, body = {}) {
+function getEnvAdminDevices() {
+  return ADMIN_DEVICE_IDS.map((deviceId) => ({
+    deviceId,
+    username: deviceId === "3fa56c0a" ? "Owner iPad" : "Owner",
+    deviceName: "Permanent whitelist",
+    addedAt: 0,
+    addedBy: "Vercel env",
+    protected: true
+  }));
+}
+
+function getAdminDevices(store = {}) {
+  const map = new Map();
+  getEnvAdminDevices().forEach((device) => map.set(device.deviceId, device));
+  Object.values(store.adminDevices || {}).forEach((device) => {
+    const normalized = normalizeAdminDevice(device);
+    if (!normalized || map.has(normalized.deviceId)) return;
+    map.set(normalized.deviceId, { ...normalized, protected: false });
+  });
+  return [...map.values()];
+}
+
+function isAllowedAdminDevice(deviceId = "", store = {}) {
+  const currentDeviceId = cleanId(deviceId, 96);
+  if (!currentDeviceId) return false;
+  return getAdminDevices(store).some((adminDevice) => (
+    currentDeviceId === adminDevice.deviceId || currentDeviceId.startsWith(adminDevice.deviceId)
+  ));
+}
+
+function getAdminAccessError(req, body = {}, store = {}) {
   if (getAdminCode(req, body) !== ADMIN_CODE) {
     return {
       error: "admin_required",
       message: "Admin code required."
     };
   }
-  if (!isAllowedAdminDevice(getAdminDeviceId(req, body))) {
+  if (!isAllowedAdminDevice(getAdminDeviceId(req, body), store)) {
     return {
       error: "device_required",
-      message: "Dev Panel is locked to your iPad."
+      message: "You're not whitelisted for Dev Panel."
     };
   }
   return null;
 }
 
-function hasAdminAccess(req, body = {}) {
-  return !getAdminAccessError(req, body);
+function hasAdminAccess(req, body = {}, store = {}) {
+  return !getAdminAccessError(req, body, store);
 }
 
 async function readRequestBody(req) {
@@ -283,7 +320,13 @@ function normalizeStore(value = {}) {
     };
   });
 
-  return { users, bans, kicks, locks, grants };
+  const adminDevices = {};
+  Object.entries(value?.adminDevices || {}).forEach(([key, device]) => {
+    const normalized = normalizeAdminDevice({ id: key, ...device });
+    if (normalized) adminDevices[normalized.deviceId] = normalized;
+  });
+
+  return { users, bans, kicks, locks, grants, adminDevices };
 }
 
 function prunePresence(store) {
@@ -400,8 +443,9 @@ function resolveTarget(store, body = {}) {
   const deviceId = targetDeviceId || user?.deviceId || "";
   const userId = targetUserId || user?.userId || "";
   const username = cleanText(body.targetUsername || user?.username, 24) || "Unknown";
+  const deviceName = cleanText(body.targetDeviceName || user?.deviceName, 60) || "Unknown device";
   if (!deviceId && !userId) return null;
-  return { deviceId, userId, username };
+  return { deviceId, userId, username, deviceName };
 }
 
 function getDuration(body = {}) {
@@ -460,7 +504,8 @@ function serialize(store) {
           banExpiresAt: ban?.expiresAt || 0,
           banDurationLabel: ban?.durationLabel || "",
           siteLocked: Boolean(lock?.siteLocked),
-          lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : []
+          lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : [],
+          devWhitelisted: isAllowedAdminDevice(user.deviceId, store)
         };
       })
       .sort((left, right) => {
@@ -471,18 +516,19 @@ function serialize(store) {
       .slice(0, 80),
     bans,
     locks: Object.values(store.locks || {}).slice(0, CONTROL_LIMIT),
+    adminDevices: getAdminDevices(store).slice(0, CONTROL_LIMIT),
     storage: store.storage || "memory",
     persistent: Boolean(store.persistent)
   };
 }
 
 async function handleControl(req, res, body) {
-  const adminError = getAdminAccessError(req, body);
+  const store = await readStore();
+  const adminError = getAdminAccessError(req, body, store);
   if (adminError) {
     return sendJson(res, 401, adminError);
   }
   const command = cleanText(body.command, 32);
-  const store = await readStore();
   prunePresence(store);
   const target = resolveTarget(store, body);
   if (!target) {
@@ -585,6 +631,32 @@ async function handleControl(req, res, body) {
       screenSessionId: cleanId(body.sessionId, 96),
       updatedAt: Date.now()
     };
+  } else if (command === "whitelist-admin") {
+    if (!target.deviceId) {
+      return sendJson(res, 400, {
+        error: "missing_device",
+        message: "That user does not have a device ID to whitelist."
+      });
+    }
+    store.adminDevices[target.deviceId] = normalizeAdminDevice({
+      ...target,
+      addedAt: Date.now(),
+      addedBy: "Owner"
+    });
+  } else if (command === "revoke-admin") {
+    if (!target.deviceId) {
+      return sendJson(res, 400, {
+        error: "missing_device",
+        message: "That user does not have a device ID to remove."
+      });
+    }
+    if (ADMIN_DEVICE_IDS.some((deviceId) => target.deviceId === deviceId || target.deviceId.startsWith(deviceId))) {
+      return sendJson(res, 400, {
+        error: "protected_device",
+        message: "Your owner iPad whitelist cannot be removed here."
+      });
+    }
+    delete store.adminDevices[target.deviceId];
   } else {
     return sendJson(res, 400, {
       error: "bad_command",
@@ -673,11 +745,11 @@ async function handleLeave(req, res, body) {
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const adminError = getAdminAccessError(req);
+      const store = await readStore();
+      const adminError = getAdminAccessError(req, {}, store);
       if (adminError) {
         return sendJson(res, 401, adminError);
       }
-      const store = await readStore();
       const saved = await writeStore(store);
       return sendJson(res, 200, serialize(saved));
     }

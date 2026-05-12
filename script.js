@@ -2116,6 +2116,7 @@ const devCopyDeviceButton = document.getElementById("devCopyDeviceButton");
 const devDashboard = document.getElementById("devDashboard");
 const devOnlineList = document.getElementById("devOnlineList");
 const devBanList = document.getElementById("devBanList");
+const devWhitelistList = document.getElementById("devWhitelistList");
 const devStatus = document.getElementById("devStatus");
 const devRefreshButton = document.getElementById("devRefreshButton");
 const devLockButton = document.getElementById("devLockButton");
@@ -4457,7 +4458,9 @@ function getDevAppLockOptions(activeApp = "") {
 function renderDevPanel(users = [], meta = {}) {
   if (!devOnlineList) return;
   const bans = Array.isArray(meta.bans) ? meta.bans : [];
+  const adminDevices = Array.isArray(meta.adminDevices) ? meta.adminDevices : [];
   const bannedKeys = new Set(bans.flatMap((ban) => [ban.deviceId && `device:${ban.deviceId}`, ban.userId && `user:${ban.userId}`].filter(Boolean)));
+  const whitelistedKeys = new Set(adminDevices.map((device) => device?.deviceId).filter(Boolean));
   if (!users.length) {
     devOnlineList.innerHTML = '<p class="catalog-empty">No users online yet.</p>';
   } else {
@@ -4471,6 +4474,7 @@ function renderDevPanel(users = [], meta = {}) {
             <b class="dev-activity">${escapeHtml(user.activity || "Live on vel.os")}</b>
             <small>${escapeHtml(user.deviceName || "Unknown device")}</small>
             <small>${escapeHtml(user.deviceId ? `Device ${user.deviceId.slice(0, 8)}` : "No device ID")}</small>
+            ${user.devWhitelisted || whitelistedKeys.has(user.deviceId) ? '<small class="dev-lock-note">Dev Panel whitelisted</small>' : ""}
             ${user.siteLocked ? '<small class="dev-lock-note">Site locked by owner</small>' : ""}
             ${Array.isArray(user.lockedApps) && user.lockedApps.length ? `<small class="dev-lock-note">Locked apps: ${escapeHtml(user.lockedApps.join(", "))}</small>` : ""}
           </div>
@@ -4481,6 +4485,9 @@ function renderDevPanel(users = [], meta = {}) {
             <span class="dev-self-badge">This is you</span>
             <span class="dev-action-note">Admin controls show on other devices.</span>
           ` : `
+            ${user.devWhitelisted || whitelistedKeys.has(user.deviceId)
+              ? `<button type="button" data-dev-revoke-admin="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove Dev</button>`
+              : `<button type="button" data-dev-whitelist="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Whitelist Dev</button>`}
             <button type="button" data-dev-kick="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Kick off site</button>
             <select aria-label="Ban duration" data-dev-duration="${escapeHtml(user.userId || "")}">
               ${getDevBanDurationOptions()}
@@ -4504,8 +4511,29 @@ function renderDevPanel(users = [], meta = {}) {
     `).join("");
   }
   renderDevBans(bans);
+  renderDevWhitelist(adminDevices);
   const storageLabel = meta.persistent ? "global storage" : "temporary memory";
   setDevStatus(`${users.length} online - ${storageLabel}.`, meta.persistent ? "live" : "warn");
+}
+
+function renderDevWhitelist(adminDevices = []) {
+  if (!devWhitelistList) return;
+  const devices = adminDevices.filter((device) => device?.deviceId);
+  devWhitelistList.innerHTML = `
+    <p class="section-label">Dev Whitelist${devices.length ? ` (${devices.length})` : ""}</p>
+    ${devices.length ? devices.map((device) => `
+      <article class="dev-whitelist-row">
+        <div>
+          <strong>${escapeHtml(device.username || "Whitelisted")}</strong>
+          <span>${escapeHtml(device.deviceName || "Unknown device")}</span>
+          <small>${escapeHtml(`Device ${String(device.deviceId || "").slice(0, 12)}`)}${device.protected ? " - Owner iPad" : ""}</small>
+        </div>
+        ${device.protected
+          ? '<em>Protected</em>'
+          : `<button type="button" data-dev-revoke-admin-device="${escapeHtml(device.deviceId || "")}">Remove</button>`}
+      </article>
+    `).join("") : '<p class="catalog-empty">Only your owner iPad is whitelisted.</p>'}
+  `;
 }
 
 function renderDevBans(bans = []) {
@@ -4531,6 +4559,9 @@ function setDevUnlocked(unlocked) {
   if (devDashboard) devDashboard.hidden = !unlocked;
   if (!unlocked && devOnlineList) {
     devOnlineList.innerHTML = '<p class="catalog-empty">Unlock Dev Panel to view sessions.</p>';
+  }
+  if (!unlocked && devWhitelistList) {
+    devWhitelistList.innerHTML = '<p class="section-label">Dev Whitelist</p><p class="catalog-empty">Unlock Dev Panel to manage devices.</p>';
   }
 }
 
@@ -4723,7 +4754,9 @@ async function sendDevControl(command, payload = {}) {
     "lock-app": "Locking app",
     "unlock-app": "Unlocking app",
     "grant-vc": "Granting VC",
-    "screen-request": "Requesting screen share"
+    "screen-request": "Requesting screen share",
+    "whitelist-admin": "Whitelisting device",
+    "revoke-admin": "Removing whitelist"
   };
   setDevStatus(`${labels[command] || "Updating"}...`);
   try {
@@ -4758,7 +4791,9 @@ async function sendDevControl(command, payload = {}) {
       "lock-app": "App locked.",
       "unlock-app": "App unlocked.",
       "grant-vc": "VC grant sent.",
-      "screen-request": "Screen request sent."
+      "screen-request": "Screen request sent.",
+      "whitelist-admin": "Device whitelisted.",
+      "revoke-admin": "Whitelist removed."
     };
     setDevStatus(doneLabels[command] || "Dev control updated.", data.persistent ? "live" : "warn");
   } catch (error) {
@@ -10917,6 +10952,30 @@ devCopyDeviceButton?.addEventListener("click", async () => {
 });
 
 devOnlineList?.addEventListener("click", (event) => {
+  const whitelistButton = event.target.closest("[data-dev-whitelist]");
+  if (whitelistButton) {
+    const username = whitelistButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
+    if (window.confirm(`Whitelist ${username} for Dev Panel access? They will still need the admin code.`)) {
+      sendDevControl("whitelist-admin", {
+        targetUserId: whitelistButton.dataset.devWhitelist || "",
+        targetDeviceId: whitelistButton.dataset.devDevice || ""
+      });
+    }
+    return;
+  }
+
+  const revokeAdminButton = event.target.closest("[data-dev-revoke-admin]");
+  if (revokeAdminButton) {
+    const username = revokeAdminButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
+    if (window.confirm(`Remove Dev Panel access for ${username}?`)) {
+      sendDevControl("revoke-admin", {
+        targetUserId: revokeAdminButton.dataset.devRevokeAdmin || "",
+        targetDeviceId: revokeAdminButton.dataset.devDevice || ""
+      });
+    }
+    return;
+  }
+
   const kickButton = event.target.closest("[data-dev-kick]");
   if (kickButton) {
     const username = kickButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
@@ -11020,6 +11079,16 @@ devOnlineList?.addEventListener("click", (event) => {
     sendDevControl("revoke-ban", {
       targetUserId: revokeButton.dataset.devRevoke || "",
       targetDeviceId: revokeButton.dataset.devDevice || ""
+    });
+  }
+});
+
+devWhitelistList?.addEventListener("click", (event) => {
+  const revokeButton = event.target.closest("[data-dev-revoke-admin-device]");
+  if (!revokeButton) return;
+  if (window.confirm("Remove this device from the Dev Panel whitelist?")) {
+    sendDevControl("revoke-admin", {
+      targetDeviceId: revokeButton.dataset.devRevokeAdminDevice || ""
     });
   }
 });
