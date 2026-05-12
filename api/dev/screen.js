@@ -3,8 +3,11 @@ const SCREEN_MEMORY_KEY = "__velos_screen_sessions";
 const REDIS_CLIENT_KEY = "__velos_screen_redis_client_promise";
 const SCREEN_TTL_MS = 1000 * 60 * 8;
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
-const ADMIN_CODE = "admin7945";
-const ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2"].map((id) => cleanId(id, 96)).filter(Boolean);
+const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
+const ADMIN_DEVICE_IDS = (process.env.VEL_OS_ADMIN_DEVICE_IDS || "3fa56c0a")
+  .split(/[\s,]+/)
+  .map((id) => cleanId(id, 96))
+  .filter(Boolean);
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
