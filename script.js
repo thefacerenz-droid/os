@@ -110,6 +110,14 @@ const localGameMeta = {
       "Bet on low, high, or lucky seven and ride out a slick local dice roll animation.",
     best: "Quick betting rounds",
     controls: "Pick a lane and roll"
+  },
+  flappy: {
+    category: "Challenge",
+    title: "Flappy Challenge",
+    description:
+      "Tap through tight pipes, chase a high score, and post your run to the vel.os leaderboard.",
+    best: "Fast one-more-run sessions",
+    controls: "Tap, click, Space, W, Up, or swipe up"
   }
 };
 
@@ -2019,6 +2027,7 @@ const velofySpotifySearchButton = document.getElementById("velofySpotifySearchBu
 const velofySpotifyResults = document.getElementById("velofySpotifyResults");
 
 const settingsWallpaperButtons = [...document.querySelectorAll("[data-wallpaper-option]")];
+const settingsWallpaperEffectButtons = [...document.querySelectorAll("[data-wallpaper-effect]")];
 const settingsFontButtons = [...document.querySelectorAll("[data-font-option]")];
 const settingsDensityButtons = [...document.querySelectorAll("[data-density-option]")];
 const settingsZoomButtons = [...document.querySelectorAll("[data-zoom-option]")];
@@ -2047,6 +2056,7 @@ const velChatToggle = document.getElementById("velChatToggle");
 const velChatPanel = document.getElementById("velChatPanel");
 const velChatHide = document.getElementById("velChatHide");
 const velChatClearLog = document.getElementById("velChatClearLog");
+const velChatBottomButton = document.getElementById("velChatBottomButton");
 const velChatPinForm = document.getElementById("velChatPinForm");
 const velChatPinInput = document.getElementById("velChatPinInput");
 const velChatLoginForm = document.getElementById("velChatLoginForm");
@@ -2127,17 +2137,26 @@ const ownerLockDismiss = document.getElementById("ownerLockDismiss");
 const screenShareRequest = document.getElementById("screenShareRequest");
 const screenShareAccept = document.getElementById("screenShareAccept");
 const screenShareDismiss = document.getElementById("screenShareDismiss");
+const screenShareRequestText = document.getElementById("screenShareRequestText");
 const screenViewer = document.getElementById("screenViewer");
 const screenViewerTitle = document.getElementById("screenViewerTitle");
 const screenViewerStatus = document.getElementById("screenViewerStatus");
 const screenViewerVideo = document.getElementById("screenViewerVideo");
 const screenViewerClose = document.getElementById("screenViewerClose");
+const globalAnnouncement = document.getElementById("globalAnnouncement");
+const globalAnnouncementText = document.getElementById("globalAnnouncementText");
+const globalAnnouncementDismiss = document.getElementById("globalAnnouncementDismiss");
+const devAnnouncementForm = document.getElementById("devAnnouncementForm");
+const devAnnouncementInput = document.getElementById("devAnnouncementInput");
+const devAnnouncementClear = document.getElementById("devAnnouncementClear");
 
 let activeLocalGame = "snake";
 let activeWeb = "rocketgoal";
 let activePanel = "";
 let currentTrackIndex = 0;
 let currentWallpaperKey = storage.get("vel-wallpaper", "vel");
+let currentWallpaperEffect = storage.get("vel-wallpaper-effect", "cinema");
+if (!["cinema", "clear"].includes(currentWallpaperEffect)) currentWallpaperEffect = "cinema";
 let currentFontKey = storage.get("vel-font", "system");
 let currentDensityKey = storage.get("vel-density", "roomy");
 let currentZoomKey = storage.get("vel-zoom", "normal");
@@ -2175,6 +2194,7 @@ const VEL_CHAT_TYPING_THROTTLE_MS = 900;
 const VEL_DEVICE_ID_KEY = "vel-device-id";
 const VEL_TASKBAR_POSITION_KEY = "vel-taskbar-position";
 const VEL_CUSTOM_THEME_KEY = "vel-custom-theme";
+const VEL_ANNOUNCEMENT_DISMISSED_KEY = "vel-announcement-dismissed";
 const VEL_HOME_CLOCK_POSITION_KEY = "vel-home-clock-position";
 const DEV_ACCESS_CHECK_MS = 4000;
 const DEV_PRESENCE_POLL_MS = 4000;
@@ -2409,6 +2429,11 @@ if (storage.get("vel-installed-apps-v6", "0") !== "1" && !installedApps.includes
   installedApps = ["panel:dev", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v6", "1");
+}
+if (storage.get("vel-installed-apps-v7", "0") !== "1" && !installedApps.includes("game:flappy")) {
+  installedApps = ["game:flappy", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v7", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 recentApps = Array.isArray(recentApps) ? recentApps.filter((item) => !(item?.type === "panel" && item?.id === "ai")) : [];
@@ -2868,6 +2893,9 @@ function pauseDynamicGames(nextGame) {
   }
   if (nextGame !== "tap") {
     tapRush.stop(false, "Tap Rush paused.");
+  }
+  if (nextGame !== "flappy") {
+    flappy.pause("Flappy paused.");
   }
   if (nextGame !== "slots") {
     neonSlots.stop();
@@ -3503,11 +3531,27 @@ function getVelChatUnreadCount() {
   return unseen.filter((message) => message.userId !== velChatUser?.id).length;
 }
 
+function setVelFaviconBadge(count = 0) {
+  const label = count > 0 ? String(Math.min(99, count)) : "V";
+  const fontSize = count > 0 ? 54 : 58;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+      <rect width="96" height="96" rx="24" fill="#050505"/>
+      <rect x="5" y="5" width="86" height="86" rx="21" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="3"/>
+      <text x="48" y="${count > 0 ? 66 : 68}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="900" fill="#fff">${label}</text>
+    </svg>`;
+  document.querySelectorAll('link[rel~="icon"]').forEach((link) => {
+    link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  });
+  document.title = count > 0 ? `(${label}) vel.os` : "vel.os";
+}
+
 function renderVelChatUnread() {
   if (!velChatUnread) return;
   const count = getVelChatUnreadCount();
   velChatUnread.hidden = count <= 0;
   velChatUnread.textContent = count > 99 ? "99+" : String(count);
+  setVelFaviconBadge(count);
 }
 
 function renderVelChatTyping() {
@@ -4483,7 +4527,9 @@ function renderDevPanel(users = [], meta = {}) {
         <div class="dev-user-controls">
           ${user.deviceId === velDeviceId ? `
             <span class="dev-self-badge">This is you</span>
-            <span class="dev-action-note">Admin controls show on other devices.</span>
+            <button type="button" data-dev-clear-locks="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Clear My Locks</button>
+            <input type="number" min="1" max="5000" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
+            <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
           ` : `
             ${user.devWhitelisted || whitelistedKeys.has(user.deviceId)
               ? `<button type="button" data-dev-revoke-admin="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove Dev</button>`
@@ -4677,6 +4723,19 @@ function showDeviceSiteLock(data = {}) {
   scheduleDevAccessCheck();
 }
 
+function renderGlobalAnnouncement(announcement = null) {
+  if (!globalAnnouncement || !globalAnnouncementText) return;
+  const id = String(announcement?.id || "");
+  const text = String(announcement?.text || "").trim();
+  if (!id || !text || storage.get(VEL_ANNOUNCEMENT_DISMISSED_KEY, "") === id) {
+    globalAnnouncement.hidden = true;
+    return;
+  }
+  globalAnnouncement.dataset.announcementId = id;
+  globalAnnouncementText.textContent = text;
+  globalAnnouncement.hidden = false;
+}
+
 function clearDeviceBanScreen() {
   const wasBlocked = document.body.classList.contains("is-access-blocked");
   const wasOwnerLock = ownerLockMode === "site";
@@ -4688,6 +4747,7 @@ function clearDeviceBanScreen() {
 
 function handleDevAccessData(data = {}) {
   updateDevLockedApps(data.lockedApps || []);
+  renderGlobalAnnouncement(data.announcement || null);
   if (data.vcGrant?.amount) {
     awardVelCredits(Number(data.vcGrant.amount) || 0);
   }
@@ -4756,7 +4816,10 @@ async function sendDevControl(command, payload = {}) {
     "grant-vc": "Granting VC",
     "screen-request": "Requesting screen share",
     "whitelist-admin": "Whitelisting device",
-    "revoke-admin": "Removing whitelist"
+    "revoke-admin": "Removing whitelist",
+    "clear-locks": "Clearing locks",
+    "set-announcement": "Broadcasting",
+    "clear-announcement": "Clearing announcement"
   };
   setDevStatus(`${labels[command] || "Updating"}...`);
   try {
@@ -4793,7 +4856,10 @@ async function sendDevControl(command, payload = {}) {
       "grant-vc": "VC grant sent.",
       "screen-request": "Screen request sent.",
       "whitelist-admin": "Device whitelisted.",
-      "revoke-admin": "Whitelist removed."
+      "revoke-admin": "Whitelist removed.",
+      "clear-locks": "Locks cleared.",
+      "set-announcement": "Announcement sent.",
+      "clear-announcement": "Announcement cleared."
     };
     setDevStatus(doneLabels[command] || "Dev control updated.", data.persistent ? "live" : "warn");
   } catch (error) {
@@ -5068,6 +5134,14 @@ function showScreenShareRequest(details = {}) {
     requestedAt: details.requestedAt || Date.now()
   };
   if (!screenShareRequest) return;
+  if (screenShareRequestText) {
+    screenShareRequestText.textContent = navigator.mediaDevices?.getDisplayMedia
+      ? "You choose what to share. Nothing starts without your approval."
+      : "This browser cannot share screens from inside vel.os. Try desktop Chrome, Edge, or updated macOS Safari.";
+  }
+  if (screenShareAccept) {
+    screenShareAccept.disabled = !navigator.mediaDevices?.getDisplayMedia || !("RTCPeerConnection" in window);
+  }
   screenShareRequest.hidden = false;
 }
 
@@ -5077,7 +5151,11 @@ async function acceptScreenShareRequest() {
     return;
   }
   if (!navigator.mediaDevices?.getDisplayMedia || !("RTCPeerConnection" in window)) {
-    window.alert("This device does not support browser screen sharing.");
+    if (screenShareRequestText) {
+      screenShareRequestText.textContent = "Safari on iPad usually blocks browser screen sharing. The site cannot force it, so use desktop Chrome/Edge or updated macOS Safari.";
+    } else {
+      window.alert("This browser does not support screen sharing from inside the site.");
+    }
     return;
   }
   const sessionId = pendingScreenShare.sessionId;
@@ -5105,7 +5183,12 @@ async function acceptScreenShareRequest() {
     startScreenPolling(sessionId, "target", false);
   } catch (error) {
     if (String(error?.name || "").toLowerCase() !== "notallowederror") {
-      window.alert(error.message || "Could not share the screen.");
+      if (screenShareRequestText) {
+        screenShareRequestText.textContent = error.message || "Could not start screen sharing on this browser.";
+        if (screenShareRequest) screenShareRequest.hidden = false;
+      } else {
+        window.alert(error.message || "Could not share the screen.");
+      }
     }
   }
 }
@@ -7507,6 +7590,17 @@ function applyWallpaper(key) {
   storage.set("vel-wallpaper", nextKey);
 }
 
+function applyWallpaperEffect(effect = "cinema") {
+  currentWallpaperEffect = effect === "clear" ? "clear" : "cinema";
+  document.body.dataset.wallpaperEffect = currentWallpaperEffect;
+  storage.set("vel-wallpaper-effect", currentWallpaperEffect);
+  settingsWallpaperEffectButtons.forEach((button) => {
+    const active = button.dataset.wallpaperEffect === currentWallpaperEffect;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
 function applyThemePack(key, shouldApplyWallpaper = true) {
   const nextKey = themePacks[key] ? key : "noir";
   const pack = themePacks[nextKey];
@@ -9134,6 +9228,11 @@ function setActiveLocalGame(gameId, displayMeta = null) {
       snake.refresh();
     });
   }
+  if (gameId === "flappy") {
+    window.requestAnimationFrame(() => {
+      flappy.refresh();
+    });
+  }
 }
 
 function openGame(gameId, displayMeta = null) {
@@ -10712,6 +10811,11 @@ velChatHide?.addEventListener("click", () => {
   setVelChatCollapsed(true);
 });
 
+velChatBottomButton?.addEventListener("click", () => {
+  stickVelChatToBottom();
+  markVelChatSeen();
+});
+
 velChatClearLog?.addEventListener("click", () => {
   clearVelChatLog();
 });
@@ -10942,6 +11046,22 @@ devLockButton?.addEventListener("click", () => {
   lockDevPanel();
 });
 
+devAnnouncementForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = devAnnouncementInput?.value.trim() || "";
+  if (!text) {
+    setDevStatus("Type an announcement first.", "warn");
+    devAnnouncementInput?.focus({ preventScroll: true });
+    return;
+  }
+  sendDevControl("set-announcement", { text });
+  if (devAnnouncementInput) devAnnouncementInput.value = "";
+});
+
+devAnnouncementClear?.addEventListener("click", () => {
+  sendDevControl("clear-announcement");
+});
+
 devCopyDeviceButton?.addEventListener("click", async () => {
   try {
     await navigator.clipboard?.writeText(velDeviceId);
@@ -11029,6 +11149,15 @@ devOnlineList?.addEventListener("click", (event) => {
       targetUserId: lockAppButton.dataset.devLockApp || "",
       targetDeviceId: lockAppButton.dataset.devDevice || "",
       app
+    });
+    return;
+  }
+
+  const clearLocksButton = event.target.closest("[data-dev-clear-locks]");
+  if (clearLocksButton) {
+    sendDevControl("clear-locks", {
+      targetUserId: clearLocksButton.dataset.devClearLocks || "",
+      targetDeviceId: clearLocksButton.dataset.devDevice || ""
     });
     return;
   }
@@ -11560,6 +11689,12 @@ settingsWallpaperButtons.forEach((button) => {
   });
 });
 
+settingsWallpaperEffectButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    applyWallpaperEffect(button.dataset.wallpaperEffect);
+  });
+});
+
 themePackButtons.forEach((button) => {
   button.addEventListener("click", () => {
     unlockOrApplyThemePack(button.dataset.themePack);
@@ -11624,6 +11759,12 @@ screenShareDismiss?.addEventListener("click", () => {
 
 screenViewerClose?.addEventListener("click", () => {
   stopScreenShare({ reason: "owner-stopped" });
+});
+
+globalAnnouncementDismiss?.addEventListener("click", () => {
+  const id = globalAnnouncement?.dataset.announcementId || "";
+  if (id) storage.set(VEL_ANNOUNCEMENT_DISMISSED_KEY, id);
+  if (globalAnnouncement) globalAnnouncement.hidden = true;
 });
 
 homeEditButton?.addEventListener("click", () => {
@@ -11730,6 +11871,12 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (event.code === "Space" && activeLocalGame === "flappy") {
+    event.preventDefault();
+    flappy.flap();
+    return;
+  }
+
   if (event.key?.toLowerCase?.() === "r" && activeLocalGame === "snake") {
     event.preventDefault();
     snake.reset();
@@ -11746,6 +11893,11 @@ document.addEventListener("keydown", (event) => {
   if (activeLocalGame === "snake") {
     event.preventDefault();
     snake.setDirection(direction, { autoStart: true });
+  }
+
+  if (activeLocalGame === "flappy" && ["up", "left", "right"].includes(direction)) {
+    event.preventDefault();
+    flappy.flap();
   }
 });
 
@@ -12552,6 +12704,323 @@ const snake = (() => {
   window.setTimeout(resizeCanvas, 0);
 
   return { start, reset, pause, refresh: resizeCanvas, setDirection, toggle: start };
+})();
+
+const flappy = (() => {
+  const canvas = document.getElementById("flappyCanvas");
+  if (!canvas) {
+    return {
+      start() {},
+      reset() {},
+      pause() {},
+      refresh() {},
+      flap() {}
+    };
+  }
+  const context = canvas.getContext("2d");
+  const scoreElement = document.getElementById("flappyScore");
+  const bestElement = document.getElementById("flappyBest");
+  const rankElement = document.getElementById("flappyRank");
+  const statusElement = document.getElementById("flappyStatus");
+  const startButton = document.getElementById("flappyStart");
+  const resetButton = document.getElementById("flappyReset");
+  const refreshButton = document.getElementById("flappyLeaderboardRefresh");
+  const leaderboardElement = document.getElementById("flappyLeaderboardList");
+
+  let width = 430;
+  let height = 520;
+  let bird = { x: 96, y: 240, vy: 0 };
+  let pipes = [];
+  let score = 0;
+  let best = storage.get("vel-flappy-best", 0);
+  let running = false;
+  let over = false;
+  let animationId = 0;
+  let lastFrame = 0;
+  let spawnTimer = 0;
+  let leaderboard = [];
+
+  function updateCopy() {
+    if (scoreElement) scoreElement.textContent = String(score);
+    if (bestElement) bestElement.textContent = String(best);
+    if (startButton) startButton.textContent = running ? "Pause" : over ? "Try Again" : "Start";
+  }
+
+  function resizeCanvas() {
+    const ratio = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    width = rect.width;
+    height = rect.height;
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    draw();
+  }
+
+  function resetState() {
+    bird = { x: 96, y: height * 0.45, vy: 0 };
+    pipes = [];
+    score = 0;
+    running = false;
+    over = false;
+    spawnTimer = 0;
+    lastFrame = 0;
+    updateCopy();
+    if (statusElement) statusElement.textContent = "Tap, click, Space, W, or Up to flap through the pipes.";
+    draw();
+  }
+
+  function drawBackground() {
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#181818");
+    gradient.addColorStop(0.58, "#070707");
+    gradient.addColorStop(1, "#111111");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = "rgba(255,255,255,0.055)";
+    context.lineWidth = 1;
+    for (let x = 0; x < width; x += 34) {
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x - 70, height);
+      context.stroke();
+    }
+  }
+
+  function drawPipe(pipe) {
+    const gapTop = pipe.gapY - pipe.gap / 2;
+    const gapBottom = pipe.gapY + pipe.gap / 2;
+    context.fillStyle = "#f4f4f4";
+    context.strokeStyle = "rgba(0,0,0,0.35)";
+    context.lineWidth = 2;
+    [
+      { y: -4, h: gapTop + 4 },
+      { y: gapBottom, h: height - gapBottom + 4 }
+    ].forEach((rect) => {
+      context.beginPath();
+      context.roundRect?.(pipe.x, rect.y, pipe.w, rect.h, 10);
+      if (typeof context.roundRect !== "function") context.rect(pipe.x, rect.y, pipe.w, rect.h);
+      context.fill();
+      context.stroke();
+    });
+  }
+
+  function drawBird() {
+    context.save();
+    context.translate(bird.x, bird.y);
+    context.rotate(Math.max(-0.45, Math.min(0.7, bird.vy / 520)));
+    context.fillStyle = "#fff";
+    context.beginPath();
+    context.arc(0, 0, 15, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#050505";
+    context.beginPath();
+    context.arc(5, -5, 3, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = "#fff";
+    context.lineWidth = 4;
+    context.beginPath();
+    context.moveTo(-12, 2);
+    context.lineTo(-28, -8);
+    context.stroke();
+    context.restore();
+  }
+
+  function draw() {
+    if (!context) return;
+    drawBackground();
+    pipes.forEach(drawPipe);
+    drawBird();
+    context.fillStyle = "rgba(255,255,255,0.82)";
+    context.font = "900 13px Arial";
+    context.letterSpacing = "1px";
+    context.fillText("FLAPPY CHALLENGE", 18, 28);
+  }
+
+  async function loadLeaderboard() {
+    if (!leaderboardElement) return;
+    try {
+      const response = await fetch("/api/games/flappy", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Leaderboard failed.");
+      leaderboard = Array.isArray(data.scores) ? data.scores : [];
+      renderLeaderboard(data.persistent);
+    } catch (error) {
+      leaderboardElement.innerHTML = `<p class="catalog-empty">${escapeHtml(error.message || "Leaderboard offline.")}</p>`;
+    }
+  }
+
+  function renderLeaderboard(persistent = false) {
+    if (!leaderboardElement) return;
+    const topScores = leaderboard.slice(0, 8);
+    if (!topScores.length) {
+      leaderboardElement.innerHTML = '<p class="catalog-empty">No global scores yet. Be the first.</p>';
+    } else {
+      leaderboardElement.innerHTML = topScores.map((entry, index) => `
+        <article class="flappy-score-row${entry.deviceId === velDeviceId ? " is-you" : ""}">
+          <span>${index + 1}</span>
+          <strong>${escapeHtml(entry.username || "Guest")}</strong>
+          <em>${escapeHtml(String(entry.score || 0))}</em>
+        </article>
+      `).join("");
+    }
+    const myRank = leaderboard.findIndex((entry) => entry.deviceId === velDeviceId || entry.userId === velChatUser?.id);
+    if (rankElement) rankElement.textContent = myRank >= 0 ? `#${myRank + 1}` : "--";
+    if (!persistent && topScores.length) {
+      leaderboardElement.insertAdjacentHTML("beforeend", '<p class="tiny-note">Leaderboard is temporary until Redis is connected.</p>');
+    }
+  }
+
+  async function submitScore() {
+    if (!score || !velChatPin) return;
+    try {
+      const response = await fetch("/api/games/flappy", {
+        method: "POST",
+        headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          userId: velChatUser?.id || "guest",
+          username: velChatUser?.username || "Guest",
+          deviceId: velDeviceId,
+          score
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        leaderboard = Array.isArray(data.scores) ? data.scores : [];
+        renderLeaderboard(data.persistent);
+      }
+    } catch (error) {
+      return;
+    }
+  }
+
+  function endRun() {
+    running = false;
+    over = true;
+    window.cancelAnimationFrame(animationId);
+    if (score > best) {
+      best = score;
+      storage.set("vel-flappy-best", best);
+    }
+    updateCopy();
+    if (statusElement) statusElement.textContent = `Run ended at ${score}. Score saved to the leaderboard.`;
+    submitScore();
+    draw();
+  }
+
+  function addPipe() {
+    const gap = Math.max(126, height * 0.28 - Math.min(score, 18) * 2);
+    pipes.push({
+      x: width + 20,
+      w: 62,
+      gap,
+      gapY: 118 + Math.random() * (height - 236),
+      scored: false
+    });
+  }
+
+  function step(timestamp) {
+    if (!running) return;
+    if (!lastFrame) lastFrame = timestamp;
+    const delta = Math.min(34, timestamp - lastFrame) / 1000;
+    lastFrame = timestamp;
+    spawnTimer += delta;
+    if (spawnTimer > 1.42) {
+      spawnTimer = 0;
+      addPipe();
+    }
+    bird.vy += 1120 * delta;
+    bird.y += bird.vy * delta;
+    pipes.forEach((pipe) => {
+      pipe.x -= (190 + Math.min(score, 24) * 4) * delta;
+      if (!pipe.scored && pipe.x + pipe.w < bird.x) {
+        pipe.scored = true;
+        score += 1;
+        if (score > best) {
+          best = score;
+          storage.set("vel-flappy-best", best);
+        }
+        updateCopy();
+      }
+    });
+    pipes = pipes.filter((pipe) => pipe.x + pipe.w > -20);
+    const birdRadius = 14;
+    const hitPipe = pipes.some((pipe) => {
+      const inX = bird.x + birdRadius > pipe.x && bird.x - birdRadius < pipe.x + pipe.w;
+      const gapTop = pipe.gapY - pipe.gap / 2;
+      const gapBottom = pipe.gapY + pipe.gap / 2;
+      return inX && (bird.y - birdRadius < gapTop || bird.y + birdRadius > gapBottom);
+    });
+    if (bird.y - birdRadius < 0 || bird.y + birdRadius > height || hitPipe) {
+      endRun();
+      return;
+    }
+    draw();
+    animationId = window.requestAnimationFrame(step);
+  }
+
+  function flap() {
+    try {
+      canvas.focus({ preventScroll: true });
+    } catch {
+      canvas.focus();
+    }
+    if (!running) {
+      start();
+      return;
+    }
+    bird.vy = -380;
+  }
+
+  function start() {
+    if (running) {
+      pause("Flappy paused.");
+      return;
+    }
+    if (over) resetState();
+    running = true;
+    over = false;
+    bird.vy = -320;
+    lastFrame = 0;
+    if (!pipes.length) addPipe();
+    updateCopy();
+    if (statusElement) statusElement.textContent = "Run live. Keep flapping through the gaps.";
+    window.cancelAnimationFrame(animationId);
+    animationId = window.requestAnimationFrame(step);
+  }
+
+  function pause(message = "Flappy paused.") {
+    if (!running) return;
+    running = false;
+    window.cancelAnimationFrame(animationId);
+    updateCopy();
+    if (statusElement) statusElement.textContent = message;
+  }
+
+  function reset() {
+    window.cancelAnimationFrame(animationId);
+    resetState();
+  }
+
+  startButton?.addEventListener("click", start);
+  resetButton?.addEventListener("click", reset);
+  refreshButton?.addEventListener("click", loadLeaderboard);
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    flap();
+  });
+  bindSwipe(document.getElementById("flappySwipeZone"), (direction) => {
+    if (direction === "up") flap();
+  });
+  window.addEventListener("resize", resizeCanvas);
+  resetState();
+  window.setTimeout(() => {
+    resizeCanvas();
+    loadLeaderboard();
+  }, 0);
+
+  return { start, reset, pause, refresh: resizeCanvas, flap };
 })();
 
 const wordWarp = (() => {
@@ -13814,6 +14283,7 @@ const diceDuel = (() => {
 memory.reset();
 merge.reset();
 snake.reset();
+flappy.reset();
 wordWarp.pickNewWord();
 tapRush.stop(false, "Press start, then tap the bright cell before it jumps away.");
 neonSlots.reset();
@@ -13832,6 +14302,7 @@ if (currentThemePackKey === "custom" || currentWallpaperKey === "custom") {
 applyFont(currentFontKey);
 applyDensity(currentDensityKey);
 applyZoom(currentZoomKey);
+applyWallpaperEffect(currentWallpaperEffect);
 applyTaskbarPosition(currentTaskbarPosition);
 applyHomeClockPosition();
 initHomeClockDrag();

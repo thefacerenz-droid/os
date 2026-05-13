@@ -85,7 +85,7 @@
       <section class="screen-share-request" id="screenShareRequest" aria-live="polite" hidden>
         <div>
           <strong>Owner requested screen sharing</strong>
-          <span>You choose what to share. Nothing starts without your approval.</span>
+          <span id="screenShareRequestText">You choose what to share. Nothing starts without your approval.</span>
         </div>
         <button type="button" id="screenShareAccept">Accept</button>
         <button type="button" id="screenShareDismiss">Dismiss</button>
@@ -101,6 +101,14 @@
           <button type="button" id="screenViewerClose">Stop</button>
         </div>
         <video id="screenViewerVideo" autoplay playsinline></video>
+      </section>
+
+      <section class="global-announcement" id="globalAnnouncement" aria-live="assertive" hidden>
+        <div>
+          <p class="micro-label">Owner Announcement</p>
+          <strong id="globalAnnouncementText">Announcement</strong>
+        </div>
+        <button type="button" id="globalAnnouncementDismiss">Dismiss</button>
       </section>
 
       <section class="lyrics-widget" id="lyricsWidget" aria-label="Lyrics panel">
@@ -567,6 +575,7 @@
             <button class="switch-chip" type="button" data-game-switch="roulette">Roulette</button>
             <button class="switch-chip" type="button" data-game-switch="poker">Poker</button>
             <button class="switch-chip" type="button" data-game-switch="dice">Dice</button>
+            <button class="switch-chip" type="button" data-game-switch="flappy">Flappy</button>
           </div>
 
           <div class="play-meta">
@@ -895,6 +904,40 @@
                 <p class="game-tip" id="diceStatus" aria-live="polite">Pick low, high, or lucky seven and roll the dice.</p>
               </div>
             </section>
+
+            <section class="game-screen" data-screen="flappy">
+              <div class="game-shell flappy-shell">
+                <div class="game-toolbar">
+                  <div class="score-pills">
+                    <div class="score-pill"><span>Score</span><strong id="flappyScore">0</strong></div>
+                    <div class="score-pill"><span>Best</span><strong id="flappyBest">0</strong></div>
+                    <div class="score-pill"><span>Rank</span><strong id="flappyRank">--</strong></div>
+                  </div>
+                  <div class="toolbar-actions">
+                    <button class="ghost-button" id="flappyStart" type="button">Start</button>
+                    <button class="ghost-button" id="flappyReset" type="button">Reset</button>
+                  </div>
+                </div>
+                <div class="flappy-layout">
+                  <div class="flappy-canvas-shell" id="flappySwipeZone">
+                    <canvas id="flappyCanvas" width="430" height="520" aria-label="Flappy Bird challenge" tabindex="0"></canvas>
+                  </div>
+                  <aside class="flappy-leaderboard">
+                    <div class="flappy-leaderboard-head">
+                      <div>
+                        <p class="section-label">Global Board</p>
+                        <h3>Flappy Challenge</h3>
+                      </div>
+                      <button class="ghost-button" id="flappyLeaderboardRefresh" type="button">Refresh</button>
+                    </div>
+                    <div class="flappy-leaderboard-list" id="flappyLeaderboardList">
+                      <p class="catalog-empty">Play a run to load the board.</p>
+                    </div>
+                  </aside>
+                </div>
+                <p class="game-tip" id="flappyStatus" aria-live="polite">Tap, click, Space, W, or Up to flap through the pipes.</p>
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -1130,6 +1173,11 @@
                   <button class="ghost-button" type="button" id="devLockButton">Lock</button>
                 </div>
               </div>
+              <form class="dev-announcement-form" id="devAnnouncementForm">
+                <input id="devAnnouncementInput" type="text" maxlength="220" autocomplete="off" placeholder="Send a global announcement" aria-label="Global announcement" />
+                <button class="ghost-button is-solid" type="submit">Announce</button>
+                <button class="ghost-button" type="button" id="devAnnouncementClear">Clear</button>
+              </form>
               <div class="dev-online-list" id="devOnlineList">
                 <p class="catalog-empty">Unlock Dev Panel to view sessions.</p>
               </div>
@@ -1222,6 +1270,11 @@
                 <button class="wallpaper-option" type="button" data-wallpaper-option="vel"><img src="./assets/images/wallpaper/vel.png" alt="Ink eye wallpaper" /><strong>Ink Eye</strong><span>Dark monochrome default</span></button>
                 <button class="wallpaper-option" type="button" data-wallpaper-option="snow"><img src="./assets/images/wallpaper/IMG_2063.png" alt="Snow lake wallpaper" /><strong>Snow Lake</strong><span>Cold cinematic scene</span></button>
                 <button class="wallpaper-option" type="button" data-wallpaper-option="moon"><img src="./assets/images/wallpaper/IMG_2064.png" alt="Moon tree wallpaper" /><strong>Moon Tree</strong><span>Blue anime night</span></button>
+              </div>
+              <p class="section-label settings-sub-label">Wallpaper Effect</p>
+              <div class="font-picker">
+                <button class="font-option" type="button" data-wallpaper-effect="cinema"><strong>Cinematic</strong><span>Darkened OS look</span><span class="font-sample">Keeps icons readable.</span></button>
+                <button class="font-option" type="button" data-wallpaper-effect="clear"><strong>Clear</strong><span>No dark overlay</span><span class="font-sample">Shows the wallpaper bright.</span></button>
               </div>
             </article>
             <article class="settings-card">
@@ -1372,6 +1425,7 @@
             </div>
             <div class="vel-chat-head-actions">
               <button class="vel-chat-mini-button vel-chat-clear-button" type="button" id="velChatClearLog">Clear</button>
+              <button class="vel-chat-mini-button" type="button" id="velChatBottomButton">Bottom</button>
               <button class="vel-chat-user-pill" type="button" id="velChatUserPill">Login</button>
               <button class="vel-chat-mini-button" type="button" id="velChatHide">Hide</button>
             </div>

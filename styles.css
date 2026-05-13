@@ -146,6 +146,19 @@ body[data-theme-pack="violet"] .wallpaper-shade {
     linear-gradient(180deg, rgba(30, 20, 70, 0.06), rgba(0, 0, 0, 0.6));
 }
 
+body[data-wallpaper-effect="clear"] .desktop-wallpaper {
+  filter: contrast(1.03) saturate(1.04) brightness(0.98);
+  transform: scale(1);
+}
+
+body[data-wallpaper-effect="clear"] .wallpaper-shade {
+  opacity: 0;
+}
+
+body[data-wallpaper-effect="clear"] .wallpaper-grain {
+  opacity: 0.08;
+}
+
 .owner-lock-overlay,
 .screen-viewer {
   position: fixed;
@@ -317,7 +330,54 @@ body[data-theme-pack="violet"] .wallpaper-shade {
   object-fit: contain;
 }
 
+.global-announcement {
+  position: fixed;
+  inset: clamp(1rem, 4vw, 2rem) clamp(1rem, 4vw, 2rem) auto;
+  z-index: 123;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 14% 20%, rgba(255, 255, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(20, 20, 20, 0.96), rgba(2, 2, 2, 0.96));
+  box-shadow: 0 24px 76px rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(20px);
+  animation: lockCardIn 260ms ease both;
+}
+
+.global-announcement[hidden] {
+  display: none !important;
+}
+
+.global-announcement strong {
+  display: block;
+  color: #fff;
+  font-size: clamp(1.05rem, 3vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.global-announcement button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: #fff;
+  color: #050505;
+  font-weight: 900;
+}
+
 @media (max-width: 680px) {
+  .global-announcement {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .screen-share-request {
     right: 0.75rem;
     left: 0.75rem;
@@ -2157,7 +2217,15 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   margin-top: 0.9rem;
 }
 
-.dev-auth-form input {
+.dev-announcement-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.55rem;
+  margin: 0.82rem 0 0.25rem;
+}
+
+.dev-auth-form input,
+.dev-announcement-form input {
   min-width: 0;
   padding: 0.82rem 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.13);
@@ -2168,7 +2236,8 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   outline: none;
 }
 
-.dev-auth-form input:focus {
+.dev-auth-form input:focus,
+.dev-announcement-form input:focus {
   border-color: rgba(255, 255, 255, 0.36);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
 }
@@ -4332,6 +4401,110 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 
 #snakeCanvas:focus-visible {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28);
+}
+
+.flappy-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.72fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.flappy-canvas-shell,
+.flappy-leaderboard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 24% 14%, rgba(255, 255, 255, 0.1), transparent 30%),
+    rgba(0, 0, 0, 0.76);
+}
+
+.flappy-canvas-shell {
+  display: grid;
+  place-items: center;
+  padding: 0.85rem;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#flappyCanvas {
+  width: min(100%, 430px);
+  max-height: min(58dvh, 560px);
+  aspect-ratio: 43 / 52;
+  border-radius: 20px;
+  background: #050505;
+  outline: none;
+  touch-action: none;
+}
+
+#flappyCanvas:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28);
+}
+
+.flappy-leaderboard {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.flappy-leaderboard-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.flappy-leaderboard-head h3 {
+  margin: 0.1rem 0 0;
+}
+
+.flappy-leaderboard-list {
+  display: grid;
+  gap: 0.48rem;
+  max-height: min(46dvh, 430px);
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.flappy-score-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.flappy-score-row.is-you {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.flappy-score-row span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #fff;
+  color: #050505;
+  font-weight: 900;
+}
+
+.flappy-score-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flappy-score-row em {
+  color: #fff;
+  font-style: normal;
+  font-weight: 900;
 }
 
 .memory-grid {
@@ -7021,7 +7194,7 @@ body[data-taskbar-style="terminal"] .taskbar {
   left: clamp(0.55rem, 1.4vw, 1rem);
   bottom: calc(4.05rem + env(safe-area-inset-bottom));
   z-index: 72;
-  width: min(370px, calc(100dvw - 1rem));
+  width: min(430px, calc(100dvw - 1rem));
   pointer-events: none;
 }
 
@@ -7081,7 +7254,7 @@ body.is-booting .vel-chat {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  width: 100%;
+  width: min(430px, calc(100dvw - 1rem));
   max-height: min(620px, calc(100dvh - 6.5rem));
   margin-bottom: 0.6rem;
   padding: 0.75rem;
@@ -7355,14 +7528,18 @@ body.is-booting .vel-chat {
   flex: 1 1 360px;
   align-content: start;
   gap: 0.55rem;
-  min-height: clamp(230px, 42dvh, 430px);
-  padding: 0.15rem 0.25rem 0.15rem 0;
+  min-height: clamp(300px, 54dvh, 560px);
+  padding: 0.15rem 0.55rem 0.15rem 0;
   overflow: auto;
   overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.52) rgba(255, 255, 255, 0.06);
 }
 
 .vel-chat-messages::-webkit-scrollbar {
-  width: 10px;
+  width: 14px;
 }
 
 .vel-chat-messages::-webkit-scrollbar-track {
@@ -7371,9 +7548,9 @@ body.is-booting .vel-chat {
 }
 
 .vel-chat-messages::-webkit-scrollbar-thumb {
-  border: 2px solid rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(0, 0, 0, 0.35);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .vel-chat-empty {
@@ -8278,6 +8455,14 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .play-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .flappy-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dev-announcement-form {
     grid-template-columns: 1fr;
   }
 

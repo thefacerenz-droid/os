@@ -85,6 +85,18 @@ function normalizeAdminDevice(input = {}) {
   };
 }
 
+function normalizeAnnouncement(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const text = cleanText(value.text, 220);
+  if (!text) return null;
+  return {
+    id: cleanId(value.id, 80) || `announce-${Date.now()}`,
+    text,
+    createdAt: Number(value.createdAt) || Date.now(),
+    createdBy: cleanText(value.createdBy, 24) || "Owner"
+  };
+}
+
 function getEnvAdminDevices() {
   return ADMIN_DEVICE_IDS.map((deviceId) => ({
     deviceId,
@@ -326,7 +338,7 @@ function normalizeStore(value = {}) {
     if (normalized) adminDevices[normalized.deviceId] = normalized;
   });
 
-  return { users, bans, kicks, locks, grants, adminDevices };
+  return { users, bans, kicks, locks, grants, adminDevices, announcement: normalizeAnnouncement(value?.announcement) };
 }
 
 function prunePresence(store) {
@@ -517,6 +529,7 @@ function serialize(store) {
     bans,
     locks: Object.values(store.locks || {}).slice(0, CONTROL_LIMIT),
     adminDevices: getAdminDevices(store).slice(0, CONTROL_LIMIT),
+    announcement: normalizeAnnouncement(store.announcement),
     storage: store.storage || "memory",
     persistent: Boolean(store.persistent)
   };
@@ -530,6 +543,36 @@ async function handleControl(req, res, body) {
   }
   const command = cleanText(body.command, 32);
   prunePresence(store);
+  if (command === "set-announcement") {
+    const text = cleanText(body.text, 220);
+    if (!text) {
+      return sendJson(res, 400, {
+        error: "missing_announcement",
+        message: "Type an announcement first."
+      });
+    }
+    store.announcement = normalizeAnnouncement({
+      id: `announce-${Date.now()}`,
+      text,
+      createdAt: Date.now(),
+      createdBy: "Owner"
+    });
+    const saved = await writeStore(store);
+    return sendJson(res, 200, {
+      ...serialize(saved),
+      ok: true,
+      command
+    });
+  }
+  if (command === "clear-announcement") {
+    store.announcement = null;
+    const saved = await writeStore(store);
+    return sendJson(res, 200, {
+      ...serialize(saved),
+      ok: true,
+      command
+    });
+  }
   const target = resolveTarget(store, body);
   if (!target) {
     return sendJson(res, 400, {
@@ -582,6 +625,8 @@ async function handleControl(req, res, body) {
       updatedAt: Date.now()
     };
     if (!store.locks[key].lockedApps.length) delete store.locks[key];
+  } else if (command === "clear-locks") {
+    delete store.locks[key];
   } else if (command === "lock-app") {
     const app = cleanAppId(body.app || body.targetApp);
     if (!app) {
@@ -705,6 +750,7 @@ async function handleAccessCheck(res, body) {
       lockedApps: Array.isArray(lock.lockedApps) ? lock.lockedApps : [],
       screenRequestAt: hasFreshScreenRequest ? screenRequestAt : 0,
       screenSessionId: hasFreshScreenRequest ? cleanId(lock.screenSessionId, 96) : "",
+      announcement: normalizeAnnouncement(saved.announcement),
       vcGrant: grant ? { amount: grant.amount } : null,
       storage: saved.storage,
       persistent: Boolean(saved.persistent)
@@ -715,6 +761,7 @@ async function handleAccessCheck(res, body) {
     lockedApps: Array.isArray(lock?.lockedApps) ? lock.lockedApps : [],
     screenRequestAt: hasFreshScreenRequest ? screenRequestAt : 0,
     screenSessionId: hasFreshScreenRequest ? cleanId(lock?.screenSessionId, 96) : "",
+    announcement: normalizeAnnouncement(saved.announcement),
     vcGrant: grant ? { amount: grant.amount } : null,
     storage: saved.storage,
     persistent: Boolean(saved.persistent)
