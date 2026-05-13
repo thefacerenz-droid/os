@@ -4572,7 +4572,7 @@ function renderDevWhitelist(adminDevices = []) {
         <div>
           <strong>${escapeHtml(device.username || "Whitelisted")}</strong>
           <span>${escapeHtml(device.deviceName || "Unknown device")}</span>
-          <small>${escapeHtml(`Device ${String(device.deviceId || "").slice(0, 12)}`)}${device.protected ? " - Owner iPad" : ""}</small>
+          <small>${escapeHtml(`Device ${String(device.deviceId || "").slice(0, 12)}`)}${device.protected ? ` - ${escapeHtml(device.username || "Owner device")}` : ""}</small>
         </div>
         ${device.protected
           ? '<em>Protected</em>'

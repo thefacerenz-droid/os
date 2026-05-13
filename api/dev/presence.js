@@ -4,11 +4,15 @@ const REDIS_CLIENT_KEY = "__velos_dev_presence_redis_client_promise";
 const MEMORY_KEY = "__velos_dev_presence_store";
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
-// Hard-bind Dev Panel access to the iPad/browser ID the owner provided.
-const ADMIN_DEVICE_IDS = (process.env.VEL_OS_ADMIN_DEVICE_IDS || "3fa56c0a")
-  .split(/[\s,]+/)
+// Hard-bind Dev Panel access to the owner devices provided.
+const BUILT_IN_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
+const ADMIN_DEVICE_IDS = [
+  ...(process.env.VEL_OS_ADMIN_DEVICE_IDS || "").split(/[\s,]+/),
+  ...BUILT_IN_ADMIN_DEVICE_IDS
+]
   .map((id) => cleanId(id, 96))
-  .filter(Boolean);
+  .filter(Boolean)
+  .filter((id, index, list) => list.indexOf(id) === index);
 const USER_ACTIVE_MS = 1000 * 18;
 const KICK_ACTIVE_MS = 1000 * 60 * 15;
 const CONTROL_LIMIT = 300;
@@ -100,7 +104,11 @@ function normalizeAnnouncement(value = null) {
 function getEnvAdminDevices() {
   return ADMIN_DEVICE_IDS.map((deviceId) => ({
     deviceId,
-    username: deviceId === "3fa56c0a" ? "Owner iPad" : "Owner",
+    username: deviceId === "3fa56c0a"
+      ? "Owner iPad"
+      : deviceId === "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"
+        ? "Owner PC"
+        : "Owner",
     deviceName: "Permanent whitelist",
     addedAt: 0,
     addedBy: "Vercel env",

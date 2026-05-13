@@ -23,6 +23,14 @@ function cleanId(value = "", limit = 96) {
   return cleanText(value, limit).replace(/[^\w.-]/g, "").slice(0, limit);
 }
 
+function scoreOwnerKey(score = {}) {
+  const userId = cleanId(score.userId, 64);
+  const deviceId = cleanId(score.deviceId, 96);
+  if (userId) return `user:${userId}`;
+  if (deviceId) return `device:${deviceId}`;
+  return "";
+}
+
 function getQueryValue(req, key) {
   try {
     const url = new URL(req.url || "/", "http://localhost");
@@ -84,16 +92,41 @@ async function readBody(req) {
 }
 
 function normalizeScores(value = []) {
-  return (Array.isArray(value) ? value : [])
-    .map((score) => ({
+  const bestByOwner = new Map();
+  (Array.isArray(value) ? value : [])
+    .map((score) => {
+      const normalized = {
       id: cleanId(score.id, 80) || `score-${Date.now()}`,
       userId: cleanId(score.userId, 64),
       deviceId: cleanId(score.deviceId, 96),
       username: cleanText(score.username, 24) || "Guest",
       score: Math.max(0, Math.min(9999, Number.parseInt(score.score, 10) || 0)),
-      createdAt: Number(score.createdAt) || Date.now()
-    }))
+      createdAt: Number(score.createdAt) || Date.now(),
+      updatedAt: Number(score.updatedAt) || Number(score.createdAt) || Date.now()
+    };
+      return normalized;
+    })
     .filter((score) => score.score > 0)
+    .forEach((score) => {
+      const ownerKey = scoreOwnerKey(score) || `score:${score.id}`;
+      const existing = bestByOwner.get(ownerKey);
+      if (!existing || score.score > existing.score) {
+        bestByOwner.set(ownerKey, {
+          ...score,
+          createdAt: existing ? Math.min(existing.createdAt, score.createdAt) : score.createdAt,
+          updatedAt: Math.max(existing?.updatedAt || 0, score.updatedAt)
+        });
+        return;
+      }
+      bestByOwner.set(ownerKey, {
+        ...existing,
+        username: score.username || existing.username,
+        createdAt: Math.min(existing.createdAt, score.createdAt),
+        updatedAt: Math.max(existing.updatedAt || 0, score.updatedAt || 0)
+      });
+    });
+
+  return [...bestByOwner.values()]
     .sort((left, right) => (right.score - left.score) || (left.createdAt - right.createdAt))
     .slice(0, SCORE_LIMIT);
 }
@@ -140,17 +173,31 @@ module.exports = async function handler(req, res) {
         });
       }
       const current = await readScores();
-      const next = [
-        ...current.scores,
-        {
-          id: `flappy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          userId: cleanId(body.userId, 64),
-          deviceId: cleanId(body.deviceId, 96),
-          username: cleanText(body.username, 24) || "Guest",
-          score,
-          createdAt: Date.now()
-        }
-      ];
+      const now = Date.now();
+      const incoming = {
+        id: `flappy-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        userId: cleanId(body.userId, 64),
+        deviceId: cleanId(body.deviceId, 96),
+        username: cleanText(body.username, 24) || "Guest",
+        score,
+        createdAt: now,
+        updatedAt: now
+      };
+      const ownerKey = scoreOwnerKey(incoming);
+      const next = current.scores.map((entry) => {
+        if (!ownerKey || scoreOwnerKey(entry) !== ownerKey) return entry;
+        return {
+          ...entry,
+          userId: incoming.userId || entry.userId,
+          deviceId: incoming.deviceId || entry.deviceId,
+          username: incoming.username || entry.username,
+          score: Math.max(entry.score, incoming.score),
+          updatedAt: now
+        };
+      });
+      if (!ownerKey || !next.some((entry) => scoreOwnerKey(entry) === ownerKey)) {
+        next.push(incoming);
+      }
       return sendJson(res, 200, await writeScores(next));
     }
     res.setHeader("Allow", "GET, POST");
