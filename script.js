@@ -3421,7 +3421,7 @@ function startVelLiveUpdates() {
     username: user?.username || "Guest",
     lobby: cleanLobbyName(lobbyState.lobby)
   });
-  velLiveSource = new EventSource(`/api/live?${params.toString()}`);
+  velLiveSource = new EventSource(`/api/lobbies?__live=1&${params.toString()}`);
   velLiveSource.onopen = () => {
     velLiveConnected = true;
     window.clearTimeout(velLiveReconnectTimer);

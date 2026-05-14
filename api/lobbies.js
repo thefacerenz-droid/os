@@ -12,7 +12,8 @@ const STROKE_POINT_LIMIT = 180;
 const CANVAS_WIDTH = 640;
 const CANVAS_HEIGHT = 400;
 const ALLOWED_DRAWING = /^data:image\/(?:png|jpe?g|webp);base64,/i;
-const { broadcastLiveEvent } = require("./live.js");
+const handleLive = require("../lib/live.js");
+const { broadcastLiveEvent } = handleLive;
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -455,9 +456,13 @@ function serialize(store, lobbyName, user = null) {
 
 module.exports = async function handler(req, res) {
   try {
+    const url = new URL(req.url || "/", "http://localhost");
+    if (req.method === "GET" && url.searchParams.get("__live") === "1") {
+      return handleLive(req, res);
+    }
+
     if (req.method === "GET") {
       if (!hasValidPin(req)) return sendPinRequired(res);
-      const url = new URL(req.url || "/", "http://localhost");
       const store = await readStore();
       const user = cleanPerson({
         userId: url.searchParams.get("userId") || "",

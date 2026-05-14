@@ -3,7 +3,7 @@ const REDIS_CLIENT_KEY = "__velos_chat_typing_redis_client_promise";
 const MEMORY_KEY = "__velos_chat_typing_store";
 const CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const TYPING_ACTIVE_MS = 4500;
-const { broadcastLiveEvent } = require("../live.js");
+const { broadcastLiveEvent } = require("../../lib/live.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;

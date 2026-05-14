@@ -23,7 +23,7 @@ const handleDevPresence = require("./api/dev/presence.js");
 const handleDevScreen = require("./api/dev/screen.js");
 const handleChatTyping = require("./api/chat/typing.js");
 const handleFlappyLeaderboard = require("./api/games/flappy.js");
-const handleLive = require("./api/live.js");
+const handleLive = require("./lib/live.js");
 const sessions = new Map();
 let spotifyToken = null;
 
