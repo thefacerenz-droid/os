@@ -1326,6 +1326,13 @@ const utilityApps = {
     action: "panel",
     panel: "soundboard"
   },
+  remoteDeck: {
+    title: "Remote Deck",
+    label: "Remote",
+    badgeText: "RD",
+    action: "panel",
+    panel: "remoteDeck"
+  },
   dev: {
     title: "Dev Panel",
     label: "Dev",
@@ -1832,6 +1839,7 @@ const drawers = {
   network: document.getElementById("networkDrawer"),
   lobbies: document.getElementById("lobbiesDrawer"),
   soundboard: document.getElementById("soundboardDrawer"),
+  remoteDeck: document.getElementById("remoteDeckDrawer"),
   dev: document.getElementById("devDrawer"),
   calculator: document.getElementById("calculatorDrawer"),
   settings: document.getElementById("settingsDrawer")
@@ -2118,6 +2126,15 @@ const soundboardStop = document.getElementById("soundboardStop");
 const soundboardImport = document.getElementById("soundboardImport");
 const soundboardFileInput = document.getElementById("soundboardFileInput");
 const soundboardStatus = document.getElementById("soundboardStatus");
+const remoteDeckPanel = document.querySelector(".remote-deck-panel");
+const remoteDeckSelectedName = document.getElementById("remoteDeckSelectedName");
+const remoteDeckStatus = document.getElementById("remoteDeckStatus");
+const remoteDeckAllow = document.getElementById("remoteDeckAllow");
+const remoteDeckRefresh = document.getElementById("remoteDeckRefresh");
+const remoteDeckTargets = document.getElementById("remoteDeckTargets");
+const remoteDeckGrid = document.getElementById("remoteDeckGrid");
+const remoteDeckFullscreen = document.getElementById("remoteDeckFullscreen");
+const remoteDeckStop = document.getElementById("remoteDeckStop");
 const devAuthCard = document.getElementById("devAuthCard");
 const devAuthForm = document.getElementById("devAuthForm");
 const devCodeInput = document.getElementById("devCodeInput");
@@ -2365,6 +2382,14 @@ let soundboardRealSounds = [];
 let soundboardImportedSounds = [];
 let soundboardLoading = false;
 let soundboardLoaded = false;
+const REMOTE_DECK_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
+const REMOTE_DECK_PEERS_KEY = "vel-remote-deck-peers";
+const REMOTE_DECK_ALLOW_KEY = "vel-remote-deck-allow";
+let remoteDeckSelectedDevices = new Set();
+let remoteDeckPeers = readStoredJson(REMOTE_DECK_PEERS_KEY, {});
+remoteDeckPeers = remoteDeckPeers && typeof remoteDeckPeers === "object" && !Array.isArray(remoteDeckPeers) ? remoteDeckPeers : {};
+let remoteDeckAllowed = storage.get(REMOTE_DECK_ALLOW_KEY, "0") === "1";
+let remoteDeckChannel = null;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -2411,6 +2436,7 @@ installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
   : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
 installedApps = installedApps.filter((item) => item !== "panel:ai");
+installedApps = installedApps.filter((item) => item !== "panel:remoteDeck" || isRemoteDeckWhitelistedDevice());
 storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
@@ -2441,6 +2467,11 @@ if (storage.get("vel-installed-apps-v7", "0") !== "1" && !installedApps.includes
   installedApps = ["game:flappy", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v7", "1");
+}
+if (isRemoteDeckWhitelistedDevice() && storage.get("vel-installed-apps-v8", "0") !== "1" && !installedApps.includes("panel:remoteDeck")) {
+  installedApps = ["panel:remoteDeck", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v8", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 recentApps = Array.isArray(recentApps) ? recentApps.filter((item) => !(item?.type === "panel" && item?.id === "ai")) : [];
@@ -2581,7 +2612,7 @@ function getRecentAppMeta(entry) {
     };
   }
 
-  if (entry.type === "panel" && utilityApps[entry.id]) {
+  if (entry.type === "panel" && utilityApps[entry.id] && isUtilityAppVisible(entry.id)) {
     return utilityApps[entry.id];
   }
 
@@ -2665,7 +2696,7 @@ function getAppMetaFromRef(ref) {
     };
   }
 
-  if (type === "panel" && utilityApps[id]) return utilityApps[id];
+  if (type === "panel" && utilityApps[id] && isUtilityAppVisible(id)) return utilityApps[id];
 
   if (type === "web") {
     const app = id === "browser" ? utilityApps.browser : webApps[id];
@@ -2694,6 +2725,7 @@ function getAppMetaFromRef(ref) {
 function openAppRef(ref) {
   const [type, id] = String(ref || "").split(":");
   if (type === "panel") {
+    if (!isUtilityAppVisible(id)) return;
     if (id === "youtube") {
       openYouTubeApp();
       return;
@@ -2976,6 +3008,10 @@ function suspendPanelPlayback(name) {
 }
 
 function openPanel(name) {
+  if (name === "remoteDeck" && !isRemoteDeckWhitelistedDevice()) {
+    showOwnerLockOverlay("Not whitelisted", "Remote Deck only shows on whitelisted admin devices.", { mode: "app" });
+    return false;
+  }
   if (isDevAppLocked(name)) {
     showDevAppLocked(name);
     return false;
@@ -3028,6 +3064,11 @@ function openPanel(name) {
     recordRecentApp({ type: "panel", id: "soundboard" });
     renderSoundboard();
     loadSoundboardFiles();
+  }
+
+  if (name === "remoteDeck") {
+    recordRecentApp({ type: "panel", id: "remoteDeck" });
+    openRemoteDeck();
   }
 
   if (name === "dev") {
@@ -3262,6 +3303,18 @@ function getVelDeviceName() {
   if (isIphone) return `iPhone ${browser}`;
   if (isAndroid) return `Android ${browser}`;
   return `${navigator.platform || "Device"} ${browser}`;
+}
+
+function isRemoteDeckWhitelistedDevice(deviceId = velDeviceId) {
+  const id = String(deviceId || "").trim();
+  if (!id) return false;
+  const extraIds = readStoredJson("vel-remote-deck-extra-whitelist", []);
+  return REMOTE_DECK_ADMIN_DEVICE_IDS.some((allowedId) => id === allowedId || id.startsWith(allowedId))
+    || (Array.isArray(extraIds) && extraIds.some((allowedId) => id === allowedId || id.startsWith(allowedId)));
+}
+
+function isUtilityAppVisible(id = "") {
+  return id !== "remoteDeck" || isRemoteDeckWhitelistedDevice();
 }
 
 function createVelChatUser(name) {
@@ -4444,6 +4497,224 @@ function renderSoundboard() {
   soundboardGrid.innerHTML = `${realPads}${emptyReal}${generatedPads}`;
 }
 
+function setRemoteDeckStatus(message = "Pick one or more whitelisted devices.", tone = "") {
+  if (!remoteDeckStatus) return;
+  remoteDeckStatus.textContent = message;
+  remoteDeckStatus.dataset.tone = tone;
+}
+
+function getRemoteDeckBuiltInDevices() {
+  return [
+    {
+      deviceId: "3fa56c0a",
+      username: "Owner iPad",
+      deviceName: "Permanent whitelist",
+      online: velDeviceId.startsWith("3fa56c0a")
+    },
+    {
+      deviceId: "a9f794a2-9e8f-4d01-acdc-3b707472ae2e",
+      username: "Owner PC",
+      deviceName: "Permanent whitelist",
+      online: velDeviceId === "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"
+    }
+  ];
+}
+
+function rememberRemoteDeckPeer(peer = {}) {
+  const deviceId = String(peer.deviceId || "").replace(/[^\w.-]/g, "").slice(0, 96);
+  if (!deviceId || !isRemoteDeckWhitelistedDevice(deviceId)) return;
+  remoteDeckPeers[deviceId] = {
+    deviceId,
+    username: cleanVelChatName(peer.username) || (deviceId === velDeviceId ? "This device" : "Whitelisted"),
+    deviceName: String(peer.deviceName || "vel.os device").slice(0, 48),
+    online: true,
+    lastSeen: Date.now()
+  };
+  storage.set(REMOTE_DECK_PEERS_KEY, JSON.stringify(remoteDeckPeers));
+}
+
+function getRemoteDeckDevices() {
+  rememberRemoteDeckPeer({
+    deviceId: velDeviceId,
+    username: velChatUser?.username || "This device",
+    deviceName: getVelDeviceName()
+  });
+  const builtIns = getRemoteDeckBuiltInDevices();
+  const map = new Map(builtIns.map((device) => [device.deviceId, device]));
+  Object.values(remoteDeckPeers).forEach((peer) => {
+    const existing = map.get(peer.deviceId) || {};
+    const online = peer.deviceId === velDeviceId || Date.now() - (Number(peer.lastSeen) || 0) < 15000;
+    map.set(peer.deviceId, { ...existing, ...peer, online });
+  });
+  return [...map.values()]
+    .filter((device) => device.deviceId && isRemoteDeckWhitelistedDevice(device.deviceId))
+    .sort((left, right) => Number(right.deviceId === velDeviceId) - Number(left.deviceId === velDeviceId) || Number(right.online) - Number(left.online));
+}
+
+function renderRemoteDeckTargets() {
+  if (!remoteDeckTargets) return;
+  const devices = getRemoteDeckDevices();
+  if (!remoteDeckSelectedDevices.size && isRemoteDeckWhitelistedDevice()) {
+    remoteDeckSelectedDevices.add(velDeviceId);
+  }
+  const selectedNames = devices
+    .filter((device) => remoteDeckSelectedDevices.has(device.deviceId))
+    .map((device) => device.deviceId === velDeviceId ? "This device" : device.username || "Whitelisted");
+  if (remoteDeckSelectedName) {
+    remoteDeckSelectedName.textContent = selectedNames.length
+      ? selectedNames.length === 1 ? selectedNames[0] : `${selectedNames.length} selected`
+      : "No target selected";
+  }
+  remoteDeckTargets.innerHTML = devices.map((device) => {
+    const selected = remoteDeckSelectedDevices.has(device.deviceId);
+    const isThisDevice = device.deviceId === velDeviceId;
+    return `
+      <button class="remote-device-card${selected ? " is-selected" : ""}" type="button" data-remote-target="${escapeHtml(device.deviceId)}" aria-pressed="${selected}">
+        <strong>${escapeHtml(isThisDevice ? "This device" : device.username || "Whitelisted")}</strong>
+        <span>${escapeHtml(device.deviceName || "vel.os device")}</span>
+        <small>${escapeHtml(`${device.online ? "Online" : "Offline"} - ${device.deviceId.slice(0, 12)}`)}</small>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderRemoteDeckGrid() {
+  if (!remoteDeckGrid) return;
+  const realSounds = getAllSoundboardRealSounds();
+  const realPads = realSounds.map((sound) => `
+    <button class="sound-pad is-real" type="button" data-remote-sound-file-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Send ${escapeHtml(sound.title)}">
+      <em>REAL</em>
+      <strong>${escapeHtml(sound.title)}</strong>
+      <span>${escapeHtml(sound.detail)}</span>
+    </button>
+  `).join("");
+  const generatedPads = soundboardGeneratedSounds.map((sound) => `
+    <button class="sound-pad" type="button" data-remote-sound-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Send ${escapeHtml(sound.title)}">
+      <strong>${escapeHtml(sound.title)}</strong>
+      <span>${escapeHtml(sound.detail)}</span>
+    </button>
+  `).join("");
+  remoteDeckGrid.innerHTML = `${realPads}${generatedPads}`;
+}
+
+function renderRemoteDeck() {
+  if (!isRemoteDeckWhitelistedDevice()) return;
+  if (remoteDeckAllow) {
+    remoteDeckAllow.textContent = remoteDeckAllowed ? "This device allowed" : "Allow this device";
+    remoteDeckAllow.classList.toggle("is-solid", !remoteDeckAllowed);
+  }
+  renderRemoteDeckTargets();
+  renderRemoteDeckGrid();
+}
+
+function postRemoteDeckMessage(message = {}) {
+  const payload = {
+    ...message,
+    fromDeviceId: velDeviceId,
+    fromUsername: velChatUser?.username || "Owner",
+    createdAt: Date.now(),
+    nonce: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  };
+  try {
+    remoteDeckChannel?.postMessage(payload);
+  } catch (error) {
+    return;
+  }
+  try {
+    storage.set("vel-remote-deck-command", JSON.stringify(payload));
+  } catch (error) {
+    return;
+  }
+}
+
+function playRemoteDeckPayload(payload = {}) {
+  if (payload.soundType === "file") {
+    playSoundboardFile(payload.soundId || "");
+    return;
+  }
+  playSoundboardSound(payload.soundId || "");
+}
+
+function handleRemoteDeckMessage(payload = {}) {
+  if (!payload || payload.fromDeviceId === velDeviceId) return;
+  if (payload.type === "hello") {
+    rememberRemoteDeckPeer(payload);
+    if (isDrawerOpen("remoteDeck")) renderRemoteDeckTargets();
+    return;
+  }
+  if (payload.type !== "play" || payload.targetDeviceId !== velDeviceId) return;
+  if (!remoteDeckAllowed) {
+    const allow = window.confirm(`${payload.fromUsername || "A whitelisted device"} wants to use Remote Deck on this device. Allow sounds?`);
+    if (!allow) return;
+    remoteDeckAllowed = true;
+    storage.set(REMOTE_DECK_ALLOW_KEY, "1");
+  }
+  playRemoteDeckPayload(payload);
+  setRemoteDeckStatus(`Received ${payload.soundTitle || "sound"} from ${payload.fromUsername || "Remote Deck"}.`, "live");
+}
+
+function sendRemoteDeckSound(soundType = "generated", soundId = "", soundTitle = "Sound") {
+  if (!remoteDeckSelectedDevices.size) {
+    setRemoteDeckStatus("Select at least one target first.", "warn");
+    return;
+  }
+  const selected = [...remoteDeckSelectedDevices];
+  selected.forEach((targetDeviceId) => {
+    const payload = { type: "play", targetDeviceId, soundType, soundId, soundTitle };
+    if (targetDeviceId === velDeviceId) {
+      if (!remoteDeckAllowed) {
+        setRemoteDeckStatus("Press Allow this device before playing sounds here.", "warn");
+        return;
+      }
+      playRemoteDeckPayload(payload);
+      return;
+    }
+    postRemoteDeckMessage(payload);
+  });
+  setRemoteDeckStatus(`Sent ${soundTitle} to ${selected.length} target${selected.length === 1 ? "" : "s"}.`, "live");
+}
+
+function announceRemoteDeckPeer() {
+  if (!isRemoteDeckWhitelistedDevice()) return;
+  postRemoteDeckMessage({
+    type: "hello",
+    deviceId: velDeviceId,
+    username: velChatUser?.username || "Whitelisted",
+    deviceName: getVelDeviceName()
+  });
+}
+
+function initRemoteDeckChannel() {
+  if (!isRemoteDeckWhitelistedDevice()) return;
+  rememberRemoteDeckPeer({
+    deviceId: velDeviceId,
+    username: velChatUser?.username || "This device",
+    deviceName: getVelDeviceName()
+  });
+  if ("BroadcastChannel" in window && !remoteDeckChannel) {
+    remoteDeckChannel = new BroadcastChannel("vel-remote-deck");
+    remoteDeckChannel.addEventListener("message", (event) => handleRemoteDeckMessage(event.data));
+  }
+  window.addEventListener("storage", (event) => {
+    if (event.key !== "vel-remote-deck-command" || !event.newValue) return;
+    try {
+      handleRemoteDeckMessage(JSON.parse(event.newValue));
+    } catch (error) {
+      return;
+    }
+  });
+  announceRemoteDeckPeer();
+  window.setInterval(announceRemoteDeckPeer, 8000);
+}
+
+function openRemoteDeck() {
+  if (!isRemoteDeckWhitelistedDevice()) return;
+  renderRemoteDeck();
+  setRemoteDeckStatus(remoteDeckAllowed
+    ? "Ready. Select targets and send a pad."
+    : "Press Allow this device if you want this device to receive sounds.", remoteDeckAllowed ? "live" : "warn");
+}
+
 function setDevStatus(message = "", tone = "") {
   if (!devStatus) return;
   devStatus.textContent = message;
@@ -4509,6 +4780,7 @@ function getDevActivityLabel() {
   }
   if (activePanel === "lobbies") return `Notebook: ${lobbyState.mode === "sketch" ? "Sketching" : "Writing notes"}`;
   if (activePanel === "soundboard") return "Using Soundboard";
+  if (activePanel === "remoteDeck") return "Using Remote Deck";
   if (activePanel === "ai") return aiLoading ? "Using Assistant" : "Assistant open";
   if (activePanel === "calculator") return secretVaultUnlocked ? "In secret vault" : "Using Calculator";
   if (activePanel === "settings") return "Changing settings";
@@ -4673,6 +4945,12 @@ function renderDevPanel(users = [], meta = {}) {
 function renderDevWhitelist(adminDevices = []) {
   if (!devWhitelistList) return;
   const devices = adminDevices.filter((device) => device?.deviceId);
+  storage.set("vel-remote-deck-extra-whitelist", JSON.stringify(devices.map((device) => device.deviceId).filter(Boolean).slice(0, 50)));
+  devices.forEach((device) => rememberRemoteDeckPeer({
+    deviceId: device.deviceId,
+    username: device.username || "Whitelisted",
+    deviceName: device.deviceName || "Dev whitelist"
+  }));
   devWhitelistList.innerHTML = `
     <p class="section-label">Dev Whitelist${devices.length ? ` (${devices.length})` : ""}</p>
     ${devices.length ? devices.map((device) => `
@@ -8767,7 +9045,7 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "lobbies", "soundboard", "dev", "calculator", "settings", "network"],
+      tools: ["browser", "lobbies", "soundboard", "remoteDeck", "dev", "calculator", "settings", "network"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -8779,6 +9057,7 @@ function renderLauncherCatalog() {
       : [];
     const utilityItems = (utilitySections[launcherStoreCategory] || [])
       .map((id) => ({ id, ...utilityApps[id] }))
+      .filter((app) => isUtilityAppVisible(app.id))
       .filter((app) => app.title && matchesSearchQuery([app.title, app.label, launcherStoreCategory], launcherGameQuery));
     const localCards = localItems.map((game) => renderStoreCard({
       ref: `game:${game.id}`,
@@ -11211,6 +11490,60 @@ soundboardFileInput?.addEventListener("change", () => {
 
 soundboardVolume?.addEventListener("input", () => {
   setSoundboardStatus(`Volume ${soundboardVolume.value}%.`);
+});
+
+remoteDeckTargets?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remote-target]");
+  if (!button) return;
+  const deviceId = button.dataset.remoteTarget || "";
+  if (remoteDeckSelectedDevices.has(deviceId)) {
+    remoteDeckSelectedDevices.delete(deviceId);
+  } else {
+    remoteDeckSelectedDevices.add(deviceId);
+  }
+  renderRemoteDeckTargets();
+});
+
+remoteDeckGrid?.addEventListener("click", (event) => {
+  const fileButton = event.target.closest("[data-remote-sound-file-id]");
+  if (fileButton) {
+    const sound = getAllSoundboardRealSounds().find((item) => item.id === fileButton.dataset.remoteSoundFileId);
+    sendRemoteDeckSound("file", fileButton.dataset.remoteSoundFileId || "", sound?.title || "Real sound");
+    return;
+  }
+
+  const button = event.target.closest("[data-remote-sound-id]");
+  if (!button) return;
+  const sound = soundboardGeneratedSounds.find((item) => item.id === button.dataset.remoteSoundId);
+  sendRemoteDeckSound("generated", button.dataset.remoteSoundId || "", sound?.title || "Sound");
+});
+
+remoteDeckAllow?.addEventListener("click", () => {
+  remoteDeckAllowed = !remoteDeckAllowed;
+  storage.set(REMOTE_DECK_ALLOW_KEY, remoteDeckAllowed ? "1" : "0");
+  renderRemoteDeck();
+  setRemoteDeckStatus(remoteDeckAllowed ? "This device can receive Remote Deck sounds." : "This device will not receive Remote Deck sounds.", remoteDeckAllowed ? "live" : "warn");
+});
+
+remoteDeckRefresh?.addEventListener("click", () => {
+  announceRemoteDeckPeer();
+  renderRemoteDeckTargets();
+  setRemoteDeckStatus("Refreshed whitelisted devices.", "live");
+});
+
+remoteDeckStop?.addEventListener("click", () => {
+  stopSoundboardSounds();
+});
+
+remoteDeckFullscreen?.addEventListener("click", () => {
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fullscreenElement) {
+    document.exitFullscreen?.();
+    document.webkitExitFullscreen?.();
+    return;
+  }
+  remoteDeckPanel?.requestFullscreen?.();
+  remoteDeckPanel?.webkitRequestFullscreen?.();
 });
 
 devAuthForm?.addEventListener("submit", (event) => {
@@ -14584,6 +14917,7 @@ updateYouTubeGlobalImportUi();
 renderLobbyState();
 clearLobbyCanvas();
 renderSoundboard();
+initRemoteDeckChannel();
 initDraggableDrawers();
 initScrollAssist();
 initDraggableLyricsWidget();

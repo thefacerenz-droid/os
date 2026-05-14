@@ -1133,6 +1133,45 @@
         </div>
       </section>
 
+      <section class="drawer" id="remoteDeckDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close remote deck" data-close-panel="remoteDeck"></button>
+        <div class="drawer-panel remote-deck-panel">
+          <header class="drawer-head">
+            <div>
+              <p class="micro-label">vel.os admin</p>
+              <h2>Remote Deck</h2>
+              <p class="drawer-copy">Whitelisted sound deck with target selection and opt-in playback.</p>
+            </div>
+            <div class="drawer-head-actions">
+              <button class="close-button" type="button" id="remoteDeckFullscreen">Fullscreen</button>
+              <button class="close-button" type="button" data-close-panel="remoteDeck">Close</button>
+            </div>
+          </header>
+
+          <div class="remote-deck-layout">
+            <aside class="remote-deck-side">
+              <p class="section-label">Selected</p>
+              <h3 id="remoteDeckSelectedName">No target selected</h3>
+              <p class="tiny-note" id="remoteDeckStatus">Pick one or more whitelisted devices.</p>
+              <button class="ghost-button is-solid" type="button" id="remoteDeckAllow">Allow this device</button>
+              <button class="ghost-button" type="button" id="remoteDeckRefresh">Refresh devices</button>
+              <div class="remote-device-list" id="remoteDeckTargets"></div>
+            </aside>
+
+            <section class="remote-deck-main">
+              <div class="remote-deck-topbar">
+                <div>
+                  <p class="section-label">Soundboard</p>
+                  <h3>Send Pad</h3>
+                </div>
+                <button class="ghost-button" type="button" id="remoteDeckStop">Stop Local Audio</button>
+              </div>
+              <div class="soundboard-grid remote-sound-grid" id="remoteDeckGrid" aria-label="Remote soundboard pads"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
       <section class="drawer" id="devDrawer" aria-hidden="true">
         <button class="drawer-scrim" type="button" aria-label="Close dev panel" data-close-panel="dev"></button>
         <div class="drawer-panel dev-panel">

@@ -865,6 +865,10 @@ body.is-home-editing .desktop-shortcut {
   width: min(920px, calc(100% - 2.3rem));
 }
 
+.remote-deck-panel {
+  width: min(1120px, calc(100% - 2.3rem));
+}
+
 .lobbies-panel {
   width: min(1120px, calc(100% - 2.3rem));
 }
@@ -894,6 +898,13 @@ body.is-home-editing .desktop-shortcut {
   cursor: grab;
   user-select: none;
   touch-action: none;
+}
+
+.drawer-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .drawer-head button,
@@ -2095,6 +2106,94 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 0.72rem;
+}
+
+.remote-deck-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.remote-deck-side,
+.remote-deck-main {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(255, 255, 255, 0.12), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.36);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 1rem;
+}
+
+.remote-deck-side {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.remote-deck-side h3 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+}
+
+.remote-device-list {
+  display: grid;
+  gap: 0.55rem;
+  max-height: min(52dvh, 500px);
+  overflow: auto;
+  padding-right: 0.12rem;
+}
+
+.remote-device-card {
+  display: grid;
+  gap: 0.24rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  padding: 0.72rem;
+  cursor: pointer;
+}
+
+.remote-device-card.is-selected {
+  border-color: rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.remote-device-card strong,
+.remote-device-card span,
+.remote-device-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote-device-card small {
+  color: var(--muted);
+}
+
+.remote-deck-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.remote-sound-grid {
+  max-height: min(60dvh, 620px);
+  overflow: auto;
+  padding-right: 0.12rem;
+}
+
+.remote-deck-panel:fullscreen,
+.remote-deck-panel:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
 }
 
 .sound-pad {
@@ -9080,6 +9179,10 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .soundboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .remote-deck-layout {
+    grid-template-columns: 1fr;
   }
 
   .dev-auth-form,
