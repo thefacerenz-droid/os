@@ -3854,7 +3854,7 @@ function scheduleVelChatTypingPoll() {
 async function fetchVelChatTyping() {
   if (!velChatUnlocked) return;
   try {
-    const response = await fetch("/api/chat/typing", {
+    const response = await fetch("/api/chat/messages?__typing=1", {
       cache: "no-store",
       headers: getVelChatHeaders()
     });
@@ -3881,7 +3881,7 @@ async function sendVelChatTyping(isTyping) {
   velChatIsTyping = Boolean(isTyping);
   velChatLastTypingSentAt = now;
   try {
-    const response = await fetch("/api/chat/typing", {
+    const response = await fetch("/api/chat/messages?__typing=1", {
       method: "POST",
       headers: getVelChatHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({

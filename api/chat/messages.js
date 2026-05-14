@@ -6,6 +6,7 @@ const CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const ATTACHMENT_URL_LIMIT = 2600000;
 const ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
 const { broadcastLiveEvent } = require("../../lib/live.js");
+const handleChatTyping = require("../../lib/chatTyping.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -279,6 +280,11 @@ function getDeleteMessageId(body = {}) {
 
 module.exports = async function handler(req, res) {
   try {
+    const url = new URL(req.url || "/", "http://localhost");
+    if (url.searchParams.get("__typing") === "1") {
+      return handleChatTyping(req, res);
+    }
+
     if (req.method === "GET") {
       if (!hasValidPin(req)) return sendPinRequired(res);
       const store = await readChatStore();

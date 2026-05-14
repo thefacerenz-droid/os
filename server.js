@@ -21,7 +21,7 @@ const handleLobbies = require("./api/lobbies.js");
 const handleSoundboard = require("./api/soundboard.js");
 const handleDevPresence = require("./api/dev/presence.js");
 const handleDevScreen = require("./api/dev/screen.js");
-const handleChatTyping = require("./api/chat/typing.js");
+const handleChatTyping = require("./lib/chatTyping.js");
 const handleFlappyLeaderboard = require("./api/games/flappy.js");
 const handleLive = require("./lib/live.js");
 const sessions = new Map();
@@ -919,6 +919,7 @@ async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || `localhost:${PORT}`}`);
   try {
     if (url.pathname === "/api/ai/chat") return await handleAiChat(req, res);
+    if (url.pathname === "/api/chat/messages" && url.searchParams.get("__typing") === "1") return await handleChatTyping(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
     if (url.pathname === "/api/chat/typing") return await handleChatTyping(req, res);
     if (url.pathname === "/api/lobbies") return await handleLobbies(req, res);
