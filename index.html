@@ -217,12 +217,12 @@
       </section>
 
       <section class="drawer ai-drawer" id="aiDrawer" aria-hidden="true">
-        <button class="drawer-scrim" type="button" aria-label="Close Vel AI" data-close-panel="ai"></button>
+        <button class="drawer-scrim" type="button" aria-label="Close Vel Assistant" data-close-panel="ai"></button>
         <div class="drawer-panel ai-panel">
           <header class="drawer-head">
             <div>
               <p class="micro-label">vel.os</p>
-              <h2>Vel AI</h2>
+              <h2>Vel Assistant</h2>
               <p class="drawer-copy">Built into the desktop.</p>
             </div>
             <div class="window-actions">
@@ -256,7 +256,7 @@
               <div class="youtube-launch-word">
                 <span>v</span><span>e</span><span>l</span><strong>Tube</strong>
               </div>
-              <p>Booting official player</p>
+              <p>Starting player</p>
             </div>
           </div>
 
@@ -266,7 +266,7 @@
               <div>
               <p class="micro-label">vel.os</p>
               <h2>YouTube</h2>
-              <p class="drawer-copy">Search real YouTube results and play videos inside vel.os with official embeds.</p>
+              <p class="drawer-copy">Search and watch videos inside vel.os.</p>
               </div>
             </div>
             <div class="window-actions">
@@ -321,9 +321,9 @@
                   </div>
                 </div>
                 <div class="youtube-player-meta">
-                  <p class="section-label" id="youtubePlayerChannel">Official YouTube Embed</p>
+                  <p class="section-label" id="youtubePlayerChannel">YouTube</p>
                   <h3 id="youtubePlayerTitle">Search YouTube to start watching.</h3>
-                  <p id="youtubePlayerDescription">Results use your YouTube Data API key through the vel.os server route.</p>
+                  <p id="youtubePlayerDescription">Search, pick a video, and it will play here.</p>
                 </div>
               </article>
             </main>
@@ -371,7 +371,7 @@
             <div>
               <p class="micro-label">vel.os</p>
               <h2>Vel Hub</h2>
-              <p class="drawer-copy">A cinematic movie library powered by free, embeddable archive films.</p>
+              <p class="drawer-copy">A clean movie room built into the desktop.</p>
             </div>
             <div class="window-actions">
               <button class="close-button" id="velHubWindowButton" type="button">Window</button>
@@ -398,7 +398,7 @@
                 <p class="section-label">Modern Picks</p>
                 <h3>Movies people actually search for</h3>
               </div>
-              <p>Full modern movies need an official licensed source. These cards open trailer searches or watch-option searches inside vel.os.</p>
+              <p>Browse featured picks, trailers, and watch options from one place.</p>
             </div>
             <div class="velhub-modern-grid" id="velHubModernGrid"></div>
           </section>
@@ -408,7 +408,7 @@
             <div class="velhub-player-meta">
               <p class="section-label" id="velHubPlayerSource">Internet Archive</p>
               <h3 id="velHubPlayerTitle">Choose a movie</h3>
-              <p id="velHubPlayerDescription">Movies open with the official Internet Archive embed player.</p>
+              <p id="velHubPlayerDescription">Pick something to start watching.</p>
               <div class="velhub-player-actions">
                 <button class="ghost-button is-solid" id="velHubFullscreenButton" type="button">Fullscreen</button>
                 <button class="ghost-button" id="velHubOpenTabButton" type="button">Open Source</button>
@@ -468,14 +468,14 @@
 
           <div class="web-shell">
             <div class="web-warning" id="webWarning" hidden>
-              <strong>Embedding may be blocked.</strong>
+                <strong>This page did not open here.</strong>
               <p id="webWarningText">This site may refuse to load inside a normal browser frame.</p>
             </div>
             <div class="web-frame-wrap">
               <iframe id="webFrame" class="web-frame" title="Website view" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; picture-in-picture; web-share" allowfullscreen src="about:blank"></iframe>
               <div class="web-frame-helper" id="webFrameHelper" hidden>
                 <strong>iPad source helper</strong>
-                <p>Some web games block iPad frames. Try another mirror or jump into the offline games that run inside vel.os.</p>
+                <p>Switch mirrors or open a local game that runs inside vel.os.</p>
                 <div>
                   <button class="ghost-button is-solid" id="webHelperMirrorButton" type="button">Try Mirror</button>
                   <button class="ghost-button" id="webHelperLocalButton" type="button">Local Games</button>
@@ -544,7 +544,7 @@
                 </div>
                 <input class="mini-search-input velofy-search" id="velofySpotifySearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search Spotify songs" aria-label="Search Spotify songs" />
                 <div class="spotify-result-list" id="velofySpotifyResults"></div>
-                <p class="tiny-note">Spotify playback uses official embeds. Save songs here to build a huge Velofy list fast.</p>
+                <p class="tiny-note">Search songs, save tracks, and build a bigger Velofy library.</p>
               </article>
             </section>
           </div>
@@ -959,7 +959,7 @@
               <div>
                 <p class="section-label">Connection</p>
                 <h3>Direct Mode</h3>
-                <p>vel.os loads allowed sources normally and shows a clean message when a website refuses iframe embedding.</p>
+              <p>vel.os opens web apps in a simple desktop window.</p>
               </div>
               <div class="network-orb" aria-hidden="true"><span></span></div>
             </article>
@@ -984,7 +984,7 @@
                 </div>
                 <span class="network-badge">Direct</span>
               </div>
-              <p>Proxy-style bypass routing is not wired in. The web window stays honest: direct load, supported embeds, or a clear blocked message.</p>
+              <p>Use direct mode for normal browsing and keep notes for sources that work best.</p>
               <div class="proxy-note-form">
                 <input class="mini-search-input" id="proxyNoteInput" type="text" maxlength="42" placeholder="Label a network note" aria-label="Network note" />
                 <button class="ghost-button is-solid" id="proxyNoteSave" type="button">Save Note</button>
@@ -1001,8 +1001,8 @@
                 <span class="network-badge">Live</span>
               </div>
               <div class="compat-grid">
-                <div><strong>Best chance</strong><span>GamePix, CrazyGames embeds, local games</span></div>
-                <div><strong>Usually blocked</strong><span>Poki pages, Google doodles, full media sites</span></div>
+                <div><strong>Works well</strong><span>Local games and supported web games</span></div>
+                <div><strong>Needs a tab</strong><span>Pages that do not open in app windows</span></div>
                 <div><strong>Why</strong><span>Sites can set browser security headers that reject iframes.</span></div>
               </div>
             </article>

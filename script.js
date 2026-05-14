@@ -35,7 +35,7 @@ const localGameMeta = {
     category: "Arcade",
     title: "Offline Snake",
     description:
-      "Guide the snake, collect food, and avoid your own trail in a fast monochrome local clone.",
+      "Guide the snake, collect food, and avoid your own trail.",
     best: "Classic arcade chasing",
     controls: "Swipe, WASD, arrows, or on-screen pad"
   },
@@ -404,7 +404,7 @@ const webApps = {
     description: "Search the web or open a URL inside the vel.os web window.",
     url: "about:blank",
     embedBlocked: false,
-    note: "Type a search like 'space games' or a full URL. This is a normal browser frame, not a bypass proxy."
+    note: "Type a search like 'space games' or a full URL."
   },
 
   googlesnake: {
@@ -413,7 +413,7 @@ const webApps = {
     description: "Google's real Snake arcade page opened through vel.os.",
     url: "https://www.google.com/fbx?fbx=snake_arcade&fbxga=1&hl=en&origin=www.google.com",
     embedBlocked: true,
-    note: "Google Snake blocks iframe loading, so use this as a fallback/external-style entry."
+    note: "Classic snake entry."
   },
 
   rocketgoal: {
@@ -422,7 +422,7 @@ const webApps = {
     description: "Live RocketGoal site opened inside vel.os.",
     url: "https://rocketgoal.io/",
     embedBlocked: false,
-    note: "RocketGoal should load inside vel.os unless the site or network blocks iframe access."
+    note: "Fast soccer arcade entry."
   },
 
   dune: {
@@ -440,7 +440,7 @@ const webApps = {
     description: "Live GamePix page for 4 Colors Multiplayer inside vel.os.",
     url: "https://www.gamepix.com/play/4-colors-multiplayer",
     embedBlocked: false,
-    note: "4 Colors should load inside vel.os unless the site or network blocks iframe access."
+    note: "Color-card party game entry."
   },
 
   snowrider: {
@@ -455,10 +455,10 @@ const webApps = {
   slither: {
     title: "Slither.io",
     tag: "Game Site",
-    description: "Slither opened through vel.os using the official site.",
+    description: "Slither opened through vel.os.",
     url: "http://slither.io/",
     embedBlocked: false,
-    note: "The official Slither site uses HTTP, so it may get blocked later if vel.os is hosted on HTTPS."
+    note: "Classic snake arena entry."
   },
 
   snakegame: {
@@ -467,7 +467,7 @@ const webApps = {
     description: "A standalone snake game page opened inside vel.os.",
     url: "https://www.gamepix.com/play/snake-game",
     embedBlocked: false,
-    note: "Good fallback if Google Snake refuses to load inside iframe."
+    note: "Standalone snake entry."
   },
 
   snake2048: {
@@ -557,7 +557,7 @@ const webApps = {
     description: "Random physics volleyball game.",
     url: "https://www.crazygames.com/game/volley-random",
     embedBlocked: true,
-    note: "May need fallback handling if iframe loading is blocked."
+    note: "Arcade catalog entry."
   },
 
   shellshockers: {
@@ -566,7 +566,7 @@ const webApps = {
     description: "Egg FPS game loaded through vel.os.",
     url: "https://www.crazygames.com/game/shellshockersio",
     embedBlocked: true,
-    note: "Likely to block iframe embedding, so this is a fallback-style entry."
+    note: "Arcade catalog entry."
   },
 
   cuttherope: {
@@ -584,7 +584,7 @@ const webApps = {
     description: "Runner game inside vel.os.",
     url: "https://poki.com/en/g/subway-surfers",
     embedBlocked: true,
-    note: "Poki often blocks iframe loading, so this should be treated as a likely fallback."
+    note: "Poki catalog entry."
   },
 
   temple: {
@@ -602,7 +602,7 @@ const webApps = {
     description: "Bike stunt game opened through vel.os.",
     url: "https://poki.com/en/g/moto-x3m",
     embedBlocked: true,
-    note: "Poki pages often need fallback handling."
+    note: "Poki catalog entry."
   },
 
   drivemad: {
@@ -611,7 +611,7 @@ const webApps = {
     description: "Physics driving game through vel.os.",
     url: "https://poki.com/en/g/drive-mad",
     embedBlocked: true,
-    note: "Likely needs fallback handling if iframe loading fails."
+    note: "Arcade catalog entry."
   },
 
   retrobowl: {
@@ -629,7 +629,7 @@ const webApps = {
     description: "Fast tunnel reflex game.",
     url: "https://www.crazygames.com/game/tunnel-rush",
     embedBlocked: true,
-    note: "Likely to require fallback if iframe access is blocked."
+    note: "Arcade catalog entry."
   },
 
   stickmanhook: {
@@ -638,60 +638,60 @@ const webApps = {
     description: "Swing through levels in Stickman Hook.",
     url: "https://poki.com/en/g/stickman-hook",
     embedBlocked: true,
-    note: "Poki page, so iframe loading may fail."
+    note: "Poki catalog entry."
   },
 
   youtube: {
     title: "YouTube",
     tag: "Media Provider",
-    description: "Search YouTube with the backend API and play videos in vel.os.",
+    description: "Search YouTube and play videos in vel.os.",
     url: "about:blank",
     mode: "mediaProvider",
     provider: "youtube",
     embedBlocked: false,
-    note: "YouTube search runs through /api/youtube/search so the API key stays on the server."
+    note: "Video search and player."
   },
 
   spotify: {
     title: "Spotify",
     tag: "Media Provider",
-    description: "Search Spotify metadata and open official Spotify embeds.",
+    description: "Search Spotify and save songs into Velofy.",
     url: "about:blank",
     mode: "mediaProvider",
     provider: "spotify",
     embedBlocked: false,
-    note: "Spotify search runs through /api/spotify/search using server-side client credentials."
+    note: "Music search entry."
   },
 
   tiktok: {
     title: "TikTok",
     tag: "Media Provider",
-    description: "Connect TikTok to display authorized profile videos.",
+    description: "Connect TikTok to display profile videos.",
     url: "about:blank",
     mode: "mediaProvider",
     provider: "tiktok",
     embedBlocked: false,
-    note: "TikTok uses official Login Kit and Display API endpoints only."
+    note: "Short-video entry."
   },
 
   tubi: {
     title: "Tubi",
     tag: "Watch Site",
-    description: "Tubi cannot be embedded as a full website inside vel.os.",
+    description: "Tubi catalog entry.",
     url: "about:blank",
     mode: "insideOnlyBlocked",
     embedBlocked: true,
-    note: "Tubi blocks iframe loading for the main app. To keep the project inside-only, use local videos or official embeddable trailers instead."
+    note: "Movie catalog shortcut."
   },
 
   pluto: {
     title: "Pluto TV",
     tag: "Watch Site",
-    description: "Pluto TV cannot be embedded as a full website inside vel.os.",
+    description: "Pluto TV catalog entry.",
     url: "about:blank",
     mode: "insideOnlyBlocked",
     embedBlocked: true,
-    note: "Pluto TV blocks iframe loading for the main app. To keep the project inside-only, use local videos or official embeddable clips instead."
+    note: "Live TV shortcut."
   }
 };
 
@@ -751,7 +751,7 @@ const gameCatalog = [
     badgeSrc: "./assets/images/apps/slither.svg",
     url: "https://www.crazygames.com/embed/slitherio",
     mirrors: ["http://slither.io/"],
-    note: "CrazyGames embed first, official site as a mirror."
+    note: "CrazyGames entry with a backup mirror."
   },
   {
     id: "subway",
@@ -760,7 +760,7 @@ const gameCatalog = [
     badgeText: "SS",
     url: "https://subwaysurfersgame.io/",
     mirrors: ["https://subwaysurfersgame.net/"],
-    note: "Direct runner mirror because the original portal pages are usually iframe-blocked."
+    note: "Runner game mirror."
   },
   {
     id: "temple",
@@ -1047,7 +1047,7 @@ const gameSourceOverrides = {
     category: "GamePix",
     source: "gamepix",
     url: `https://www.gamepix.com/play/${slug}`,
-    note: `${title} from the official GamePix game catalog. If a network blocks GamePix, vel.os cannot bypass that.`
+    note: `${title} from the GamePix game catalog.`
   });
 });
 
@@ -1166,7 +1166,7 @@ const gameSourceOverrides = {
     source: "poki",
     url: `https://poki.com/en/g/${slug}`,
     embedBlocked: true,
-    note: `${title} is from Poki's official catalog, but Poki blocks third-party iframe loading with browser security rules. Use the GamePix, CrazyGames, or More Sites tabs for games that can stay inside vel.os.`
+    note: `${title} from the Poki game catalog.`
   });
 });
 
@@ -1230,7 +1230,7 @@ const gameSourceOverrides = {
   addCatalogGame({
     source: "google",
     embedBlocked: true,
-    note: `${game.title} is an official Google game, but Google blocks third-party iframe loading with browser security rules. Use the GamePix, CrazyGames, or More Sites tabs for in-app play.`,
+    note: `${game.title} from the Google games catalog.`,
     ...game
   });
 });
@@ -1253,7 +1253,7 @@ const gameSourceOverrides = {
     category,
     source: "crazygames",
     url,
-    note: `${title} using a CrazyGames embed URL. If the embed is unavailable, try another source tab.`
+    note: `${title} from the CrazyGames catalog.`
   });
 });
 
@@ -1292,9 +1292,9 @@ const utilityApps = {
     panel: "music"
   },
   ai: {
-    title: "Vel AI",
-    label: "Vel AI",
-    badgeText: "AI",
+    title: "Vel Assistant",
+    label: "Assistant",
+    badgeText: "VA",
     action: "panel",
     panel: "ai"
   },
@@ -3154,21 +3154,21 @@ function renderAiMessages() {
   if (!aiMessages.length) {
     aiMessagesEl.innerHTML = `
       <article class="ai-message is-assistant">
-        <strong>Vel AI</strong>
+        <strong>Vel Assistant</strong>
         <p>No messages yet.</p>
       </article>
     `;
   } else {
     aiMessagesEl.innerHTML = aiMessages.map((message) => `
       <article class="ai-message ${message.role === "user" ? "is-user" : "is-assistant"}">
-        <strong>${message.role === "user" ? "You" : "Vel AI"}</strong>
+        <strong>${message.role === "user" ? "You" : "Vel Assistant"}</strong>
         <p>${escapeHtml(message.content)}</p>
       </article>
     `).join("");
   }
   aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
   if (aiStatus) {
-    aiStatus.textContent = aiLoading ? "Thinking" : `${aiMessages.filter((item) => item.role === "user").length} prompts`;
+    aiStatus.textContent = aiLoading ? "Working" : `${aiMessages.filter((item) => item.role === "user").length} messages`;
   }
   if (aiChatForm) {
     aiChatForm.classList.toggle("is-loading", aiLoading);
@@ -3184,7 +3184,7 @@ function setAiError(message) {
     ...aiMessages,
     {
       role: "assistant",
-      content: message || "Vel AI could not reply right now."
+      content: message || "Vel Assistant could not reply right now."
     }
   ].slice(-AI_HISTORY_LIMIT);
   saveAiMessages();
@@ -3211,7 +3211,7 @@ async function sendAiMessage(text) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.message || "Vel AI is not available right now.");
+      throw new Error(data.message || "Vel Assistant is not available right now.");
     }
     aiMessages = [
       ...aiMessages,
@@ -4509,7 +4509,7 @@ function getDevActivityLabel() {
   }
   if (activePanel === "lobbies") return `Notebook: ${lobbyState.mode === "sketch" ? "Sketching" : "Writing notes"}`;
   if (activePanel === "soundboard") return "Using Soundboard";
-  if (activePanel === "ai") return aiLoading ? "Asking Vel AI" : "Using Vel AI";
+  if (activePanel === "ai") return aiLoading ? "Using Assistant" : "Assistant open";
   if (activePanel === "calculator") return secretVaultUnlocked ? "In secret vault" : "Using Calculator";
   if (activePanel === "settings") return "Changing settings";
   if (activePanel === "network") return "Checking Network";
@@ -4636,7 +4636,7 @@ function renderDevPanel(users = [], meta = {}) {
           ${user.deviceId === velDeviceId ? `
             <span class="dev-self-badge">This is you</span>
             <button type="button" data-dev-clear-locks="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Clear My Locks</button>
-            <input type="number" min="1" max="5000" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
+            <input type="number" min="1" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
           ` : `
             ${user.devWhitelisted || whitelistedKeys.has(user.deviceId)
@@ -4656,7 +4656,7 @@ function renderDevPanel(users = [], meta = {}) {
             </select>
             <button type="button" data-dev-lock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Lock app</button>
             <button type="button" data-dev-unlock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Unlock app</button>
-            <input type="number" min="1" max="5000" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
+            <input type="number" min="1" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
             <button type="button" data-dev-screen-request="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Watch screen</button>
           `}
@@ -6773,8 +6773,8 @@ function renderYouTubePlayer() {
       </div>
     `;
     youtubePlayerTitle.textContent = "Browse first. Play when you choose.";
-    youtubePlayerChannel.textContent = "Official YouTube Embed";
-    youtubePlayerDescription.textContent = "The home feed loads metadata first so the app feels more like YouTube and does not autoplay.";
+    youtubePlayerChannel.textContent = "YouTube";
+    youtubePlayerDescription.textContent = "Search, scroll, and pick a video when you're ready.";
     renderYouTubeStatus();
     return;
   }
@@ -6794,10 +6794,10 @@ function renderYouTubePlayer() {
       <button class="youtube-player-hint-close" type="button" data-youtube-dismiss-hint aria-label="Close YouTube player notice">x</button>
       <div class="youtube-player-hint-copy">
         <strong>If this stays black</strong>
-        <span>Mode: ${escapeHtml(getYouTubeEmbedModeLabel())}. vel.os is using official YouTube embeds. Try the other mode, copy the link, or open it in a normal tab.</span>
+        <span>Switch playback mode, copy the link, or open it in a tab.</span>
       </div>
       <div class="youtube-player-hint-actions">
-        <button type="button" data-youtube-retry-embed>Try ${escapeHtml(getNextYouTubeEmbedModeLabel())}</button>
+        <button type="button" data-youtube-retry-embed>Switch Mode</button>
         <button type="button" data-youtube-copy-current>Copy Link</button>
         <button type="button" data-youtube-open-current>Open Tab</button>
       </div>
@@ -6805,7 +6805,7 @@ function renderYouTubePlayer() {
   `;
   youtubePlayerTitle.textContent = video.title;
   youtubePlayerChannel.textContent = `${video.channel || "YouTube"}${video.publishedAt ? ` - ${formatYouTubeDate(video.publishedAt)}` : ""}`;
-  youtubePlayerDescription.textContent = video.description || `Playing through the official ${getYouTubeEmbedModeLabel()} YouTube embedded player.`;
+  youtubePlayerDescription.textContent = video.description || "Playing in vel.os.";
   showYouTubePlayerHint();
   renderYouTubeStatus();
 }
@@ -6863,7 +6863,7 @@ function renderYouTubeResults() {
           : youtubeAppState.mode === "movies"
             ? {
               title: "No YouTube movies found",
-              body: "Try searching a movie title plus official full movie, or load a different movie search."
+              body: "Search a movie title or open a different movie search."
             }
           : {
             title: "No videos yet",
@@ -7185,7 +7185,7 @@ function setShortsStatus() {
       : shortsState.error
         ? "Error"
         : shortsState.notice
-          ? `${label} - Starter feed`
+          ? `${label} - Feed`
           : `${label} - ${shortsState.results.length || 0} shorts`;
   }
   if (shortsLoadMore) {
@@ -7342,7 +7342,7 @@ function renderShortsAppFeed() {
   if (shortsState.notice) {
     shortsFeed.insertAdjacentHTML("afterbegin", `
       <article class="shorts-state-card shorts-notice-card">
-        <strong>Starter feed active</strong>
+        <strong>Feed active</strong>
         <p>${escapeHtml(shortsState.notice)}</p>
       </article>
     `);
@@ -7410,7 +7410,7 @@ async function loadShortsForYou({ append = false } = {}) {
       shortsState.results = getShortsFallbackVideos(topics);
     }
     shortsState.error = "";
-    shortsState.notice = `YouTube API is unavailable right now (${message}). Showing the vel.os starter feed until real results work again.`;
+    shortsState.notice = `Feed is limited right now (${message}). Showing saved clips.`;
     shortsState.nextPageToken = "";
   } finally {
     shortsState.loading = false;
@@ -7481,7 +7481,7 @@ function handleYouTubeAddress(value) {
     selectYouTubeAppVideo(existing || {
       id: youtubeId,
       title: "YouTube Video",
-      channel: "Official YouTube player",
+      channel: "YouTube",
       thumbnail: "",
       publishedAt: "",
       description: ""
@@ -7569,6 +7569,88 @@ function persistThemeUnlocks() {
   storage.set("vel-theme-unlocks", JSON.stringify(unlockedThemePacks));
 }
 
+function getSettingsWallpaperButtons() {
+  return [...document.querySelectorAll("[data-wallpaper-option]")];
+}
+
+function normalizeCustomWallpapers(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      id: String(item?.id || "").replace(/[^\w.-]/g, "").slice(0, 48),
+      name: cleanVelChatName(item?.name) || "Custom Wallpaper",
+      image: String(item?.image || ""),
+      createdAt: Number(item?.createdAt) || Date.now()
+    }))
+    .filter((item) => item.id && item.image.startsWith("data:image/"))
+    .filter((item, index, list) => list.findIndex((other) => other.id === item.id) === index)
+    .slice(-18);
+}
+
+function persistCustomWallpapers() {
+  storage.set(VEL_CUSTOM_WALLPAPERS_KEY, JSON.stringify(customWallpapers));
+}
+
+function migrateLegacyCustomWallpaper() {
+  const legacy = readStoredJson(VEL_CUSTOM_THEME_KEY, null);
+  if (!legacy?.image || customWallpapers.some((item) => item.image === legacy.image)) return;
+  customWallpapers = normalizeCustomWallpapers([
+    ...customWallpapers,
+    {
+      id: "saved",
+      name: legacy.name || "Saved Wallpaper",
+      image: legacy.image,
+      createdAt: Number(legacy.createdAt) || Date.now()
+    }
+  ]);
+  persistCustomWallpapers();
+}
+
+function getWallpaperChoice(key = currentWallpaperKey) {
+  const normalizedKey = String(key || "");
+  if (normalizedKey.startsWith("custom:")) {
+    const wallpaper = customWallpapers.find((item) => `custom:${item.id}` === normalizedKey);
+    if (wallpaper) {
+      return {
+        key: normalizedKey,
+        label: wallpaper.name,
+        path: wallpaper.image,
+        custom: true
+      };
+    }
+  }
+  const builtIn = wallpaperOptions[normalizedKey] || wallpaperOptions.vel;
+  return {
+    key: wallpaperOptions[normalizedKey] ? normalizedKey : "vel",
+    label: builtIn.label,
+    path: builtIn.path,
+    custom: false
+  };
+}
+
+function renderSavedWallpaperOptions() {
+  if (!wallpaperPicker) return;
+  wallpaperPicker.querySelectorAll(".is-custom-wallpaper").forEach((button) => button.remove());
+  customWallpapers.forEach((wallpaper) => {
+    const button = document.createElement("button");
+    button.className = "wallpaper-option is-custom-wallpaper";
+    button.type = "button";
+    button.dataset.wallpaperOption = `custom:${wallpaper.id}`;
+    button.innerHTML = `
+      <img src="${escapeHtml(wallpaper.image)}" alt="${escapeHtml(wallpaper.name)} wallpaper" />
+      <strong>${escapeHtml(wallpaper.name)}</strong>
+      <span>Saved wallpaper</span>
+    `;
+    wallpaperPicker.appendChild(button);
+  });
+}
+
+function updateWallpaperButtons() {
+  getSettingsWallpaperButtons().forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.wallpaperOption === currentWallpaperKey);
+    button.setAttribute("aria-pressed", String(button.dataset.wallpaperOption === currentWallpaperKey));
+  });
+}
+
 function renderThemeStore() {
   if (themeCreditBalance) {
     themeCreditBalance.textContent = `${velCredits} VC`;
@@ -7593,7 +7675,7 @@ function renderThemeStore() {
 }
 
 function awardVelCredits(amount = 4) {
-  velCredits = Math.min(9999, velCredits + amount);
+  velCredits += Math.max(0, Number.parseInt(amount, 10) || 0);
   storage.set("vel-theme-credits", String(velCredits));
   renderThemeStore();
 }
@@ -7604,35 +7686,30 @@ function setCustomThemeStatus(message = "", tone = "") {
   customThemeStatus.dataset.tone = tone;
 }
 
-function applyCustomWallpaper(theme = readStoredJson(VEL_CUSTOM_THEME_KEY, null)) {
+function applyCustomWallpaper(theme = customWallpapers[customWallpapers.length - 1] || readStoredJson(VEL_CUSTOM_THEME_KEY, null)) {
   if (!theme?.image) return false;
-  currentWallpaperKey = "custom";
-  currentThemePackKey = "custom";
-  document.documentElement.style.setProperty("--wallpaper-image", `url("${theme.image}")`);
-  document.body.dataset.themePack = "custom";
-  document.body.dataset.taskbarStyle = "glass";
-  document.body.dataset.iconPack = "mono";
-  document.body.dataset.bootStyle = "classic";
-  velofyArtwork.src = theme.image;
-  velofyArtwork.alt = `${theme.name || "Custom"} wallpaper`;
-  storage.set("vel-wallpaper", "custom");
-  storage.set("vel-theme-pack", "custom");
-  settingsWallpaperButtons.forEach((button) => button.classList.remove("is-active"));
-  setCustomThemeStatus(`${theme.name || "Custom theme"} active.`, "live");
+  const existing = customWallpapers.find((item) => item.image === theme.image) || {
+    id: "saved",
+    name: theme.name || "Saved Wallpaper",
+    image: theme.image,
+    createdAt: Number(theme.createdAt) || Date.now()
+  };
+  if (!customWallpapers.some((item) => item.id === existing.id)) {
+    customWallpapers = normalizeCustomWallpapers([...customWallpapers, existing]);
+    persistCustomWallpapers();
+    renderSavedWallpaperOptions();
+  }
+  applyWallpaper(`custom:${existing.id}`);
+  setCustomThemeStatus(`${existing.name || "Saved wallpaper"} active.`, "live");
   return true;
 }
 
 function getCurrentWallpaperInfo() {
-  if (currentWallpaperKey === "custom") {
-    const theme = readStoredJson(VEL_CUSTOM_THEME_KEY, null);
-    if (theme?.image) {
-      return {
-        label: theme.name || "Custom Theme",
-        path: theme.image
-      };
-    }
-  }
-  return wallpaperOptions[currentWallpaperKey] || wallpaperOptions.vel;
+  const choice = getWallpaperChoice(currentWallpaperKey);
+  return {
+    label: choice.label,
+    path: choice.path
+  };
 }
 
 function createCustomTheme() {
@@ -7640,19 +7717,20 @@ function createCustomTheme() {
     setCustomThemeStatus("Pick an image first.", "warn");
     return;
   }
-  if (velCredits < 500) {
-    setCustomThemeStatus(`Need ${500 - velCredits} more VC.`, "warn");
-    return;
-  }
-  velCredits -= 500;
-  storage.set("vel-theme-credits", String(velCredits));
-  const theme = {
-    name: cleanVelChatName(customThemeName?.value || "") || "Custom Theme",
+  const id = `wall-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const wallpaper = {
+    id,
+    name: cleanVelChatName(customThemeName?.value || "") || "Custom Wallpaper",
     image: customThemeDraft.image,
     createdAt: Date.now()
   };
-  storage.set(VEL_CUSTOM_THEME_KEY, JSON.stringify(theme));
-  applyCustomWallpaper(theme);
+  customWallpapers = normalizeCustomWallpapers([...customWallpapers, wallpaper]);
+  persistCustomWallpapers();
+  storage.set(VEL_CUSTOM_THEME_KEY, JSON.stringify(wallpaper));
+  renderSavedWallpaperOptions();
+  applyWallpaper(`custom:${wallpaper.id}`);
+  customThemeDraft = null;
+  setCustomThemeStatus(`${wallpaper.name} saved.`, "live");
   renderThemeStore();
 }
 
@@ -7669,7 +7747,7 @@ function readCustomThemeFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     customThemeDraft = { image: String(reader.result || "") };
-    setCustomThemeStatus(`${file.name} selected. Create costs 500 VC.`, "live");
+    setCustomThemeStatus(`${file.name} selected.`, "live");
   };
   reader.onerror = () => setCustomThemeStatus("Could not read that image.", "error");
   reader.readAsDataURL(file);
@@ -7677,9 +7755,8 @@ function readCustomThemeFile(file) {
 
 function applyWallpaper(key) {
   if (key === "custom" && applyCustomWallpaper()) return;
-  const nextKey = wallpaperOptions[key] ? key : "vel";
-  const choice = wallpaperOptions[nextKey];
-  currentWallpaperKey = nextKey;
+  const choice = getWallpaperChoice(key);
+  currentWallpaperKey = choice.key;
 
   document.documentElement.style.setProperty(
     "--wallpaper-image",
@@ -7688,14 +7765,9 @@ function applyWallpaper(key) {
   velofyArtwork.src = choice.path;
   velofyArtwork.alt = `${choice.label} wallpaper`;
 
-  settingsWallpaperButtons.forEach((button) => {
-    button.classList.toggle(
-      "is-active",
-      button.dataset.wallpaperOption === nextKey
-    );
-  });
+  updateWallpaperButtons();
 
-  storage.set("vel-wallpaper", nextKey);
+  storage.set("vel-wallpaper", currentWallpaperKey);
 }
 
 function applyWallpaperEffect(effect = "cinema") {
@@ -7741,7 +7813,7 @@ function unlockOrApplyThemePack(key) {
     storage.set("vel-theme-credits", String(velCredits));
     persistThemeUnlocks();
   }
-  applyThemePack(key);
+  applyThemePack(key, !String(currentWallpaperKey || "").startsWith("custom:"));
 }
 
 function applyFont(key) {
@@ -9439,7 +9511,7 @@ function normalizeVelHubMovie(doc) {
   return {
     id: identifier,
     title,
-    description: description || "Free archive film with official embedded playback.",
+    description: description || "Free archive film playback.",
     subject,
     creator,
     year: yearMatch ? yearMatch[0] : "Archive",
@@ -9960,7 +10032,7 @@ async function openYouTubePlayer(video) {
   mediaPlayer.hidden = false;
   mediaPlayerProvider.textContent = "YouTube";
   mediaPlayerTitle.textContent = video.title;
-  mediaPlayerMeta.textContent = video.channel || "Official YouTube player";
+  mediaPlayerMeta.textContent = video.channel || "YouTube";
   mediaPlayerFrame.innerHTML = '<div id="youtubeApiPlayer" class="media-api-player"></div>';
   saveMediaHistory({ provider: "youtube", id: video.id, title: video.title, subtitle: video.channel });
   mediaPlayer.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -10268,13 +10340,13 @@ function renderTikTokCards() {
       <div class="media-card-body">
         <p class="section-label">Connected Profile</p>
         <h4>${escapeHtml(profile.display_name || profile.username || "TikTok Creator")}</h4>
-        <p>${escapeHtml(profile.bio_description || "Authorized TikTok Display API profile.")}</p>
+        <p>${escapeHtml(profile.bio_description || "Connected TikTok profile.")}</p>
       </div>
     </article>
   ` : "";
 
   if (!videos.length) {
-    return profileCard + renderEmptyCard("No TikTok videos", "This connected account has no public recent videos available through Display API.");
+    return profileCard + renderEmptyCard("No TikTok videos", "This connected account has no public recent videos available.");
   }
 
   return profileCard + videos.map((video) => `
@@ -10286,7 +10358,7 @@ function renderTikTokCards() {
       <div class="media-card-body">
         <p class="section-label">TikTok</p>
         <h4>${escapeHtml(video.title || video.video_description || "TikTok video")}</h4>
-        <p>${video.duration ? `${escapeHtml(video.duration)}s` : "Official Display API video"}</p>
+        <p>${video.duration ? `${escapeHtml(video.duration)}s` : "TikTok video"}</p>
       </div>
     </article>
   `).join("");
@@ -10366,7 +10438,7 @@ function openTikTokPlayer(video) {
   mediaPlayer.hidden = false;
   mediaPlayerProvider.textContent = "TikTok";
   mediaPlayerTitle.textContent = video.title || video.video_description || "TikTok video";
-  mediaPlayerMeta.textContent = "Official TikTok Display API video";
+  mediaPlayerMeta.textContent = "TikTok video";
 
   if (video.embed_link) {
     mediaPlayerFrame.innerHTML = `
@@ -10499,10 +10571,10 @@ function renderMediaHub() {
   mediaResultsTitle.textContent = `${providerLabel(provider)} Results`;
   if (provider === "spotify") {
     mediaResultsCopy.textContent =
-      "Spotify metadata comes from the Web API. Playback uses official Spotify embeds; Web Playback SDK can be added later for Premium users.";
+      "Search Spotify and open saved music inside Velofy.";
   } else if (provider === "tiktok") {
     mediaResultsCopy.textContent =
-      "TikTok uses official Login Kit and Display API. TikTok does not provide an official global For You feed API.";
+      "Connect a TikTok account to show profile videos.";
   } else {
     mediaResultsCopy.textContent =
       provider === "youtube"
@@ -10525,7 +10597,7 @@ function handleMediaSearch(value) {
   storage.set("vel-media-last-query", query);
 
   if (youtubeId) {
-    openYouTubePlayer({ id: youtubeId, title: "YouTube Video", channel: "Official YouTube player" });
+    openYouTubePlayer({ id: youtubeId, title: "YouTube Video", channel: "YouTube" });
     return;
   }
 
@@ -11791,10 +11863,11 @@ mediaPlayerClose?.addEventListener("click", () => {
   mediaPlayerFrame.innerHTML = "";
 });
 
-settingsWallpaperButtons.forEach((button) => {
-  button.addEventListener("click", () => {
+wallpaperPicker?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-wallpaper-option]");
+  if (button && wallpaperPicker.contains(button)) {
     applyWallpaper(button.dataset.wallpaperOption);
-  });
+  }
 });
 
 settingsWallpaperEffectButtons.forEach((button) => {
@@ -14401,8 +14474,21 @@ diceDuel.reset();
 casinoWallet.render();
 renderPlaylist();
 loadTrack(0, false);
-if (currentThemePackKey === "custom" || currentWallpaperKey === "custom") {
-  applyCustomWallpaper() || applyWallpaper("vel");
+customWallpapers = normalizeCustomWallpapers(readStoredJson(VEL_CUSTOM_WALLPAPERS_KEY, []));
+migrateLegacyCustomWallpaper();
+if (currentWallpaperKey === "custom") {
+  const latestWallpaper = customWallpapers[customWallpapers.length - 1];
+  currentWallpaperKey = latestWallpaper ? `custom:${latestWallpaper.id}` : "vel";
+  storage.set("vel-wallpaper", currentWallpaperKey);
+}
+if (currentThemePackKey === "custom") {
+  currentThemePackKey = "noir";
+  storage.set("vel-theme-pack", currentThemePackKey);
+}
+renderSavedWallpaperOptions();
+if (String(currentWallpaperKey || "").startsWith("custom:")) {
+  applyWallpaper(currentWallpaperKey);
+  applyThemePack(currentThemePackKey, false);
 } else {
   applyWallpaper(currentWallpaperKey);
   applyThemePack(currentThemePackKey, false);

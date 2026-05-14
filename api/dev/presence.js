@@ -329,7 +329,7 @@ function normalizeStore(value = {}) {
 
   const grants = {};
   Object.entries(value?.grants || {}).forEach(([key, grant]) => {
-    const amount = Math.max(0, Math.min(5000, Number.parseInt(grant.amount, 10) || 0));
+    const amount = Math.max(0, Number.parseInt(grant.amount, 10) || 0);
     if (!amount) return;
     grants[key] = {
       id: cleanText(grant.id, 120) || key,
@@ -672,7 +672,7 @@ async function handleControl(req, res, body) {
     };
     if (!store.locks[key].siteLocked && !store.locks[key].lockedApps.length) delete store.locks[key];
   } else if (command === "grant-vc") {
-    const amount = Math.max(1, Math.min(5000, Number.parseInt(body.amount, 10) || 0));
+    const amount = Math.max(1, Number.parseInt(body.amount, 10) || 0);
     store.grants[key] = {
       id: key,
       ...target,
