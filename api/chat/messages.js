@@ -5,8 +5,8 @@ const MEMORY_KEY = "__velos_chat_messages";
 const CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const ATTACHMENT_URL_LIMIT = 2600000;
 const ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
-const { broadcastLiveEvent } = require("../../lib/live.js");
-const handleChatTyping = require("../../lib/chatTyping.js");
+const { broadcastLiveEvent } = require("../../live.js");
+const handleChatTyping = require("../../chatTyping.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;

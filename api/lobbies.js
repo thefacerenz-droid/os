@@ -12,7 +12,7 @@ const STROKE_POINT_LIMIT = 180;
 const CANVAS_WIDTH = 640;
 const CANVAS_HEIGHT = 400;
 const ALLOWED_DRAWING = /^data:image\/(?:png|jpe?g|webp);base64,/i;
-const handleLive = require("../lib/live.js");
+const handleLive = require("../live.js");
 const { broadcastLiveEvent } = handleLive;
 
 function sendJson(res, statusCode, payload) {
