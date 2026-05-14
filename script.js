@@ -12907,6 +12907,7 @@ const flappy = (() => {
   const resetButton = document.getElementById("flappyReset");
   const refreshButton = document.getElementById("flappyLeaderboardRefresh");
   const leaderboardElement = document.getElementById("flappyLeaderboardList");
+  const localLeaderboardKey = "vel-flappy-local-leaderboard";
 
   let width = 430;
   let height = 520;
@@ -12919,7 +12920,7 @@ const flappy = (() => {
   let animationId = 0;
   let lastFrame = 0;
   let spawnTimer = 0;
-  let leaderboard = [];
+  let leaderboard = readStoredJson(localLeaderboardKey, []);
 
   function updateCopy() {
     if (scoreElement) scoreElement.textContent = String(score);
@@ -12954,56 +12955,118 @@ const flappy = (() => {
 
   function drawBackground() {
     const gradient = context.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, "#181818");
-    gradient.addColorStop(0.58, "#070707");
-    gradient.addColorStop(1, "#111111");
+    gradient.addColorStop(0, "#78dcff");
+    gradient.addColorStop(0.58, "#acecff");
+    gradient.addColorStop(1, "#f8f1ad");
     context.fillStyle = gradient;
     context.fillRect(0, 0, width, height);
-    context.strokeStyle = "rgba(255,255,255,0.055)";
-    context.lineWidth = 1;
-    for (let x = 0; x < width; x += 34) {
+
+    const drift = running ? (performance.now() * 0.022) % 260 : 0;
+    const clouds = [
+      { x: 42 - drift * 0.55, y: 72, s: 1.02 },
+      { x: 245 - drift * 0.4, y: 132, s: 0.76 },
+      { x: 384 - drift * 0.65, y: 54, s: 0.9 }
+    ];
+    clouds.forEach((cloud) => {
+      const x = ((cloud.x % (width + 180)) + width + 180) % (width + 180) - 90;
+      context.fillStyle = "rgba(255,255,255,0.86)";
       context.beginPath();
-      context.moveTo(x, 0);
-      context.lineTo(x - 70, height);
-      context.stroke();
+      context.ellipse(x, cloud.y, 38 * cloud.s, 17 * cloud.s, 0, 0, Math.PI * 2);
+      context.ellipse(x + 31 * cloud.s, cloud.y + 2, 30 * cloud.s, 15 * cloud.s, 0, 0, Math.PI * 2);
+      context.ellipse(x - 28 * cloud.s, cloud.y + 4, 25 * cloud.s, 13 * cloud.s, 0, 0, Math.PI * 2);
+      context.fill();
+    });
+
+    const hillGradient = context.createLinearGradient(0, height * 0.62, 0, height);
+    hillGradient.addColorStop(0, "#8de36c");
+    hillGradient.addColorStop(1, "#37a838");
+    context.fillStyle = hillGradient;
+    context.beginPath();
+    context.moveTo(0, height - 80);
+    for (let x = 0; x <= width + 20; x += 34) {
+      context.lineTo(x, height - 78 - Math.sin((x + drift) * 0.018) * 12);
+    }
+    context.lineTo(width, height);
+    context.lineTo(0, height);
+    context.closePath();
+    context.fill();
+
+    context.fillStyle = "#d99632";
+    context.fillRect(0, height - 34, width, 34);
+    context.fillStyle = "#fff05a";
+    for (let x = -40 - (drift % 48); x < width + 48; x += 48) {
+      context.fillRect(x, height - 34, 24, 6);
     }
   }
 
   function drawPipe(pipe) {
     const gapTop = pipe.gapY - pipe.gap / 2;
     const gapBottom = pipe.gapY + pipe.gap / 2;
-    context.fillStyle = "#f4f4f4";
-    context.strokeStyle = "rgba(0,0,0,0.35)";
-    context.lineWidth = 2;
-    [
-      { y: -4, h: gapTop + 4 },
-      { y: gapBottom, h: height - gapBottom + 4 }
-    ].forEach((rect) => {
+    const drawTube = (x, y, w, h, flip = false) => {
+      const tubeGradient = context.createLinearGradient(x, y, x + w, y);
+      tubeGradient.addColorStop(0, "#48b63c");
+      tubeGradient.addColorStop(0.28, "#94ee55");
+      tubeGradient.addColorStop(0.62, "#35a631");
+      tubeGradient.addColorStop(1, "#13701e");
+      context.fillStyle = tubeGradient;
+      context.strokeStyle = "#0b5818";
+      context.lineWidth = 3;
       context.beginPath();
-      context.roundRect?.(pipe.x, rect.y, pipe.w, rect.h, 10);
-      if (typeof context.roundRect !== "function") context.rect(pipe.x, rect.y, pipe.w, rect.h);
+      if (typeof context.roundRect === "function") context.roundRect(x, y, w, h, 10);
+      else context.rect(x, y, w, h);
       context.fill();
       context.stroke();
-    });
+      context.fillStyle = "rgba(255,255,255,0.32)";
+      context.fillRect(x + 10, y + 8, Math.max(5, w * 0.16), Math.max(0, h - 16));
+      const capY = flip ? y + h - 18 : y - 2;
+      context.fillStyle = "#78db43";
+      context.strokeStyle = "#0b5818";
+      context.beginPath();
+      if (typeof context.roundRect === "function") context.roundRect(x - 8, capY, w + 16, 22, 8);
+      else context.rect(x - 8, capY, w + 16, 22);
+      context.fill();
+      context.stroke();
+    };
+    [
+      { y: -8, h: gapTop + 8, flip: true },
+      { y: gapBottom, h: height - gapBottom - 30, flip: false }
+    ].forEach((rect) => drawTube(pipe.x, rect.y, pipe.w, rect.h, rect.flip));
   }
 
   function drawBird() {
     context.save();
     context.translate(bird.x, bird.y);
     context.rotate(Math.max(-0.45, Math.min(0.7, bird.vy / 520)));
+    context.fillStyle = "#ffdf38";
+    context.strokeStyle = "#a86a12";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.ellipse(0, 0, 18, 15, 0, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+    context.fillStyle = "#ff9d2f";
+    context.beginPath();
+    context.moveTo(14, -1);
+    context.lineTo(32, 4);
+    context.lineTo(14, 9);
+    context.closePath();
+    context.fill();
+    context.strokeStyle = "#a85610";
+    context.stroke();
     context.fillStyle = "#fff";
     context.beginPath();
-    context.arc(0, 0, 15, 0, Math.PI * 2);
+    context.arc(7, -7, 5, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = "#050505";
+    context.fillStyle = "#121212";
     context.beginPath();
-    context.arc(5, -5, 3, 0, Math.PI * 2);
+    context.arc(8.5, -7, 2, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = "#fff";
-    context.lineWidth = 4;
+    context.fillStyle = "#f5b51e";
+    context.strokeStyle = "#a86a12";
+    context.lineWidth = 2.4;
     context.beginPath();
-    context.moveTo(-12, 2);
-    context.lineTo(-28, -8);
+    context.ellipse(-9, 3, 10, 6, -0.45, 0, Math.PI * 2);
+    context.fill();
     context.stroke();
     context.restore();
   }
@@ -13013,30 +13076,44 @@ const flappy = (() => {
     drawBackground();
     pipes.forEach(drawPipe);
     drawBird();
-    context.fillStyle = "rgba(255,255,255,0.82)";
-    context.font = "900 13px Arial";
-    context.letterSpacing = "1px";
-    context.fillText("FLAPPY CHALLENGE", 18, 28);
+    context.fillStyle = "rgba(20,45,90,0.78)";
+    context.font = "900 14px Arial";
+    context.fillText("FLAPPY CHALLENGE", 18, 30);
+    context.font = "900 42px Arial";
+    context.textAlign = "center";
+    context.lineWidth = 5;
+    context.strokeStyle = "rgba(0,0,0,0.28)";
+    context.strokeText(String(score), width / 2, 62);
+    context.fillStyle = "#fff";
+    context.fillText(String(score), width / 2, 62);
+    context.textAlign = "start";
   }
 
-  async function loadLeaderboard() {
+  function normalizeLocalScores(items = []) {
+    return (Array.isArray(items) ? items : [])
+      .map((entry) => ({
+        deviceId: String(entry.deviceId || "").slice(0, 96),
+        userId: String(entry.userId || "").slice(0, 64),
+        username: cleanVelChatName(entry.username || "Guest"),
+        score: Math.max(0, Number.parseInt(entry.score, 10) || 0),
+        updatedAt: Number(entry.updatedAt) || Date.now()
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => right.score - left.score || right.updatedAt - left.updatedAt)
+      .slice(0, 12);
+  }
+
+  function loadLeaderboard() {
     if (!leaderboardElement) return;
-    try {
-      const response = await fetch("/api/games/flappy", { cache: "no-store" });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || "Leaderboard failed.");
-      leaderboard = Array.isArray(data.scores) ? data.scores : [];
-      renderLeaderboard(data.persistent);
-    } catch (error) {
-      leaderboardElement.innerHTML = `<p class="catalog-empty">${escapeHtml(error.message || "Leaderboard offline.")}</p>`;
-    }
+    leaderboard = normalizeLocalScores(readStoredJson(localLeaderboardKey, []));
+    renderLeaderboard(true);
   }
 
   function renderLeaderboard(persistent = false) {
     if (!leaderboardElement) return;
     const topScores = leaderboard.slice(0, 8);
     if (!topScores.length) {
-      leaderboardElement.innerHTML = '<p class="catalog-empty">No global scores yet. Be the first.</p>';
+      leaderboardElement.innerHTML = '<p class="catalog-empty">No local scores yet. Be the first.</p>';
     } else {
       leaderboardElement.innerHTML = topScores.map((entry, index) => `
         <article class="flappy-score-row${entry.deviceId === velDeviceId ? " is-you" : ""}">
@@ -13048,32 +13125,27 @@ const flappy = (() => {
     }
     const myRank = leaderboard.findIndex((entry) => entry.deviceId === velDeviceId || entry.userId === velChatUser?.id);
     if (rankElement) rankElement.textContent = myRank >= 0 ? `#${myRank + 1}` : "--";
-    if (!persistent && topScores.length) {
-      leaderboardElement.insertAdjacentHTML("beforeend", '<p class="tiny-note">Leaderboard is temporary until Redis is connected.</p>');
+    if (persistent && topScores.length) {
+      leaderboardElement.insertAdjacentHTML("beforeend", '<p class="tiny-note">Saved on this device.</p>');
     }
   }
 
-  async function submitScore() {
-    if (!score || !velChatPin) return;
-    try {
-      const response = await fetch("/api/games/flappy", {
-        method: "POST",
-        headers: getVelChatHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          userId: velChatUser?.id || "guest",
-          username: velChatUser?.username || "Guest",
-          deviceId: velDeviceId,
-          score
-        })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        leaderboard = Array.isArray(data.scores) ? data.scores : [];
-        renderLeaderboard(data.persistent);
-      }
-    } catch (error) {
-      return;
-    }
+  function submitScore() {
+    if (!score) return;
+    const userId = velChatUser?.id || "guest";
+    const nextEntry = {
+      userId,
+      username: velChatUser?.username || "Guest",
+      deviceId: velDeviceId,
+      score,
+      updatedAt: Date.now()
+    };
+    const owner = nextEntry.userId || nextEntry.deviceId;
+    const previous = normalizeLocalScores(readStoredJson(localLeaderboardKey, []))
+      .filter((entry) => (entry.userId || entry.deviceId) !== owner);
+    leaderboard = normalizeLocalScores([nextEntry, ...previous]);
+    storage.set(localLeaderboardKey, JSON.stringify(leaderboard));
+    renderLeaderboard(true);
   }
 
   function endRun() {
@@ -13085,7 +13157,7 @@ const flappy = (() => {
       storage.set("vel-flappy-best", best);
     }
     updateCopy();
-    if (statusElement) statusElement.textContent = `Run ended at ${score}. Score saved to the leaderboard.`;
+    if (statusElement) statusElement.textContent = `Run ended at ${score}. Score saved on this device.`;
     submitScore();
     draw();
   }
