@@ -12,6 +12,7 @@ const STROKE_POINT_LIMIT = 180;
 const CANVAS_WIDTH = 640;
 const CANVAS_HEIGHT = 400;
 const ALLOWED_DRAWING = /^data:image\/(?:png|jpe?g|webp);base64,/i;
+const { broadcastLiveEvent } = require("./live.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -619,6 +620,14 @@ module.exports = async function handler(req, res) {
     }
 
     const saved = await writeStore(store);
+    broadcastLiveEvent("lobby", {
+      action,
+      lobby: lobbyName,
+      userId: user.userId,
+      username: user.username,
+      targetUserId: cleanText(body.targetUserId || "", 64),
+      inviteId: cleanText(body.inviteId || "", 48)
+    });
     return sendJson(res, 200, serialize(saved, lobbyName, user));
   } catch (error) {
     return sendJson(res, error.code === "missing_storage" ? 503 : 500, {

@@ -4,6 +4,7 @@ const REDIS_CLIENT_KEY = "__velos_screen_redis_client_promise";
 const SCREEN_TTL_MS = 1000 * 60 * 8;
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
+const { broadcastLiveEvent } = require("../live.js");
 const BUILT_IN_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
 const ADMIN_DEVICE_IDS = [
   ...(process.env.VEL_OS_ADMIN_DEVICE_IDS || "").split(/[\s,]+/),
@@ -197,6 +198,12 @@ async function resetSession(req, res, body) {
     status: "requested",
     messages: []
   });
+  broadcastLiveEvent("screen", {
+    action: "reset",
+    sessionId,
+    targetUserId: session.targetUserId,
+    targetDeviceId: session.targetDeviceId
+  });
   return sendJson(res, 200, { ok: true, session });
 }
 
@@ -234,6 +241,14 @@ async function signalSession(req, res, body) {
   if (type === "stopped") session.status = "stopped";
   session.updatedAt = Date.now();
   const saved = await writeSession(session);
+  broadcastLiveEvent("screen", {
+    action: "signal",
+    sessionId,
+    role,
+    type,
+    targetUserId: saved.targetUserId,
+    targetDeviceId: saved.targetDeviceId
+  });
   return sendJson(res, 200, { ok: true, status: saved.status });
 }
 

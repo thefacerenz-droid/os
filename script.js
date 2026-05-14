@@ -2191,6 +2191,7 @@ const VEL_CHAT_POLL_MS = 3000;
 const VEL_CHAT_TYPING_POLL_MS = 1300;
 const VEL_CHAT_TYPING_IDLE_MS = 2600;
 const VEL_CHAT_TYPING_THROTTLE_MS = 900;
+const VEL_LIVE_RECONNECT_MS = 1800;
 const VEL_DEVICE_ID_KEY = "vel-device-id";
 const VEL_TASKBAR_POSITION_KEY = "vel-taskbar-position";
 const VEL_CUSTOM_THEME_KEY = "vel-custom-theme";
@@ -2326,6 +2327,10 @@ let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
 let velChatUnlocked = false;
 let velChatPin = "";
 let velChatAttachment = null;
+let velLiveSource = null;
+let velLiveReconnectTimer = null;
+let velLiveConnected = false;
+let velLiveLastEventAt = 0;
 const storedDevLockedApps = readStoredJson("vel-dev-locked-apps", []);
 let devLockedApps = new Set(Array.isArray(storedDevLockedApps) ? storedDevLockedApps : []);
 let lastDevScreenRequestAt = Number.parseInt(storage.get("vel-dev-screen-request-at", "0"), 10) || 0;
@@ -3341,6 +3346,99 @@ function getVelChatHeaders(extra = {}) {
   };
 }
 
+function stopVelLiveUpdates() {
+  window.clearTimeout(velLiveReconnectTimer);
+  velLiveReconnectTimer = null;
+  velLiveConnected = false;
+  if (velLiveSource) {
+    velLiveSource.close();
+    velLiveSource = null;
+  }
+}
+
+function scheduleVelLiveReconnect() {
+  window.clearTimeout(velLiveReconnectTimer);
+  if (!velChatPin || document.visibilityState === "hidden") return;
+  velLiveReconnectTimer = window.setTimeout(startVelLiveUpdates, VEL_LIVE_RECONNECT_MS);
+}
+
+function handleScreenLiveEvent(payload = {}) {
+  const sessionId = String(payload.sessionId || "");
+  if (!sessionId) return;
+  const viewerSessionId = screenViewer?.dataset.sessionId || "";
+  const viewerRole = screenViewer?.dataset.role || "";
+  if (viewerSessionId === sessionId && viewerRole) {
+    pollScreenSession(sessionId, viewerRole, viewerRole === "admin");
+  }
+  if (pendingScreenShare?.sessionId === sessionId && screenSharePeer) {
+    pollScreenSession(sessionId, "target", false);
+  }
+}
+
+function handleVelLiveEvent(payload = {}) {
+  const type = String(payload.type || "");
+  if (!type || type === "connected") return;
+  velLiveLastEventAt = Number(payload.at) || Date.now();
+  if (type === "chat" && velChatUnlocked) {
+    fetchVelChatMessages(false);
+    return;
+  }
+  if (type === "chat-typing" && velChatUnlocked) {
+    fetchVelChatTyping();
+    return;
+  }
+  if (type === "lobby" && velChatPin) {
+    if (isDrawerOpen("lobbies") || payload.targetUserId === velChatUser?.id) {
+      loadLobbyState({ silent: true, live: true });
+    }
+    return;
+  }
+  if (type === "dev-presence") {
+    if (isDrawerOpen("dev") && devAdminCode) fetchDevPresence();
+    return;
+  }
+  if (type === "dev-control") {
+    checkDevAccess({ silent: true, once: true });
+    if (isDrawerOpen("dev") && devAdminCode) fetchDevPresence();
+    return;
+  }
+  if (type === "screen") {
+    handleScreenLiveEvent(payload);
+  }
+}
+
+function startVelLiveUpdates() {
+  if (!("EventSource" in window) || !velChatPin) return;
+  if (velLiveSource && [EventSource.CONNECTING, EventSource.OPEN].includes(velLiveSource.readyState)) return;
+  stopVelLiveUpdates();
+  const user = normalizeVelChatUser(velChatUser);
+  const params = new URLSearchParams({
+    pin: velChatPin,
+    deviceId: velDeviceId,
+    userId: user?.id || "",
+    username: user?.username || "Guest",
+    lobby: cleanLobbyName(lobbyState.lobby)
+  });
+  velLiveSource = new EventSource(`/api/live?${params.toString()}`);
+  velLiveSource.onopen = () => {
+    velLiveConnected = true;
+    window.clearTimeout(velLiveReconnectTimer);
+  };
+  velLiveSource.onmessage = (event) => {
+    try {
+      handleVelLiveEvent(JSON.parse(event.data || "{}"));
+    } catch (error) {
+      return;
+    }
+  };
+  velLiveSource.onerror = () => {
+    velLiveConnected = false;
+    velLiveSource?.close();
+    velLiveSource = null;
+    scheduleVelLiveReconnect();
+  };
+}
+
 function setVelChatLocked(isLocked, message = "") {
   velChatUnlocked = !isLocked;
   velChat?.classList.toggle("is-locked", isLocked);
@@ -3351,6 +3449,9 @@ function setVelChatLocked(isLocked, message = "") {
     renderVelChatTyping();
     window.clearTimeout(velChatTypingPollTimer);
     window.clearTimeout(velChatTypingStopTimer);
+    stopVelLiveUpdates();
+  } else {
+    startVelLiveUpdates();
   }
   if (velChatMessages) velChatMessages.hidden = isLocked;
   if (velChatForm) velChatForm.hidden = isLocked;
@@ -3825,6 +3926,7 @@ async function sendVelChatMessage(text) {
       body: JSON.stringify({
         userId: velChatUser.id,
         username: velChatUser.username,
+        deviceId: velDeviceId,
         text: message,
         attachment: velChatAttachment || makeAttachmentFromText(message)
       })
@@ -3867,7 +3969,11 @@ async function deleteVelChatMessages(payload = {}, successMessage = "Chat update
     const response = await fetch("/api/chat/messages", {
       method: "DELETE",
       headers: getVelChatHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        userId: velChatUser?.id || "",
+        deviceId: velDeviceId,
+        ...payload
+      })
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
@@ -14347,17 +14453,21 @@ devPresenceTimer = window.setInterval(reportDevPresence, DEV_PRESENCE_POLL_MS);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     sendDevPresenceLeave();
+    stopVelLiveUpdates();
     return;
   }
+  if (velChatPin) startVelLiveUpdates();
   checkDevAccess({ silent: true, once: true });
   reportDevPresence();
 });
 
 window.addEventListener("pagehide", () => {
   sendDevPresenceLeave();
+  stopVelLiveUpdates();
   stopScreenShare({ silent: true });
 });
 
 window.addEventListener("beforeunload", () => {
   sendDevPresenceLeave();
+  stopVelLiveUpdates();
 });

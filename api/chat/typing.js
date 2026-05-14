@@ -3,6 +3,7 @@ const REDIS_CLIENT_KEY = "__velos_chat_typing_redis_client_promise";
 const MEMORY_KEY = "__velos_chat_typing_store";
 const CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const TYPING_ACTIVE_MS = 4500;
+const { broadcastLiveEvent } = require("../live.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -257,6 +258,12 @@ module.exports = async function handler(req, res) {
       };
     }
     const saved = await writeStore(store);
+    broadcastLiveEvent("chat-typing", {
+      userId,
+      username,
+      deviceId: cleanId(body.deviceId, 96),
+      typing: body.typing !== false
+    });
     return sendJson(res, 200, serialize(saved));
   } catch (error) {
     return sendJson(res, error.code === "missing_storage" ? 503 : 500, {

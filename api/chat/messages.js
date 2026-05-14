@@ -5,6 +5,7 @@ const MEMORY_KEY = "__velos_chat_messages";
 const CHAT_PIN = process.env.VEL_OS_PIN || "74281";
 const ATTACHMENT_URL_LIMIT = 2600000;
 const ALLOWED_DATA_MEDIA = /^data:(image\/(?:png|jpe?g|gif|webp)|video\/(?:mp4|webm|ogg));base64,/i;
+const { broadcastLiveEvent } = require("../live.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -314,6 +315,12 @@ module.exports = async function handler(req, res) {
         });
       }
       const storage = await writeChatStore(messages);
+      broadcastLiveEvent("chat", {
+        action: shouldClear ? "clear" : "delete",
+        messageId,
+        senderUserId: cleanChatText(body.userId, 64),
+        senderDeviceId: cleanChatText(body.deviceId, 96)
+      });
       return sendJson(res, 200, {
         messages,
         storage,
@@ -333,6 +340,12 @@ module.exports = async function handler(req, res) {
     const store = await readChatStore();
     const messages = [...store.messages, nextMessage].slice(-CHAT_LIMIT);
     const storage = await writeChatStore(messages);
+    broadcastLiveEvent("chat", {
+      action: "message",
+      messageId: nextMessage.id,
+      senderUserId: nextMessage.userId,
+      senderDeviceId: cleanChatText(body.deviceId, 96)
+    });
     return sendJson(res, 201, {
       message: nextMessage,
       messages,

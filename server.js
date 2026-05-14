@@ -23,6 +23,7 @@ const handleDevPresence = require("./api/dev/presence.js");
 const handleDevScreen = require("./api/dev/screen.js");
 const handleChatTyping = require("./api/chat/typing.js");
 const handleFlappyLeaderboard = require("./api/games/flappy.js");
+const handleLive = require("./api/live.js");
 const sessions = new Map();
 let spotifyToken = null;
 
@@ -549,6 +550,12 @@ async function handleChatMessages(req, res, url) {
       ? []
       : readGlobalChatMessages().filter((message) => message.id !== messageId);
     writeGlobalChatMessages(messages);
+    handleLive.broadcastLiveEvent?.("chat", {
+      action: shouldClear ? "clear" : "delete",
+      messageId,
+      senderUserId: cleanChatText(body.userId, 64),
+      senderDeviceId: cleanChatText(body.deviceId, 96)
+    });
     return sendJson(res, 200, {
       messages,
       storage: "file",
@@ -577,6 +584,12 @@ async function handleChatMessages(req, res, url) {
   }
   const messages = [...readGlobalChatMessages(), nextMessage].slice(-GLOBAL_CHAT_LIMIT);
   writeGlobalChatMessages(messages);
+  handleLive.broadcastLiveEvent?.("chat", {
+    action: "message",
+    messageId: nextMessage.id,
+    senderUserId: nextMessage.userId,
+    senderDeviceId: cleanChatText(body.deviceId, 96)
+  });
   return sendJson(res, 201, {
     message: nextMessage,
     messages,
@@ -913,6 +926,7 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/dev/presence") return await handleDevPresence(req, res);
     if (url.pathname === "/api/dev/screen") return await handleDevScreen(req, res);
     if (url.pathname === "/api/games/flappy") return await handleFlappyLeaderboard(req, res);
+    if (url.pathname === "/api/live") return await handleLive(req, res);
     if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res, url);

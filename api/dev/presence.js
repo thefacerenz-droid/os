@@ -4,6 +4,7 @@ const REDIS_CLIENT_KEY = "__velos_dev_presence_redis_client_promise";
 const MEMORY_KEY = "__velos_dev_presence_store";
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
+const { broadcastLiveEvent } = require("../live.js");
 // Hard-bind Dev Panel access to the owner devices provided.
 const BUILT_IN_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
 const ADMIN_DEVICE_IDS = [
@@ -566,6 +567,10 @@ async function handleControl(req, res, body) {
       createdBy: "Owner"
     });
     const saved = await writeStore(store);
+    broadcastLiveEvent("dev-control", {
+      command,
+      announcementId: store.announcement?.id || ""
+    });
     return sendJson(res, 200, {
       ...serialize(saved),
       ok: true,
@@ -575,6 +580,7 @@ async function handleControl(req, res, body) {
   if (command === "clear-announcement") {
     store.announcement = null;
     const saved = await writeStore(store);
+    broadcastLiveEvent("dev-control", { command });
     return sendJson(res, 200, {
       ...serialize(saved),
       ok: true,
@@ -717,6 +723,11 @@ async function handleControl(req, res, body) {
     });
   }
   const saved = await writeStore(store);
+  broadcastLiveEvent("dev-control", {
+    command,
+    targetUserId: target.userId || "",
+    targetDeviceId: target.deviceId || ""
+  });
   return sendJson(res, 200, {
     ...serialize(saved),
     ok: true,
@@ -864,6 +875,11 @@ module.exports = async function handler(req, res) {
         lastSeen: Date.now()
       };
       const saved = await writeStore(store);
+      broadcastLiveEvent("dev-presence", {
+        userId: user.userId,
+        deviceId: cleanDeviceId(body),
+        app: cleanText(body.app, 48)
+      });
       return sendJson(res, 200, {
         ok: true,
         storage: saved.storage || "memory",
