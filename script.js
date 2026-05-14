@@ -4118,7 +4118,7 @@ async function loadSecretVaultVideos() {
   secretVaultLoading = true;
   renderSecretVault();
   try {
-    const response = await fetch("/api/secret/videos", { cache: "no-store" });
+    const response = await fetch("/api/soundboard?__secretVideos=1", { cache: "no-store" });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Vault videos could not load.");
     secretVaultVideos = Array.isArray(data.videos) ? data.videos : [];
