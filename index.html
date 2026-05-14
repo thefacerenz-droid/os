@@ -1266,7 +1266,7 @@
           <div class="settings-layout">
             <article class="settings-card">
               <p class="section-label">Wallpapers</p>
-              <div class="wallpaper-picker">
+              <div class="wallpaper-picker" id="wallpaperPicker">
                 <button class="wallpaper-option" type="button" data-wallpaper-option="vel"><img src="./assets/images/wallpaper/vel.png" alt="Ink eye wallpaper" /><strong>Ink Eye</strong><span>Dark monochrome default</span></button>
                 <button class="wallpaper-option" type="button" data-wallpaper-option="snow"><img src="./assets/images/wallpaper/IMG_2063.png" alt="Snow lake wallpaper" /><strong>Snow Lake</strong><span>Cold cinematic scene</span></button>
                 <button class="wallpaper-option" type="button" data-wallpaper-option="moon"><img src="./assets/images/wallpaper/IMG_2064.png" alt="Moon tree wallpaper" /><strong>Moon Tree</strong><span>Blue anime night</span></button>
@@ -1304,7 +1304,7 @@
               <div class="theme-store-head">
                 <div>
                   <p class="section-label">Theme Store</p>
-                  <h3>Unlock the vibe</h3>
+                  <h3>Theme Packs</h3>
                 </div>
                 <span class="theme-credit-badge" id="themeCreditBalance">0 VC</span>
               </div>
@@ -1334,17 +1334,17 @@
                   <em>220 VC</em>
                 </button>
               </div>
-              <p class="tiny-note settings-note">Earn Vel Credits by opening apps, playing games, and using Velofy. Unlocks save on this device.</p>
+              <p class="tiny-note settings-note">Themes change the taskbar, icons, and boot style. Wallpapers stay separate.</p>
             </article>
             <article class="settings-card">
-              <p class="section-label">Custom Theme</p>
-              <h3>Camera Roll Theme</h3>
-              <p class="settings-card-copy">Create a personal theme with your own wallpaper for 500 VC.</p>
+              <p class="section-label">Custom Wallpaper</p>
+              <h3>Camera Roll</h3>
+              <p class="settings-card-copy">Save wallpapers from your device. Saved wallpapers stay in the wallpaper list.</p>
               <div class="custom-theme-actions">
-                <input id="customThemeName" type="text" maxlength="24" autocomplete="off" placeholder="Theme name" aria-label="Custom theme name" />
+                <input id="customThemeName" type="text" maxlength="24" autocomplete="off" placeholder="Wallpaper name" aria-label="Custom wallpaper name" />
                 <button class="ghost-button" type="button" id="customThemePick">Pick Image</button>
-                <button class="ghost-button is-solid" type="button" id="customThemeCreate">Create - 500 VC</button>
-                <button class="ghost-button" type="button" id="customThemeApply">Apply Saved</button>
+                <button class="ghost-button is-solid" type="button" id="customThemeCreate">Save Wallpaper</button>
+                <button class="ghost-button" type="button" id="customThemeApply">Apply Latest</button>
                 <input id="customThemeInput" type="file" accept="image/*" hidden />
               </div>
               <p class="tiny-note settings-note" id="customThemeStatus">No image selected.</p>
