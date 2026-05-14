@@ -1,10 +1,7 @@
 {
   "functions": {
     "api/soundboard.js": {
-      "includeFiles": [
-        "assets/soundboard/**",
-        "assets/secret-videos/**"
-      ]
+      "includeFiles": "assets/**"
     }
   }
 }
