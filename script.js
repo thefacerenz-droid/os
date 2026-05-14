@@ -2123,6 +2123,7 @@ const lobbySketchClear = document.getElementById("lobbySketchClear");
 const soundboardGrid = document.getElementById("soundboardGrid");
 const soundboardVolume = document.getElementById("soundboardVolume");
 const soundboardStop = document.getElementById("soundboardStop");
+const soundboardRemoteDeck = document.getElementById("soundboardRemoteDeck");
 const soundboardImport = document.getElementById("soundboardImport");
 const soundboardFileInput = document.getElementById("soundboardFileInput");
 const soundboardStatus = document.getElementById("soundboardStatus");
@@ -4605,6 +4606,11 @@ function renderRemoteDeck() {
   }
   renderRemoteDeckTargets();
   renderRemoteDeckGrid();
+}
+
+function syncRemoteDeckLaunchButton() {
+  if (!soundboardRemoteDeck) return;
+  soundboardRemoteDeck.hidden = !isRemoteDeckWhitelistedDevice();
 }
 
 function postRemoteDeckMessage(message = {}) {
@@ -11479,6 +11485,10 @@ soundboardStop?.addEventListener("click", () => {
   stopSoundboardSounds();
 });
 
+soundboardRemoteDeck?.addEventListener("click", () => {
+  openPanel("remoteDeck");
+});
+
 soundboardImport?.addEventListener("click", () => {
   soundboardFileInput?.click();
 });
@@ -14917,6 +14927,7 @@ updateYouTubeGlobalImportUi();
 renderLobbyState();
 clearLobbyCanvas();
 renderSoundboard();
+syncRemoteDeckLaunchButton();
 initRemoteDeckChannel();
 initDraggableDrawers();
 initScrollAssist();

@@ -1124,6 +1124,7 @@
                 <input id="soundboardVolume" type="range" min="0" max="100" value="72" aria-label="Soundboard volume" />
               </label>
               <button class="ghost-button" type="button" id="soundboardStop">Stop All</button>
+              <button class="ghost-button is-solid" type="button" id="soundboardRemoteDeck">Remote Device Deck</button>
               <button class="ghost-button is-solid" type="button" id="soundboardImport">Import Sounds</button>
               <input id="soundboardFileInput" type="file" accept="audio/*" multiple hidden />
               <p class="tiny-note">Permanent sounds live in <code>assets/soundboard</code>. Add MP3/WAV/M4A files there, publish, and they become pads.</p>
@@ -1150,9 +1151,9 @@
 
           <div class="remote-deck-layout">
             <aside class="remote-deck-side">
-              <p class="section-label">Selected</p>
+              <p class="section-label">Pick Device First</p>
               <h3 id="remoteDeckSelectedName">No target selected</h3>
-              <p class="tiny-note" id="remoteDeckStatus">Pick one or more whitelisted devices.</p>
+              <p class="tiny-note" id="remoteDeckStatus">Select Owner iPad, Owner PC, or multiple whitelisted devices, then tap a sound pad.</p>
               <button class="ghost-button is-solid" type="button" id="remoteDeckAllow">Allow this device</button>
               <button class="ghost-button" type="button" id="remoteDeckRefresh">Refresh devices</button>
               <div class="remote-device-list" id="remoteDeckTargets"></div>
@@ -1161,8 +1162,8 @@
             <section class="remote-deck-main">
               <div class="remote-deck-topbar">
                 <div>
-                  <p class="section-label">Soundboard</p>
-                  <h3>Send Pad</h3>
+                  <p class="section-label">After Picking A Device</p>
+                  <h3>Tap A Sound</h3>
                 </div>
                 <button class="ghost-button" type="button" id="remoteDeckStop">Stop Local Audio</button>
               </div>
