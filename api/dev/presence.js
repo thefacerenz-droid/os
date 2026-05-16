@@ -388,10 +388,10 @@ async function readStore() {
     try {
       parsed = await readJsonFromStorage(PRESENCE_KEY);
       if (!parsed || !Object.keys(parsed).length) parsed = await readJsonFromStorage(LEGACY_PRESENCE_KEY);
+      return { ...normalizeStore(parsed), storage: restKvConfigured() ? "kv" : "redis", persistent: true };
     } catch (error) {
-      parsed = {};
+      console.error("vel.os dev presence storage read failed; using memory fallback:", error.message);
     }
-    return { ...normalizeStore(parsed), storage: restKvConfigured() ? "kv" : "redis", persistent: true };
   }
   globalThis[MEMORY_KEY] = normalizeStore(globalThis[MEMORY_KEY] || {});
   return { ...globalThis[MEMORY_KEY], storage: "memory", persistent: false };
@@ -399,14 +399,18 @@ async function readStore() {
 
 async function writeStore(store) {
   const normalized = normalizeStore(store);
-  if (restKvConfigured()) {
-    await kvCommand(["SET", PRESENCE_KEY, JSON.stringify(normalized)]);
-    return { ...normalized, storage: "kv", persistent: true };
-  }
-  if (redisUrlConfigured()) {
-    const client = await getRedisClient();
-    await client.set(PRESENCE_KEY, JSON.stringify(normalized));
-    return { ...normalized, storage: "redis", persistent: true };
+  try {
+    if (restKvConfigured()) {
+      await kvCommand(["SET", PRESENCE_KEY, JSON.stringify(normalized)]);
+      return { ...normalized, storage: "kv", persistent: true };
+    }
+    if (redisUrlConfigured()) {
+      const client = await getRedisClient();
+      await client.set(PRESENCE_KEY, JSON.stringify(normalized));
+      return { ...normalized, storage: "redis", persistent: true };
+    }
+  } catch (error) {
+    console.error("vel.os dev presence storage write failed; using memory fallback:", error.message);
   }
   globalThis[MEMORY_KEY] = normalized;
   return { ...normalized, storage: "memory", persistent: false };
