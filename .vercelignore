@@ -1,3 +1,10 @@
 .env
 node_modules
 data/*.json
+
+# Hobby plan safety: deploy exactly one serverless API function.
+# Older commits may still have nested api files; ignore all of them
+# except the single router at api/index.js.
+api/**
+!api/
+!api/index.js
