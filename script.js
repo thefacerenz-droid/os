@@ -652,17 +652,6 @@ const webApps = {
     note: "Video search and player."
   },
 
-  spotify: {
-    title: "Spotify",
-    tag: "Media Provider",
-    description: "Search Spotify and save songs into Velofy.",
-    url: "about:blank",
-    mode: "mediaProvider",
-    provider: "spotify",
-    embedBlocked: false,
-    note: "Music search entry."
-  },
-
   tiktok: {
     title: "TikTok",
     tag: "Media Provider",
@@ -695,7 +684,7 @@ const webApps = {
   }
 };
 
-["youtube", "spotify", "tiktok", "tubi", "pluto"].forEach((id) => {
+["youtube", "tiktok", "tubi", "pluto"].forEach((id) => {
   delete webApps[id];
 });
 
@@ -1291,13 +1280,6 @@ const utilityApps = {
     action: "panel",
     panel: "music"
   },
-  ai: {
-    title: "Vel Assistant",
-    label: "Assistant",
-    badgeText: "VA",
-    action: "panel",
-    panel: "ai"
-  },
   youtube: {
     title: "YouTube",
     label: "YouTube",
@@ -1829,7 +1811,6 @@ const mediaPlutoCatalog = [
 
 const drawers = {
   launcher: document.getElementById("launcherDrawer"),
-  ai: document.getElementById("aiDrawer"),
   media: document.getElementById("mediaDrawer"),
   youtube: document.getElementById("youtubeDrawer"),
   velhub: document.getElementById("velHubDrawer"),
@@ -1931,12 +1912,6 @@ const webHelperMirrorButton = document.getElementById("webHelperMirrorButton");
 const webHelperLocalButton = document.getElementById("webHelperLocalButton");
 const webReloadButton = document.getElementById("webReloadButton");
 const webMirrorButton = document.getElementById("webMirrorButton");
-const aiMessagesEl = document.getElementById("aiMessages");
-const aiChatForm = document.getElementById("aiChatForm");
-const aiInput = document.getElementById("aiInput");
-const aiStatus = document.getElementById("aiStatus");
-const aiClearButton = document.getElementById("aiClearButton");
-const aiPromptButtons = [...document.querySelectorAll("[data-ai-prompt]")];
 const youtubeDrawer = document.getElementById("youtubeDrawer");
 const youtubePanel = youtubeDrawer?.querySelector(".youtube-panel");
 const youtubeLaunch = document.getElementById("youtubeLaunch");
@@ -2029,10 +2004,6 @@ const velofyPlaylist = document.getElementById("velofyPlaylist");
 const velofyPlaylistNote = document.getElementById("velofyPlaylistNote");
 const velofyImportButton = document.getElementById("velofyImportButton");
 const velofyImportInput = document.getElementById("velofyImportInput");
-const velofySpotifyPlayer = document.getElementById("velofySpotifyPlayer");
-const velofySpotifySearch = document.getElementById("velofySpotifySearch");
-const velofySpotifySearchButton = document.getElementById("velofySpotifySearchButton");
-const velofySpotifyResults = document.getElementById("velofySpotifyResults");
 
 const wallpaperPicker = document.getElementById("wallpaperPicker");
 const settingsWallpaperEffectButtons = [...document.querySelectorAll("[data-wallpaper-effect]")];
@@ -2199,8 +2170,6 @@ if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
 let networkNote = storage.get("vel-network-note", "");
-const AI_HISTORY_KEY = "vel-ai-history";
-const AI_HISTORY_LIMIT = 24;
 const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
@@ -2324,13 +2293,6 @@ let youtubeGlobalMessage = "";
 let youtubeGlobalImportType = "video";
 let youtubeGlobalIds = new Set();
 let youtubeGlobalSavingIds = new Set();
-let aiMessages = readStoredJson(AI_HISTORY_KEY, []);
-aiMessages = Array.isArray(aiMessages)
-  ? aiMessages
-    .filter((item) => ["user", "assistant"].includes(item?.role) && item.content)
-    .slice(-AI_HISTORY_LIMIT)
-  : [];
-let aiLoading = false;
 let velChatUser = readStoredJson(VEL_CHAT_USER_KEY, null);
 let velChatItems = [];
 let velChatTypingUsers = [];
@@ -2410,16 +2372,16 @@ let velofyPlaylistMode = storage.get("velofy-playlist-mode", "all");
 let velofyShuffleEnabled = storage.get("velofy-shuffle", "0") === "1";
 let velofyCustomPlaylists = readStoredJson("velofy-custom-playlists", []);
 velofyCustomPlaylists = Array.isArray(velofyCustomPlaylists) ? velofyCustomPlaylists : [];
+velofyCustomPlaylists = velofyCustomPlaylists.map((playlist) => ({
+  ...playlist,
+  refs: Array.isArray(playlist.refs)
+    ? playlist.refs.filter((ref) => String(ref).startsWith("local:"))
+    : []
+}));
 let velofyRecentTrackRefs = readStoredJson("velofy-recent-tracks", []);
-velofyRecentTrackRefs = Array.isArray(velofyRecentTrackRefs) ? velofyRecentTrackRefs : [];
-let velofySpotifySearchQuery = storage.get("velofy-spotify-query", "Ken Carson");
-let velofySpotifySearchResults = [];
-let velofySpotifyLoading = false;
-let velofySpotifyError = "";
-let savedSpotifyTracks = readStoredJson("velofy-spotify-tracks", []);
-let currentVelofyMode = "local";
-let currentSpotifyTrackId = "";
-let currentSpotifyTrack = null;
+velofyRecentTrackRefs = Array.isArray(velofyRecentTrackRefs)
+  ? velofyRecentTrackRefs.filter((ref) => String(ref).startsWith("local:"))
+  : [];
 let velCredits = Number.parseInt(storage.get("vel-theme-credits", "80"), 10) || 80;
 let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir"]);
 unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", ...unlockedThemePacks])] : ["noir"];
@@ -2492,14 +2454,13 @@ let currentLyricsState = {
   syncOffset: 0
 };
 let mediaState = {
-  provider: storage.get("vel-media-tab", "all"),
+  provider: ["all", "youtube", "tiktok"].includes(storage.get("vel-media-tab", "all"))
+    ? storage.get("vel-media-tab", "all")
+    : "all",
   query: storage.get("vel-media-last-query", ""),
   youtubeResults: [],
   youtubeNextPageToken: "",
   youtubeError: "",
-  spotifyResults: { tracks: [], artists: [], albums: [], playlists: [] },
-  spotifyType: storage.get("vel-spotify-type", "track"),
-  spotifyError: "",
   tiktokProfile: null,
   tiktokVideos: [],
   tiktokError: "",
@@ -2881,10 +2842,6 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="music"]')?.classList.add("is-active");
   }
 
-  if (activePanel === "ai") {
-    recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="ai"]')?.classList.add("is-active");
-  }
-
   if (activePanel === "youtube") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
   }
@@ -3040,11 +2997,6 @@ function openPanel(name) {
     recordRecentApp({ type: "panel", id: "music" });
   }
 
-  if (name === "ai") {
-    recordRecentApp({ type: "panel", id: "ai" });
-    window.requestAnimationFrame(() => aiInput?.focus({ preventScroll: true }));
-  }
-
   if (name === "youtube") {
     recordRecentApp({ type: "panel", id: "youtube" });
   }
@@ -3185,95 +3137,6 @@ function renderNetworkState() {
   if (proxyNoteInput) {
     proxyNoteInput.value = networkNote;
   }
-}
-
-function saveAiMessages() {
-  storage.set(AI_HISTORY_KEY, JSON.stringify(aiMessages.slice(-AI_HISTORY_LIMIT)));
-}
-
-function renderAiMessages() {
-  if (!aiMessagesEl) return;
-  if (!aiMessages.length) {
-    aiMessagesEl.innerHTML = `
-      <article class="ai-message is-assistant">
-        <strong>Vel Assistant</strong>
-        <p>No messages yet.</p>
-      </article>
-    `;
-  } else {
-    aiMessagesEl.innerHTML = aiMessages.map((message) => `
-      <article class="ai-message ${message.role === "user" ? "is-user" : "is-assistant"}">
-        <strong>${message.role === "user" ? "You" : "Vel Assistant"}</strong>
-        <p>${escapeHtml(message.content)}</p>
-      </article>
-    `).join("");
-  }
-  aiMessagesEl.scrollTop = aiMessagesEl.scrollHeight;
-  if (aiStatus) {
-    aiStatus.textContent = aiLoading ? "Working" : `${aiMessages.filter((item) => item.role === "user").length} messages`;
-  }
-  if (aiChatForm) {
-    aiChatForm.classList.toggle("is-loading", aiLoading);
-  }
-  if (aiInput) {
-    aiInput.disabled = aiLoading;
-  }
-  aiChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", aiLoading);
-}
-
-function setAiError(message) {
-  aiMessages = [
-    ...aiMessages,
-    {
-      role: "assistant",
-      content: message || "Vel Assistant could not reply right now."
-    }
-  ].slice(-AI_HISTORY_LIMIT);
-  saveAiMessages();
-  renderAiMessages();
-}
-
-async function sendAiMessage(text) {
-  const message = text.trim();
-  if (!message || aiLoading) return;
-
-  aiMessages = [
-    ...aiMessages,
-    { role: "user", content: message }
-  ].slice(-AI_HISTORY_LIMIT);
-  saveAiMessages();
-  aiLoading = true;
-  renderAiMessages();
-
-  try {
-    const response = await fetch("/api/ai/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: aiMessages.slice(-12) })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || "Vel Assistant is not available right now.");
-    }
-    aiMessages = [
-      ...aiMessages,
-      { role: "assistant", content: data.reply || "I could not generate a reply." }
-    ].slice(-AI_HISTORY_LIMIT);
-    saveAiMessages();
-  } catch (error) {
-    setAiError(error.message);
-  } finally {
-    aiLoading = false;
-    if (aiInput) aiInput.value = "";
-    renderAiMessages();
-  }
-}
-
-function clearAiChat() {
-  aiMessages = [];
-  saveAiMessages();
-  renderAiMessages();
-  aiInput?.focus({ preventScroll: true });
 }
 
 function cleanVelChatName(value = "") {
@@ -4771,7 +4634,6 @@ function getDevActivityLabel() {
   }
   if (activePanel === "music") {
     const localTrack = playlist[currentTrackIndex];
-    if (currentSpotifyTrack?.title) return `Velofy Spotify: ${currentSpotifyTrack.title}`;
     if (localTrack?.title) return `Velofy: ${localTrack.title}`;
     return "Using Velofy";
   }
@@ -4787,7 +4649,6 @@ function getDevActivityLabel() {
   if (activePanel === "lobbies") return `Notebook: ${lobbyState.mode === "sketch" ? "Sketching" : "Writing notes"}`;
   if (activePanel === "soundboard") return "Using Soundboard";
   if (activePanel === "remoteDeck") return "Using Remote Deck";
-  if (activePanel === "ai") return aiLoading ? "Using Assistant" : "Assistant open";
   if (activePanel === "calculator") return secretVaultUnlocked ? "In secret vault" : "Using Calculator";
   if (activePanel === "settings") return "Changing settings";
   if (activePanel === "network") return "Checking Network";
@@ -8115,22 +7976,6 @@ function applyFont(key) {
 }
 
 function updateNowPlayingUi() {
-  if (currentVelofyMode === "spotify") {
-    const spotifyTrack = getCurrentSpotifyTrack();
-    const text = spotifyTrack
-      ? `${spotifyTrack.title} - ${spotifyTrack.subtitle}`
-      : "Spotify - Velofy";
-    nowPlayingChip.hidden = false;
-    taskbarNowPlaying.hidden = false;
-    nowPlayingText.textContent = text;
-    taskbarNowPlayingText.textContent = spotifyTrack?.title || "Spotify";
-    document.body.classList.add("is-music-playing");
-    velofyState.textContent = "Spotify Embed";
-    velofyPlay.textContent = "Open";
-    if (taskbarPlayButton) taskbarPlayButton.textContent = "Open";
-    return;
-  }
-
   const track = velofyTracks[currentTrackIndex];
   const isPlaying = !audioElement.paused;
   const text = `${track.title} - ${track.artist}`;
@@ -8592,170 +8437,8 @@ function matchesSearchQuery(parts, query) {
   return normalizeSearchText(parts.filter(Boolean).join(" ")).includes(needle);
 }
 
-function normalizeVelofySpotifyTrack(item) {
-  if (!item?.id) return null;
-  return {
-    id: item.id,
-    type: item.type || "track",
-    title: item.title || "Spotify Track",
-    subtitle: item.subtitle || "Spotify",
-    image: item.image || "",
-    externalUrl: item.externalUrl || `https://open.spotify.com/track/${item.id}`
-  };
-}
-
-function getCurrentSpotifyTrack() {
-  return currentSpotifyTrack
-    || savedSpotifyTracks.find((track) => track.id === currentSpotifyTrackId)
-    || velofySpotifySearchResults.find((track) => track.id === currentSpotifyTrackId)
-    || null;
-}
-
-function persistSavedSpotifyTracks() {
-  storage.set("velofy-spotify-tracks", JSON.stringify(savedSpotifyTracks));
-}
-
-function saveVelofySpotifyTrack(item) {
-  const track = normalizeVelofySpotifyTrack(item);
-  if (!track) return null;
-  savedSpotifyTracks = [
-    track,
-    ...savedSpotifyTracks.filter((saved) => saved.id !== track.id)
-  ].slice(0, 250);
-  persistSavedSpotifyTracks();
-  renderPlaylist();
-  return track;
-}
-
 function showLocalVelofyPlayer() {
-  currentVelofyMode = "local";
-  currentSpotifyTrackId = "";
-  currentSpotifyTrack = null;
-  if (velofySpotifyPlayer) {
-    velofySpotifyPlayer.hidden = true;
-    velofySpotifyPlayer.innerHTML = "";
-  }
   velofyProgress.disabled = false;
-}
-
-function openVelofySpotifyTrack(item, { save = false } = {}) {
-  const track = save ? saveVelofySpotifyTrack(item) : normalizeVelofySpotifyTrack(item);
-  if (!track) return;
-  currentVelofyMode = "spotify";
-  currentSpotifyTrackId = track.id;
-  currentSpotifyTrack = track;
-
-  audioElement.pause();
-  velofyTitle.textContent = track.title;
-  velofyArtist.textContent = track.subtitle;
-  velofyState.textContent = "Spotify Embed";
-  velofyPlay.textContent = "Open";
-  velofyElapsed.textContent = "Spotify";
-  velofyDuration.textContent = "Embed";
-  velofyProgress.value = "0";
-  velofyProgress.disabled = true;
-  if (track.image) {
-    velofyArtwork.src = track.image;
-    velofyArtwork.alt = `${track.title} artwork`;
-    setVelofyArtworkBackground(track.image);
-  }
-  if (velofySpotifyPlayer) {
-    velofySpotifyPlayer.hidden = false;
-    velofySpotifyPlayer.innerHTML = `
-      <iframe
-        title="${escapeHtml(track.title)} on Spotify"
-        src="https://open.spotify.com/embed/track/${encodeURIComponent(track.id)}"
-        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-        loading="lazy">
-      </iframe>
-    `;
-  }
-  recordVelofyRecent(getVelofySpotifyRef(track.id));
-  updateNowPlayingUi();
-  renderPlaylist();
-}
-
-function renderVelofySpotifyResults() {
-  if (!velofySpotifyResults) return;
-
-  if (velofySpotifyLoading) {
-    velofySpotifyResults.innerHTML = Array.from({ length: 4 }, () => `
-      <article class="spotify-result-card is-loading">
-        <div class="spotify-result-art"></div>
-        <div><strong>Searching Spotify</strong><span>Loading tracks...</span></div>
-      </article>
-    `).join("");
-    return;
-  }
-
-  if (velofySpotifyError) {
-    velofySpotifyResults.innerHTML = `
-      <article class="spotify-result-card">
-        <div class="spotify-result-art"></div>
-        <div><strong>Spotify could not load</strong><span>${escapeHtml(velofySpotifyError)}</span></div>
-      </article>
-    `;
-    return;
-  }
-
-  if (!velofySpotifySearchResults.length) {
-    velofySpotifyResults.innerHTML = `
-      <article class="spotify-result-card">
-        <div class="spotify-result-art">SP</div>
-        <div><strong>Search Spotify</strong><span>Find tracks and save them into Velofy.</span></div>
-      </article>
-    `;
-    return;
-  }
-
-  velofySpotifyResults.innerHTML = velofySpotifySearchResults.map((track) => {
-    const isSaved = savedSpotifyTracks.some((saved) => saved.id === track.id);
-    return `
-      <article class="spotify-result-card">
-        ${track.image ? `<img class="spotify-result-art" src="${escapeHtml(track.image)}" alt="" loading="lazy" />` : '<div class="spotify-result-art">SP</div>'}
-        <div>
-          <strong>${escapeHtml(track.title)}</strong>
-          <span>${escapeHtml(track.subtitle || "Spotify")}</span>
-        </div>
-        <div class="spotify-result-actions">
-          <button type="button" data-velofy-spotify-play="${escapeHtml(track.id)}">Play</button>
-          <button type="button" data-velofy-spotify-save="${escapeHtml(track.id)}">${isSaved ? "Saved" : "Save"}</button>
-        </div>
-      </article>
-    `;
-  }).join("");
-}
-
-async function searchVelofySpotify() {
-  const query = (velofySpotifySearch?.value || velofySpotifySearchQuery || "").trim();
-  if (!query) {
-    velofySpotifySearchResults = [];
-    velofySpotifyError = "";
-    renderVelofySpotifyResults();
-    return;
-  }
-
-  velofySpotifySearchQuery = query;
-  storage.set("velofy-spotify-query", query);
-  velofySpotifyLoading = true;
-  velofySpotifyError = "";
-  renderVelofySpotifyResults();
-
-  try {
-    const params = new URLSearchParams({ q: query, type: "track" });
-    const response = await fetch(`/api/spotify/search?${params}`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || "Spotify search failed.");
-    }
-    velofySpotifySearchResults = (data.tracks || []).map(normalizeVelofySpotifyTrack).filter(Boolean);
-  } catch (error) {
-    velofySpotifyError = error.message || "Spotify search could not load.";
-    velofySpotifySearchResults = [];
-  } finally {
-    velofySpotifyLoading = false;
-    renderVelofySpotifyResults();
-  }
 }
 
 function isLikelyIpad() {
@@ -8777,29 +8460,17 @@ function getVelofyLocalRef(index) {
   return `local:${index}`;
 }
 
-function getVelofySpotifyRef(id) {
-  return `spotify:${id}`;
-}
-
 function getVelofyTrackByRef(ref = "") {
   if (ref.startsWith("local:")) {
     const index = Number.parseInt(ref.slice(6), 10);
     const track = velofyTracks[index];
     return track ? { ref, type: "local", index, title: track.title, subtitle: track.artist, track } : null;
   }
-  if (ref.startsWith("spotify:")) {
-    const id = ref.slice(8);
-    const track = savedSpotifyTracks.find((item) => item.id === id);
-    return track ? { ref, type: "spotify", id, title: track.title, subtitle: `${track.subtitle || "Spotify"} - Spotify`, track } : null;
-  }
   return null;
 }
 
 function getVelofyAllRefs() {
-  return [
-    ...velofyTracks.map((track, index) => getVelofyLocalRef(index)),
-    ...savedSpotifyTracks.map((track) => getVelofySpotifyRef(track.id))
-  ];
+  return velofyTracks.map((track, index) => getVelofyLocalRef(index));
 }
 
 function getActiveVelofyPlaylist() {
@@ -8869,17 +8540,11 @@ function recordVelofyRecent(ref, shouldAward = true) {
 function playVelofyRef(ref, shouldPlay = true) {
   const item = getVelofyTrackByRef(ref);
   if (!item) return;
-  if (item.type === "spotify") {
-    openVelofySpotifyTrack(item.track);
-    return;
-  }
   loadTrack(item.index, shouldPlay);
 }
 
 function getCurrentVelofyRef() {
-  return currentVelofyMode === "spotify"
-    ? getVelofySpotifyRef(currentSpotifyTrackId)
-    : getVelofyLocalRef(currentTrackIndex);
+  return getVelofyLocalRef(currentTrackIndex);
 }
 
 function createVelofyPlaylist() {
@@ -8972,17 +8637,16 @@ function renderPlaylist() {
   visibleItems.forEach((item) => {
     const row = document.createElement("div");
     row.className = "track-row";
-    const active = currentVelofyMode === item.type
-      && (item.type === "local" ? item.index === currentTrackIndex : item.id === currentSpotifyTrackId);
+    const active = item.type === "local" && item.index === currentTrackIndex;
     const alreadyInTarget = Boolean(targetPlaylist?.refs?.includes(item.ref));
     row.innerHTML = `
       <button
         type="button"
-        class="track-button${item.type === "spotify" ? " spotify-track-button" : ""}${active ? " is-active" : ""}"
-        ${item.type === "local" ? `data-track-index="${item.index}"` : `data-spotify-track-id="${escapeHtml(item.id)}"`}
+        class="track-button${active ? " is-active" : ""}"
+        data-track-index="${item.index}"
       >
         <strong>${escapeHtml(item.title)}</strong>
-        <span>${escapeHtml(item.subtitle || (item.type === "spotify" ? "Spotify" : "Local MP3"))}</span>
+        <span>${escapeHtml(item.subtitle || "Local MP3")}</span>
       </button>
       <button
         class="track-add-button${alreadyInTarget ? " is-added" : ""}"
@@ -9014,17 +8678,10 @@ function playVelofyOffset(delta) {
     const currentRef = getCurrentVelofyRef();
     const currentIndexInList = Math.max(0, playableRefs.indexOf(currentRef));
     const nextRef = playableRefs[(currentIndexInList + delta + playableRefs.length) % playableRefs.length];
-    playVelofyRef(nextRef, !audioElement.paused || currentVelofyMode === "spotify");
+    playVelofyRef(nextRef, !audioElement.paused);
     return;
   }
   loadTrack(currentTrackIndex + delta, !audioElement.paused);
-}
-
-function openCurrentSpotifyExternal() {
-  const track = getCurrentSpotifyTrack();
-  if (track?.externalUrl) {
-    window.open(track.externalUrl, "_blank", "noopener,noreferrer");
-  }
 }
 
 function renderLauncherCatalog() {
@@ -9480,7 +9137,6 @@ function initScrollAssist() {
   initAssistedScrollSurface(drawers.launcher?.querySelector(".drawer-panel"), launcherGameGrid);
   initAssistedScrollSurface(youtubePanel, youtubeResultsGrid);
   initAssistedScrollSurface(drawers.music?.querySelector(".drawer-panel"), velofyPlaylist);
-  initAssistedScrollSurface(drawers.ai?.querySelector(".drawer-panel"), aiMessagesEl);
   initAssistedScrollSurface(drawers.settings?.querySelector(".drawer-panel"), drawers.settings?.querySelector(".settings-layout"));
   initAssistedScrollSurface(drawers.web?.querySelector(".drawer-panel"), webFrameHelper);
 }
@@ -10164,7 +9820,6 @@ function providerLabel(provider) {
   const labels = {
     all: "All",
     youtube: "YouTube",
-    spotify: "Spotify",
     tiktok: "TikTok"
   };
   return labels[provider] || "All";
@@ -10333,123 +9988,6 @@ async function openYouTubePlayer(video) {
     }
   });
   mediaPlayerClose?.focus({ preventScroll: true });
-}
-
-async function searchSpotify() {
-  const query = mediaState.query.trim() || "lofi";
-  const params = new URLSearchParams({
-    q: query,
-    type: mediaState.spotifyType === "all" ? "track,artist,album,playlist" : mediaState.spotifyType
-  });
-
-  mediaState.loading = true;
-  mediaState.spotifyError = "";
-  renderMediaHub();
-
-  try {
-    const response = await fetch(`/api/spotify/search?${params}`);
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || "Spotify search failed.");
-    }
-    mediaState.spotifyResults = data;
-    saveMediaSearch("spotify", query);
-  } catch (error) {
-    mediaState.spotifyError = error.message || "Spotify search could not load.";
-    mediaState.spotifyResults = { tracks: [], artists: [], albums: [], playlists: [] };
-  } finally {
-    mediaState.loading = false;
-    renderMediaHub();
-  }
-}
-
-function getSpotifyItems() {
-  if (mediaState.spotifyType === "track") return mediaState.spotifyResults.tracks || [];
-  if (mediaState.spotifyType === "artist") return mediaState.spotifyResults.artists || [];
-  if (mediaState.spotifyType === "album") return mediaState.spotifyResults.albums || [];
-  if (mediaState.spotifyType === "playlist") return mediaState.spotifyResults.playlists || [];
-  return [
-    ...(mediaState.spotifyResults.tracks || []),
-    ...(mediaState.spotifyResults.artists || []),
-    ...(mediaState.spotifyResults.albums || []),
-    ...(mediaState.spotifyResults.playlists || [])
-  ];
-}
-
-function renderSpotifyCards() {
-  if (mediaState.loading && !getSpotifyItems().length) {
-    return renderSkeletonCards(6);
-  }
-
-  if (mediaState.spotifyError) {
-    return `
-      <article class="media-card media-config-card">
-        <div class="media-card-thumb media-logo-thumb">SP</div>
-        <div class="media-card-body">
-          <p class="section-label">Spotify Error</p>
-          <h4>Search did not load.</h4>
-          <p>${escapeHtml(mediaState.spotifyError)}</p>
-          <button class="media-card-action" type="button" data-media-retry="spotify">Retry Spotify</button>
-        </div>
-      </article>
-    `;
-  }
-
-  const tabs = `
-    <div class="media-filter-row" role="tablist" aria-label="Spotify result type">
-      ${[
-        ["track", "Tracks"],
-        ["artist", "Artists"],
-        ["album", "Albums"],
-        ["playlist", "Playlists"]
-      ].map(([type, label]) => `
-        <button class="switch-chip ${mediaState.spotifyType === type ? "is-active" : ""}" type="button" data-spotify-type="${type}">
-          ${label}
-        </button>
-      `).join("")}
-    </div>
-  `;
-
-  const items = getSpotifyItems();
-  if (!items.length) {
-    return tabs + renderEmptyCard("No Spotify results", "Search for a track, artist, album, or playlist.");
-  }
-
-  return tabs + items.map((item) => `
-    <article class="media-card" data-media-kind="spotify" data-spotify-id="${escapeHtml(item.id)}" data-spotify-type="${escapeHtml(item.type)}" role="button" tabindex="0" aria-label="${item.playable ? "Play" : "View"} ${escapeHtml(item.title)} on Spotify">
-      <div class="media-card-thumb media-poster-thumb" style="--poster-accent: #1db954">
-        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" loading="lazy" />` : "<span>Spotify</span>"}
-        ${item.playable ? '<span class="media-play-pill">Play</span>' : ""}
-      </div>
-      <div class="media-card-body">
-        <p class="section-label">Spotify ${escapeHtml(item.type)}</p>
-        <h4>${escapeHtml(item.title)}</h4>
-        <p>${escapeHtml(item.subtitle || "Spotify")}</p>
-      </div>
-    </article>
-  `).join("");
-}
-
-function openSpotifyPlayer(item) {
-  if (!item.playable) {
-    openMediaPlayer({
-      provider: "Spotify",
-      title: item.title,
-      meta: "Artist pages are metadata-only here. Tracks, albums, and playlists support embeds.",
-      src: "about:blank"
-    });
-    mediaPlayerFrame.innerHTML = renderEmptyCard("Spotify artist selected", "Choose a track, album, or playlist to open an official Spotify embed.");
-    return;
-  }
-
-  const embedType = item.type === "track" ? "track" : item.type === "album" ? "album" : "playlist";
-  saveMediaHistory({ provider: "spotify", id: item.id, title: item.title, subtitle: item.subtitle });
-  openMediaPlayer({
-    provider: "Spotify",
-    title: item.title,
-    meta: `${item.type} - Spotify Embed. Premium is only required for future Web Playback SDK control.`,
-    src: `https://open.spotify.com/embed/${embedType}/${item.id}`
-  });
 }
 
 function renderFeedVideo(item, index) {
@@ -10839,9 +10377,6 @@ function renderMediaHub() {
   if (provider === "all" || provider === "youtube") {
     sections.push(renderYouTubeCards());
   }
-  if (provider === "all" || provider === "spotify") {
-    sections.push(renderSpotifyCards());
-  }
   if (provider === "all" || provider === "tiktok") {
     sections.push(renderTikTokCards());
   }
@@ -10854,17 +10389,14 @@ function renderMediaHub() {
 
   mediaLoading.hidden = !mediaState.loading;
   mediaResultsTitle.textContent = `${providerLabel(provider)} Results`;
-  if (provider === "spotify") {
-    mediaResultsCopy.textContent =
-      "Search Spotify and open saved music inside Velofy.";
-  } else if (provider === "tiktok") {
+  if (provider === "tiktok") {
     mediaResultsCopy.textContent =
       "Connect a TikTok account to show profile videos.";
   } else {
     mediaResultsCopy.textContent =
       provider === "youtube"
         ? "YouTube metadata comes from /api/youtube/search and playback uses the YouTube IFrame Player API."
-        : "Search real YouTube and Spotify results, or connect TikTok to show authorized profile videos.";
+        : "Search YouTube results, or connect TikTok to show authorized profile videos.";
   }
 
   mediaLoadMore.hidden =
@@ -10903,24 +10435,20 @@ function handleMediaSearch(value) {
   if (mediaState.provider === "youtube" || mediaState.provider === "all") {
     searchYouTube();
   }
-  if (mediaState.provider === "spotify" || mediaState.provider === "all") {
-    searchSpotify();
-  }
   if (mediaState.provider === "tiktok") {
     loadTikTokData();
   }
-  if (!["youtube", "spotify", "all", "tiktok"].includes(mediaState.provider)) {
+  if (!["youtube", "all", "tiktok"].includes(mediaState.provider)) {
     renderMediaHub();
   }
 }
 
 function openMediaProvider(provider) {
-  mediaState.provider = provider;
-  storage.set("vel-media-tab", provider);
+  mediaState.provider = ["all", "youtube", "tiktok"].includes(provider) ? provider : "youtube";
+  storage.set("vel-media-tab", mediaState.provider);
   mediaState.youtubeNextPageToken = "";
-  if (provider === "youtube" || provider === "all") searchYouTube();
-  if (provider === "spotify" || provider === "all") searchSpotify();
-  if (provider === "tiktok") loadTikTokData();
+  if (mediaState.provider === "youtube" || mediaState.provider === "all") searchYouTube();
+  if (mediaState.provider === "tiktok") loadTikTokData();
   renderMediaHub();
   openPanel("media");
 }
@@ -10933,20 +10461,8 @@ function selectMediaCard(card) {
     return;
   }
 
-  if (card.dataset.mediaRetry === "spotify") {
-    searchSpotify();
-    return;
-  }
-
   if (card.dataset.mediaRetry === "tiktok") {
     loadTikTokData();
-    return;
-  }
-
-  if (card.dataset.spotifyType) {
-    mediaState.spotifyType = card.dataset.spotifyType;
-    storage.set("vel-spotify-type", mediaState.spotifyType);
-    searchSpotify();
     return;
   }
 
@@ -10969,12 +10485,6 @@ function selectMediaCard(card) {
     );
     if (!video) return;
     openYouTubePlayer(video);
-    return;
-  }
-
-  if (card.dataset.mediaKind === "spotify") {
-    const item = getSpotifyItems().find((entry) => entry.id === card.dataset.spotifyId && entry.type === card.dataset.spotifyType);
-    if (item) openSpotifyPlayer(item);
     return;
   }
 
@@ -11241,22 +10751,6 @@ panelOpenButtons.forEach((button) => {
 closePanelButtons.forEach((button) => {
   button.addEventListener("click", () => {
     closePanel(button.dataset.closePanel);
-  });
-});
-
-aiChatForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  sendAiMessage(aiInput?.value || "");
-});
-
-aiClearButton?.addEventListener("click", () => {
-  clearAiChat();
-});
-
-aiPromptButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    if (aiInput) aiInput.value = button.dataset.aiPrompt || "";
-    sendAiMessage(button.dataset.aiPrompt || "");
   });
 });
 
@@ -12089,7 +11583,7 @@ mediaSearchForm?.addEventListener("submit", (event) => {
 
 mediaSearchInput?.addEventListener("input", () => {
   window.clearTimeout(mediaSearchDebounceTimer);
-  if (mediaState.provider !== "spotify") return;
+  if (mediaState.provider !== "youtube" && mediaState.provider !== "all") return;
   mediaSearchDebounceTimer = window.setTimeout(() => {
     handleMediaSearch(mediaSearchInput.value);
   }, 420);
@@ -12103,7 +11597,7 @@ mediaProviderButtons.forEach((button) => {
 
 mediaGrid?.addEventListener("click", (event) => {
   if (event.target.closest("a")) return;
-  const directMediaButton = event.target.closest("button[data-media-kind], button[data-spotify-type], button[data-tiktok-connect], button[data-media-retry]");
+  const directMediaButton = event.target.closest("button[data-media-kind], button[data-tiktok-connect], button[data-media-retry]");
   if (directMediaButton) {
     selectMediaCard(directMediaButton);
     return;
@@ -12512,10 +12006,6 @@ velofyNext.addEventListener("click", () => {
   playVelofyOffset(1);
 });
 velofyPlay.addEventListener("click", () => {
-  if (currentVelofyMode === "spotify") {
-    openCurrentSpotifyExternal();
-    return;
-  }
   if (audioElement.paused) {
     audioElement.play().catch(() => {});
   } else {
@@ -12529,10 +12019,6 @@ taskbarNextButton?.addEventListener("click", () => {
   playVelofyOffset(1);
 });
 taskbarPlayButton?.addEventListener("click", () => {
-  if (currentVelofyMode === "spotify") {
-    openCurrentSpotifyExternal();
-    return;
-  }
   if (audioElement.paused) {
     audioElement.play().catch(() => {});
   } else {
@@ -12569,12 +12055,7 @@ velofyPlaylist.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-track-index]");
   if (button) {
     loadTrack(Number(button.dataset.trackIndex), true);
-    return;
   }
-  const spotifyButton = event.target.closest("button[data-spotify-track-id]");
-  if (!spotifyButton) return;
-  const track = savedSpotifyTracks.find((item) => item.id === spotifyButton.dataset.spotifyTrackId);
-  openVelofySpotifyTrack(track);
 });
 velofySearch?.addEventListener("input", () => {
   velofySearchQuery = velofySearch.value;
@@ -12595,31 +12076,6 @@ velofyShuffleButton?.addEventListener("click", () => {
   velofyShuffleEnabled = !velofyShuffleEnabled;
   storage.set("velofy-shuffle", velofyShuffleEnabled ? "1" : "0");
   renderVelofyPlaylistSelect();
-});
-
-velofySpotifySearchButton?.addEventListener("click", () => {
-  searchVelofySpotify();
-});
-
-velofySpotifySearch?.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  searchVelofySpotify();
-});
-
-velofySpotifyResults?.addEventListener("click", (event) => {
-  const playButton = event.target.closest("[data-velofy-spotify-play]");
-  const saveButton = event.target.closest("[data-velofy-spotify-save]");
-  const id = playButton?.dataset.velofySpotifyPlay || saveButton?.dataset.velofySpotifySave;
-  if (!id) return;
-  const track = velofySpotifySearchResults.find((item) => item.id === id)
-    || savedSpotifyTracks.find((item) => item.id === id);
-  if (saveButton) {
-    saveVelofySpotifyTrack(track);
-    renderVelofySpotifyResults();
-    return;
-  }
-  openVelofySpotifyTrack(track);
 });
 
 velofyImportButton?.addEventListener("click", () => {
@@ -14915,13 +14371,9 @@ applyWallpaperEffect(currentWallpaperEffect);
 applyTaskbarPosition(currentTaskbarPosition);
 applyHomeClockPosition();
 initHomeClockDrag();
-if (velofySpotifySearch) {
-  velofySpotifySearch.value = velofySpotifySearchQuery;
-}
 renderLauncherCatalog();
 renderDesktopShortcuts();
 renderRecentApps();
-renderAiMessages();
 initVelChat();
 updateYouTubeGlobalImportUi();
 renderLobbyState();
@@ -14943,7 +14395,6 @@ if (velHubSearchInput) {
 setVelHubCinema(velHubState.cinema);
 renderVelHubModernPicks();
 renderVelHub();
-renderVelofySpotifyResults();
 showBootScreen();
 updateClock();
 renderNetworkState();

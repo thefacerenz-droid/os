@@ -67,6 +67,7 @@
             <label for="welcomePinInput">Enter PIN</label>
             <input id="welcomePinInput" type="password" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="PIN" aria-label="Startup PIN" />
             <button class="ghost-button is-solid" type="submit">Enter vel.os</button>
+            <p class="tiny-note">Screen sharing and Remote Deck sounds still ask for visible permission on each device.</p>
           </form>
           <p class="welcome-status" id="welcomeStatus" aria-live="polite"></p>
         </div>
@@ -213,37 +214,6 @@
               </button>
             </div>
           </section>
-        </div>
-      </section>
-
-      <section class="drawer ai-drawer" id="aiDrawer" aria-hidden="true">
-        <button class="drawer-scrim" type="button" aria-label="Close Vel Assistant" data-close-panel="ai"></button>
-        <div class="drawer-panel ai-panel">
-          <header class="drawer-head">
-            <div>
-              <p class="micro-label">vel.os</p>
-              <h2>Vel Assistant</h2>
-              <p class="drawer-copy">Built into the desktop.</p>
-            </div>
-            <div class="window-actions">
-              <button class="close-button" id="aiClearButton" type="button">Clear</button>
-              <button class="close-button" type="button" data-close-panel="ai">Close</button>
-            </div>
-          </header>
-
-          <div class="ai-layout">
-            <section class="ai-chat-card">
-              <div class="ai-status-row">
-                <p class="section-label">Chat</p>
-                <span id="aiStatus">Ready</span>
-              </div>
-              <div class="ai-messages" id="aiMessages" aria-live="polite"></div>
-              <form class="ai-form" id="aiChatForm">
-                <textarea id="aiInput" rows="2" maxlength="1200" placeholder="Type a message..." aria-label="Type a message"></textarea>
-                <button class="ghost-button is-solid" type="submit">Send</button>
-              </form>
-            </section>
-          </div>
         </div>
       </section>
 
@@ -500,7 +470,6 @@
           <div class="music-layout">
             <section class="music-player-card">
               <div class="album-art"><img id="velofyArtwork" src="./assets/images/wallpaper/vel.png" alt="vel.os artwork" /></div>
-              <div class="velofy-spotify-player" id="velofySpotifyPlayer" hidden></div>
               <div class="track-copy">
                 <p class="micro-label">Now Playing</p>
                 <h3 id="velofyTitle">Rock N Roll</h3>
@@ -536,15 +505,6 @@
                 <input id="velofyImportInput" type="file" accept="audio/*" multiple hidden />
                 <div class="playlist-list" id="velofyPlaylist"></div>
                 <p class="tiny-note" id="velofyPlaylistNote">Local MP3s play with full Velofy controls. Save tracks into custom playlists with the + button.</p>
-              </article>
-              <article class="side-card spotify-velofy-card">
-                <div class="music-side-head">
-                  <p class="section-label">Spotify Search</p>
-                  <button class="ghost-button" id="velofySpotifySearchButton" type="button">Search</button>
-                </div>
-                <input class="mini-search-input velofy-search" id="velofySpotifySearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search Spotify songs" aria-label="Search Spotify songs" />
-                <div class="spotify-result-list" id="velofySpotifyResults"></div>
-                <p class="tiny-note">Search songs, save tracks, and build a bigger Velofy library.</p>
               </article>
             </section>
           </div>
