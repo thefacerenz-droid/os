@@ -6483,11 +6483,16 @@ function getLocalYouTubeFallbackResults(query = "") {
     ...youtubeWatchHistory,
     ...youtubeFavorites,
     youtubeAppState.currentVideo,
-    ...youtubeAppState.results
+    ...youtubeAppState.results,
+    ...mediaYouTubeCatalog.map((video) => ({
+      ...video,
+      topic: video.tags?.[0] || "youtube",
+      description: (video.tags || []).join(" ")
+    }))
   ].filter(Boolean);
   const seen = new Set();
 
-  return sources
+  const ranked = sources
     .map((video, index) => {
       const haystack = `${video.title || ""} ${video.channel || ""} ${video.topic || ""} ${video.description || ""}`.toLowerCase();
       const score = words.reduce((total, word) => total + (haystack.includes(word) ? 1 : 0), 0);
@@ -6511,6 +6516,18 @@ function getLocalYouTubeFallbackResults(query = "") {
       watchedAt: video.watchedAt || ""
     }))
     .slice(0, 30);
+
+  if (ranked.length) return ranked;
+  return mediaYouTubeCatalog.slice(0, 12).map((video) => ({
+    id: video.id,
+    title: video.title,
+    channel: video.channel,
+    thumbnail: video.thumbnail,
+    publishedAt: "",
+    description: (video.tags || []).join(" "),
+    topic: video.tags?.[0] || "youtube",
+    watchedAt: ""
+  }));
 }
 
 async function fetchYouTubeSearchItems(query, pageToken = "", options = {}) {

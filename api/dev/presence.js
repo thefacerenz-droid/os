@@ -4,7 +4,7 @@ const REDIS_CLIENT_KEY = "__velos_dev_presence_redis_client_promise";
 const MEMORY_KEY = "__velos_dev_presence_store";
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
-const { broadcastLiveEvent } = require("../../live.js");
+const { broadcastLiveEvent } = require("../../lib/live.js");
 // Hard-bind Dev Panel access to the owner devices provided.
 const BUILT_IN_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
 const ADMIN_DEVICE_IDS = [
