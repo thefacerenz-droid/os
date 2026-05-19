@@ -2187,6 +2187,9 @@ const VEL_CHAT_TYPING_POLL_MS = 1300;
 const VEL_CHAT_TYPING_IDLE_MS = 2600;
 const VEL_CHAT_TYPING_THROTTLE_MS = 900;
 const VEL_LIVE_RECONNECT_MS = 1800;
+const REMOTE_DECK_FAST_POLL_MS = 300;
+const REMOTE_DECK_READY_POLL_MS = 700;
+const REMOTE_DECK_HIDDEN_POLL_MS = 2000;
 const VEL_DEVICE_ID_KEY = "vel-device-id";
 const VEL_TASKBAR_POSITION_KEY = "vel-taskbar-position";
 const VEL_CUSTOM_THEME_KEY = "vel-custom-theme";
@@ -2366,6 +2369,10 @@ let remoteDeckChannel = null;
 let remoteDeckOnlineUsers = [];
 let remoteDeckTargetsLoading = false;
 let remoteDeckPendingPayload = null;
+let remoteDeckPollTimer = null;
+let remoteDeckPolling = false;
+let remoteDeckHandledSoundIds = new Set();
+let soundboardAudioPrimed = false;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -3385,9 +3392,11 @@ function setVelChatLocked(isLocked, message = "") {
     renderVelChatTyping();
     window.clearTimeout(velChatTypingPollTimer);
     window.clearTimeout(velChatTypingStopTimer);
+    clearRemoteDeckPoll();
     stopVelLiveUpdates();
   } else {
     startVelLiveUpdates();
+    scheduleRemoteDeckPoll(120);
   }
   if (velChatMessages) velChatMessages.hidden = isLocked;
   if (velChatForm) velChatForm.hidden = isLocked;
@@ -4260,8 +4269,22 @@ function armSoundboardAudio() {
       } catch (error) {
         return ctx.state === "running";
       }
-      return ctx.state === "running";
+      soundboardAudioPrimed = ctx.state === "running";
+      return soundboardAudioPrimed;
     });
+}
+
+function initSoundboardGestureUnlock() {
+  const unlock = () => {
+    armSoundboardAudio();
+    loadSoundboardFiles();
+    document.removeEventListener("pointerdown", unlock, true);
+    document.removeEventListener("touchstart", unlock, true);
+    document.removeEventListener("keydown", unlock, true);
+  };
+  document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("touchstart", unlock, true);
+  document.addEventListener("keydown", unlock, true);
 }
 
 function getSoundboardVolume() {
@@ -4766,6 +4789,61 @@ function hideRemoteSoundPrompt() {
   if (remoteSoundPrompt) remoteSoundPrompt.hidden = true;
 }
 
+function rememberRemoteSoundHandled(payload = {}) {
+  const id = String(payload.id || payload.nonce || "").slice(0, 120);
+  if (!id) return false;
+  if (remoteDeckHandledSoundIds.has(id)) return true;
+  remoteDeckHandledSoundIds.add(id);
+  if (remoteDeckHandledSoundIds.size > 80) {
+    remoteDeckHandledSoundIds = new Set([...remoteDeckHandledSoundIds].slice(-40));
+  }
+  return false;
+}
+
+function clearRemoteDeckPoll() {
+  window.clearTimeout(remoteDeckPollTimer);
+  remoteDeckPollTimer = null;
+}
+
+function scheduleRemoteDeckPoll(delay = null) {
+  clearRemoteDeckPoll();
+  if (!velChatPin) return;
+  const nextDelay = delay ?? (
+    document.visibilityState === "hidden"
+      ? REMOTE_DECK_HIDDEN_POLL_MS
+      : remoteDeckAllowed ? REMOTE_DECK_FAST_POLL_MS : REMOTE_DECK_READY_POLL_MS
+  );
+  remoteDeckPollTimer = window.setTimeout(pollRemoteDeckSounds, nextDelay);
+}
+
+async function pollRemoteDeckSounds() {
+  if (!velChatPin || remoteDeckPolling) {
+    scheduleRemoteDeckPoll();
+    return;
+  }
+  remoteDeckPolling = true;
+  try {
+    const response = await fetch("/api/dev/presence", {
+      method: "POST",
+      cache: "no-store",
+      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        action: "remote-poll",
+        ...getDevIdentityPayload()
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && Array.isArray(data.remoteSounds)) {
+      data.remoteSounds.forEach((sound) => handleRemoteDeckServerSound(sound));
+    }
+  } catch (error) {
+    return;
+  } finally {
+    remoteDeckPolling = false;
+    scheduleRemoteDeckPoll();
+  }
+}
+
 async function playRemoteDeckPayload(payload = {}) {
   if (payload.soundType === "file") {
     await loadSoundboardFiles();
@@ -4778,6 +4856,7 @@ async function playRemoteDeckPayload(payload = {}) {
 async function handleRemoteDeckServerSound(payload = {}) {
   if (!payload || !isRemoteDeckPayloadForThisDevice(payload)) return;
   if (payload.fromDeviceId === velDeviceId) return;
+  if (rememberRemoteSoundHandled(payload)) return;
   if (!remoteDeckAllowed) {
     const allow = window.confirm(`${payload.fromUsername || "Remote Deck"} wants to play sounds on this device. Allow Remote Deck sounds here?`);
     if (!allow) return;
@@ -11378,7 +11457,11 @@ remoteDeckGrid?.addEventListener("click", (event) => {
 remoteDeckAllow?.addEventListener("click", async () => {
   remoteDeckAllowed = !remoteDeckAllowed;
   storage.set(REMOTE_DECK_ALLOW_KEY, remoteDeckAllowed ? "1" : "0");
-  if (remoteDeckAllowed) await armSoundboardAudio();
+  if (remoteDeckAllowed) {
+    await armSoundboardAudio();
+    loadSoundboardFiles();
+    scheduleRemoteDeckPoll(80);
+  }
   renderRemoteDeck();
   setRemoteDeckStatus(remoteDeckAllowed ? "This device can receive Remote Deck sounds." : "This device will not receive Remote Deck sounds.", remoteDeckAllowed ? "live" : "warn");
 });
@@ -11391,6 +11474,8 @@ remoteSoundPromptPlay?.addEventListener("click", async () => {
   remoteDeckAllowed = true;
   storage.set(REMOTE_DECK_ALLOW_KEY, "1");
   await armSoundboardAudio();
+  loadSoundboardFiles();
+  scheduleRemoteDeckPoll(80);
   const played = await playRemoteDeckPayload(remoteDeckPendingPayload);
   if (played) {
     setRemoteDeckStatus(`Played ${remoteDeckPendingPayload.soundTitle || "remote sound"}.`, "live");
@@ -14791,6 +14876,7 @@ renderLauncherCatalog();
 renderDesktopShortcuts();
 renderRecentApps();
 initVelChatResize();
+initSoundboardGestureUnlock();
 initVelChat();
 updateYouTubeGlobalImportUi();
 renderLobbyState();
@@ -14827,9 +14913,11 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     sendDevPresenceLeave();
     stopVelLiveUpdates();
+    scheduleRemoteDeckPoll(REMOTE_DECK_HIDDEN_POLL_MS);
     return;
   }
   if (velChatPin) startVelLiveUpdates();
+  scheduleRemoteDeckPoll(120);
   checkDevAccess({ silent: true, once: true });
   reportDevPresence();
 });
