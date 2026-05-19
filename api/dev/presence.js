@@ -107,7 +107,7 @@ function getEnvAdminDevices() {
     deviceId,
     username: deviceId === "3fa56c0a"
       ? "Owner iPad"
-      : deviceId === "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"
+      : deviceId === "f1a9b3e9-a51e-4f20-9ffe-ada48165a354"
         ? "Owner PC"
         : "Owner",
     deviceName: "Permanent whitelist",
