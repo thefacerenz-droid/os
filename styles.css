@@ -7637,10 +7637,11 @@ body.is-booting .vel-chat {
 
 .vel-chat-messages {
   display: grid;
-  flex: 1 1 360px;
+  flex: 1 1 auto;
   align-content: start;
   gap: 0.55rem;
-  min-height: clamp(300px, 54dvh, 560px);
+  min-height: 0;
+  max-height: clamp(230px, 46dvh, 430px);
   padding: 0.15rem 0.55rem 0.15rem 0;
   overflow: auto;
   overscroll-behavior: contain;
@@ -7864,6 +7865,12 @@ body.is-booting .vel-chat {
 
 .vel-chat-form {
   padding-top: 0.1rem;
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.78), rgba(5, 5, 5, 0.94));
 }
 
 .vel-chat-attach-button {

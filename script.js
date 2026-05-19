@@ -3516,6 +3516,9 @@ function setVelChatCollapsed(collapsed) {
 
 function renderVelChatAuth() {
   velChatUser = normalizeVelChatUser(velChatUser);
+  if (velChatMessages) velChatMessages.hidden = !velChatUnlocked;
+  if (velChatForm) velChatForm.hidden = !velChatUnlocked;
+  if (velChatAttachmentName) velChatAttachmentName.hidden = !velChatUnlocked || !velChatAttachment;
   if (velChatUserBar) velChatUserBar.hidden = !velChatUser;
   if (velChatUserName) velChatUserName.textContent = velChatUser?.username || "Guest";
   if (velChatUserPill) {
