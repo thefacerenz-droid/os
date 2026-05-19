@@ -2105,6 +2105,7 @@ const remoteDeckAllow = document.getElementById("remoteDeckAllow");
 const remoteDeckRefresh = document.getElementById("remoteDeckRefresh");
 const remoteDeckTargets = document.getElementById("remoteDeckTargets");
 const remoteDeckGrid = document.getElementById("remoteDeckGrid");
+const remoteDeckMain = remoteDeckGrid?.closest(".remote-deck-main");
 const remoteDeckFullscreen = document.getElementById("remoteDeckFullscreen");
 const remoteDeckStop = document.getElementById("remoteDeckStop");
 const devAuthCard = document.getElementById("devAuthCard");
@@ -2353,6 +2354,8 @@ let remoteDeckPeers = readStoredJson(REMOTE_DECK_PEERS_KEY, {});
 remoteDeckPeers = remoteDeckPeers && typeof remoteDeckPeers === "object" && !Array.isArray(remoteDeckPeers) ? remoteDeckPeers : {};
 let remoteDeckAllowed = storage.get(REMOTE_DECK_ALLOW_KEY, "0") === "1";
 let remoteDeckChannel = null;
+let remoteDeckOnlineUsers = [];
+let remoteDeckTargetsLoading = false;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -3321,6 +3324,10 @@ function handleVelLiveEvent(payload = {}) {
     if (isDrawerOpen("dev") && devAdminCode) fetchDevPresence();
     return;
   }
+  if (type === "remote-sound") {
+    handleRemoteDeckServerSound(payload);
+    return;
+  }
   if (type === "screen") {
     handleScreenLiveEvent(payload);
   }
@@ -4163,6 +4170,7 @@ async function loadSoundboardFiles() {
   } finally {
     soundboardLoading = false;
     renderSoundboard();
+    if (isDrawerOpen("remoteDeck")) renderRemoteDeckGrid();
   }
 }
 
@@ -4361,7 +4369,7 @@ function renderSoundboard() {
   soundboardGrid.innerHTML = `${realPads}${emptyReal}${generatedPads}`;
 }
 
-function setRemoteDeckStatus(message = "Pick one or more whitelisted devices.", tone = "") {
+function setRemoteDeckStatus(message = "Pick someone online, then choose a sound.", tone = "") {
   if (!remoteDeckStatus) return;
   remoteDeckStatus.textContent = message;
   remoteDeckStatus.dataset.tone = tone;
@@ -4386,11 +4394,13 @@ function getRemoteDeckBuiltInDevices() {
 
 function rememberRemoteDeckPeer(peer = {}) {
   const deviceId = String(peer.deviceId || "").replace(/[^\w.-]/g, "").slice(0, 96);
-  if (!deviceId || !isRemoteDeckWhitelistedDevice(deviceId)) return;
+  if (!deviceId) return;
   remoteDeckPeers[deviceId] = {
     deviceId,
     username: cleanVelChatName(peer.username) || (deviceId === velDeviceId ? "This device" : "Whitelisted"),
     deviceName: String(peer.deviceName || "vel.os device").slice(0, 48),
+    userId: String(peer.userId || "").replace(/[^\w.-]/g, "").slice(0, 64),
+    appTitle: String(peer.appTitle || peer.app || "").replace(/\s+/g, " ").trim().slice(0, 36),
     online: true,
     lastSeen: Date.now()
   };
@@ -4405,37 +4415,66 @@ function getRemoteDeckDevices() {
   });
   const builtIns = getRemoteDeckBuiltInDevices();
   const map = new Map(builtIns.map((device) => [device.deviceId, device]));
+  remoteDeckOnlineUsers.forEach((user) => {
+    const deviceId = String(user.deviceId || "").replace(/[^\w.-]/g, "").slice(0, 96);
+    if (!deviceId) return;
+    map.set(deviceId, {
+      deviceId,
+      userId: String(user.userId || "").replace(/[^\w.-]/g, "").slice(0, 64),
+      username: cleanVelChatName(user.username) || "Online user",
+      deviceName: String(user.deviceName || "vel.os device").slice(0, 48),
+      appTitle: String(user.appTitle || user.app || "").replace(/\s+/g, " ").trim().slice(0, 36),
+      online: true,
+      lastSeen: Number(user.lastSeen) || Date.now()
+    });
+  });
   Object.values(remoteDeckPeers).forEach((peer) => {
     const existing = map.get(peer.deviceId) || {};
     const online = peer.deviceId === velDeviceId || Date.now() - (Number(peer.lastSeen) || 0) < 15000;
     map.set(peer.deviceId, { ...existing, ...peer, online });
   });
   return [...map.values()]
-    .filter((device) => device.deviceId && isRemoteDeckWhitelistedDevice(device.deviceId))
-    .sort((left, right) => Number(right.deviceId === velDeviceId) - Number(left.deviceId === velDeviceId) || Number(right.online) - Number(left.online));
+    .filter((device) => device.deviceId)
+    .sort((left, right) => Number(right.online) - Number(left.online) || String(left.username || "").localeCompare(String(right.username || "")));
+}
+
+function getRemoteDeckSelectedTargets() {
+  const devices = getRemoteDeckDevices();
+  return devices.filter((device) => device.online && remoteDeckSelectedDevices.has(device.deviceId));
 }
 
 function renderRemoteDeckTargets() {
   if (!remoteDeckTargets) return;
   const devices = getRemoteDeckDevices();
-  if (!remoteDeckSelectedDevices.size && isRemoteDeckWhitelistedDevice()) {
-    remoteDeckSelectedDevices.add(velDeviceId);
-  }
-  const selectedNames = devices
-    .filter((device) => remoteDeckSelectedDevices.has(device.deviceId))
+  const selected = getRemoteDeckSelectedTargets();
+  const selectedNames = selected
     .map((device) => device.deviceId === velDeviceId ? "This device" : device.username || "Whitelisted");
   if (remoteDeckSelectedName) {
     remoteDeckSelectedName.textContent = selectedNames.length
       ? selectedNames.length === 1 ? selectedNames[0] : `${selectedNames.length} selected`
       : "No target selected";
   }
-  remoteDeckTargets.innerHTML = devices.map((device) => {
+  if (remoteDeckMain) {
+    remoteDeckMain.hidden = !selected.length;
+  }
+  const visibleDevices = devices.filter((device) => device.online);
+  if (!visibleDevices.length) {
+    remoteDeckTargets.innerHTML = `
+      <article class="remote-device-card is-empty">
+        <strong>No one online</strong>
+        <span>Open vel.os on another device, enter the PIN, then refresh.</span>
+      </article>
+    `;
+    return;
+  }
+  remoteDeckTargets.innerHTML = visibleDevices.map((device) => {
     const selected = remoteDeckSelectedDevices.has(device.deviceId);
     const isThisDevice = device.deviceId === velDeviceId;
+    const detail = device.appTitle ? `${device.deviceName || "vel.os device"} - ${device.appTitle}` : device.deviceName || "vel.os device";
     return `
       <button class="remote-device-card${selected ? " is-selected" : ""}" type="button" data-remote-target="${escapeHtml(device.deviceId)}" aria-pressed="${selected}">
         <strong>${escapeHtml(isThisDevice ? "This device" : device.username || "Whitelisted")}</strong>
-        <span>${escapeHtml(device.deviceName || "vel.os device")}</span>
+        <span>${escapeHtml(detail)}</span>
         <small>${escapeHtml(`${device.online ? "Online" : "Offline"} - ${device.deviceId.slice(0, 12)}`)}</small>
       </button>
     `;
@@ -4444,6 +4483,10 @@ function renderRemoteDeckTargets() {
 
 function renderRemoteDeckGrid() {
   if (!remoteDeckGrid) return;
+  if (!remoteDeckSelectedDevices.size) {
+    remoteDeckGrid.innerHTML = "";
+    return;
+  }
   const realSounds = getAllSoundboardRealSounds();
   const realPads = realSounds.map((sound) => `
     <button class="sound-pad is-real" type="button" data-remote-sound-file-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Send ${escapeHtml(sound.title)}">
@@ -4471,6 +4514,39 @@ function renderRemoteDeck() {
   renderRemoteDeckGrid();
 }
 
+async function fetchRemoteDeckTargets() {
+  if (!isRemoteDeckWhitelistedDevice()) return;
+  if (!velChatPin) {
+    setRemoteDeckStatus("Enter the startup PIN first so Remote Deck can see online users.", "warn");
+    return;
+  }
+  if (remoteDeckTargetsLoading) return;
+  remoteDeckTargetsLoading = true;
+  setRemoteDeckStatus("Looking for online devices...");
+  try {
+    const response = await fetch("/api/dev/presence", {
+      method: "POST",
+      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        action: "remote-list",
+        ...getDevIdentityPayload()
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Remote Deck could not load online users.");
+    remoteDeckOnlineUsers = (Array.isArray(data.users) ? data.users : []).filter((user) => user?.deviceId);
+    remoteDeckOnlineUsers.forEach((user) => rememberRemoteDeckPeer(user));
+    renderRemoteDeck();
+    setRemoteDeckStatus(remoteDeckOnlineUsers.length
+      ? `Found ${remoteDeckOnlineUsers.length} online device${remoteDeckOnlineUsers.length === 1 ? "" : "s"}.`
+      : "No one else online yet.", remoteDeckOnlineUsers.length ? "live" : "warn");
+  } catch (error) {
+    setRemoteDeckStatus(error.message || "Remote Deck could not load online users.", "error");
+  } finally {
+    remoteDeckTargetsLoading = false;
+  }
+}
+
 function syncRemoteDeckLaunchButton() {
   if (!soundboardRemoteDeck) return;
   soundboardRemoteDeck.hidden = !isRemoteDeckWhitelistedDevice();
@@ -4496,12 +4572,37 @@ function postRemoteDeckMessage(message = {}) {
   }
 }
 
-function playRemoteDeckPayload(payload = {}) {
+function isRemoteDeckPayloadForThisDevice(payload = {}) {
+  const user = normalizeVelChatUser(velChatUser);
+  const targetDeviceId = String(payload.targetDeviceId || "").replace(/[^\w.-]/g, "").slice(0, 96);
+  const targetUserId = String(payload.targetUserId || "").replace(/[^\w.-]/g, "").slice(0, 64);
+  return Boolean(
+    (targetDeviceId && targetDeviceId === velDeviceId)
+      || (targetUserId && user?.id && targetUserId === user.id)
+  );
+}
+
+async function playRemoteDeckPayload(payload = {}) {
   if (payload.soundType === "file") {
+    await loadSoundboardFiles();
     playSoundboardFile(payload.soundId || "");
     return;
   }
   playSoundboardSound(payload.soundId || "");
+}
+
+async function handleRemoteDeckServerSound(payload = {}) {
+  if (!payload || !isRemoteDeckPayloadForThisDevice(payload)) return;
+  if (payload.fromDeviceId === velDeviceId) return;
+  if (!remoteDeckAllowed) {
+    const allow = window.confirm(`${payload.fromUsername || "Remote Deck"} wants to play sounds on this device. Allow Remote Deck sounds here?`);
+    if (!allow) return;
+    remoteDeckAllowed = true;
+    storage.set(REMOTE_DECK_ALLOW_KEY, "1");
+    renderRemoteDeck();
+  }
+  await playRemoteDeckPayload(payload);
+  setRemoteDeckStatus(`Received ${payload.soundTitle || "sound"} from ${payload.fromUsername || "Remote Deck"}.`, "live");
 }
 
 function handleRemoteDeckMessage(payload = {}) {
@@ -4511,36 +4612,75 @@ function handleRemoteDeckMessage(payload = {}) {
     if (isDrawerOpen("remoteDeck")) renderRemoteDeckTargets();
     return;
   }
-  if (payload.type !== "play" || payload.targetDeviceId !== velDeviceId) return;
-  if (!remoteDeckAllowed) {
-    const allow = window.confirm(`${payload.fromUsername || "A whitelisted device"} wants to use Remote Deck on this device. Allow sounds?`);
-    if (!allow) return;
-    remoteDeckAllowed = true;
-    storage.set(REMOTE_DECK_ALLOW_KEY, "1");
-  }
-  playRemoteDeckPayload(payload);
-  setRemoteDeckStatus(`Received ${payload.soundTitle || "sound"} from ${payload.fromUsername || "Remote Deck"}.`, "live");
+  if (payload.type !== "play" && payload.type !== "remote-sound") return;
+  handleRemoteDeckServerSound(payload);
 }
 
-function sendRemoteDeckSound(soundType = "generated", soundId = "", soundTitle = "Sound") {
+async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundTitle = "Sound") {
   if (!remoteDeckSelectedDevices.size) {
     setRemoteDeckStatus("Select at least one target first.", "warn");
     return;
   }
-  const selected = [...remoteDeckSelectedDevices];
-  selected.forEach((targetDeviceId) => {
-    const payload = { type: "play", targetDeviceId, soundType, soundId, soundTitle };
+  if (!velChatPin) {
+    setRemoteDeckStatus("Enter the startup PIN first so Remote Deck can send across devices.", "warn");
+    return;
+  }
+  const selected = getRemoteDeckSelectedTargets();
+  if (!selected.length) {
+    setRemoteDeckStatus("The selected device is not online anymore. Refresh and pick again.", "warn");
+    remoteDeckSelectedDevices.clear();
+    renderRemoteDeck();
+    return;
+  }
+  let sent = 0;
+  for (const target of selected) {
+    const targetDeviceId = target.deviceId || "";
+    const payload = {
+      type: "play",
+      targetDeviceId,
+      targetUserId: target.userId || "",
+      targetUsername: target.username || "",
+      targetDeviceName: target.deviceName || "",
+      soundType,
+      soundId,
+      soundTitle
+    };
     if (targetDeviceId === velDeviceId) {
       if (!remoteDeckAllowed) {
         setRemoteDeckStatus("Press Allow this device before playing sounds here.", "warn");
-        return;
+        continue;
       }
-      playRemoteDeckPayload(payload);
-      return;
+      await playRemoteDeckPayload(payload);
+      sent += 1;
+      continue;
     }
-    postRemoteDeckMessage(payload);
-  });
-  setRemoteDeckStatus(`Sent ${soundTitle} to ${selected.length} target${selected.length === 1 ? "" : "s"}.`, "live");
+    try {
+      const response = await fetch("/api/dev/presence", {
+        method: "POST",
+        headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          action: "remote-sound",
+          ...getDevIdentityPayload(),
+          targetDeviceId,
+          targetUserId: target.userId || "",
+          targetUsername: target.username || "",
+          targetDeviceName: target.deviceName || "",
+          soundType,
+          soundId,
+          soundTitle
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Sound could not be sent.");
+      postRemoteDeckMessage(payload);
+      sent += 1;
+    } catch (error) {
+      setRemoteDeckStatus(error.message || "Sound could not be sent.", "error");
+    }
+  }
+  if (sent) {
+    setRemoteDeckStatus(`Sent ${soundTitle} to ${sent} target${sent === 1 ? "" : "s"}.`, "live");
+  }
 }
 
 function announceRemoteDeckPeer() {
@@ -4579,9 +4719,11 @@ function initRemoteDeckChannel() {
 function openRemoteDeck() {
   if (!isRemoteDeckWhitelistedDevice()) return;
   renderRemoteDeck();
+  loadSoundboardFiles();
+  fetchRemoteDeckTargets();
   setRemoteDeckStatus(remoteDeckAllowed
-    ? "Ready. Select targets and send a pad."
-    : "Press Allow this device if you want this device to receive sounds.", remoteDeckAllowed ? "live" : "warn");
+    ? "Pick someone online, then choose a sound."
+    : "Pick a target. Press Allow this device only if this device should receive sounds.", remoteDeckAllowed ? "live" : "warn");
 }
 
 function setDevStatus(message = "", tone = "") {
@@ -5001,6 +5143,9 @@ function clearDeviceBanScreen() {
 function handleDevAccessData(data = {}) {
   updateDevLockedApps(data.lockedApps || []);
   renderGlobalAnnouncement(data.announcement || null);
+  if (Array.isArray(data.remoteSounds)) {
+    data.remoteSounds.forEach((sound) => handleRemoteDeckServerSound(sound));
+  }
   if (data.vcGrant?.amount) {
     awardVelCredits(Number(data.vcGrant.amount) || 0);
   }
@@ -11023,6 +11168,7 @@ remoteDeckTargets?.addEventListener("click", (event) => {
     remoteDeckSelectedDevices.add(deviceId);
   }
   renderRemoteDeckTargets();
+  renderRemoteDeckGrid();
 });
 
 remoteDeckGrid?.addEventListener("click", (event) => {
@@ -11042,14 +11188,14 @@ remoteDeckGrid?.addEventListener("click", (event) => {
 remoteDeckAllow?.addEventListener("click", () => {
   remoteDeckAllowed = !remoteDeckAllowed;
   storage.set(REMOTE_DECK_ALLOW_KEY, remoteDeckAllowed ? "1" : "0");
+  if (remoteDeckAllowed) getSoundboardContext();
   renderRemoteDeck();
   setRemoteDeckStatus(remoteDeckAllowed ? "This device can receive Remote Deck sounds." : "This device will not receive Remote Deck sounds.", remoteDeckAllowed ? "live" : "warn");
 });
 
-remoteDeckRefresh?.addEventListener("click", () => {
+remoteDeckRefresh?.addEventListener("click", async () => {
   announceRemoteDeckPeer();
-  renderRemoteDeckTargets();
-  setRemoteDeckStatus("Refreshed whitelisted devices.", "live");
+  await fetchRemoteDeckTargets();
 });
 
 remoteDeckStop?.addEventListener("click", () => {
@@ -12737,6 +12883,7 @@ const flappy = (() => {
   let lastFrame = 0;
   let spawnTimer = 0;
   let leaderboard = readStoredJson(localLeaderboardKey, []);
+  let leaderboardPersistent = false;
 
   function updateCopy() {
     if (scoreElement) scoreElement.textContent = String(score);
@@ -12919,17 +13066,29 @@ const flappy = (() => {
       .slice(0, 12);
   }
 
-  function loadLeaderboard() {
+  async function loadLeaderboard() {
     if (!leaderboardElement) return;
-    leaderboard = normalizeLocalScores(readStoredJson(localLeaderboardKey, []));
-    renderLeaderboard(true);
+    leaderboardElement.innerHTML = '<p class="catalog-empty">Loading scores...</p>';
+    try {
+      const response = await fetch("/api/games/flappy", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Leaderboard could not load.");
+      leaderboard = normalizeLocalScores(data.scores || []);
+      leaderboardPersistent = Boolean(data.persistent);
+      renderLeaderboard(leaderboardPersistent, true);
+    } catch (error) {
+      leaderboard = normalizeLocalScores(readStoredJson(localLeaderboardKey, []));
+      leaderboardPersistent = false;
+      renderLeaderboard(false, true);
+      if (statusElement) statusElement.textContent = "Leaderboard is offline, showing this device's saved scores.";
+    }
   }
 
-  function renderLeaderboard(persistent = false) {
+  function renderLeaderboard(persistent = false, fromServer = false) {
     if (!leaderboardElement) return;
     const topScores = leaderboard.slice(0, 8);
     if (!topScores.length) {
-      leaderboardElement.innerHTML = '<p class="catalog-empty">No local scores yet. Be the first.</p>';
+      leaderboardElement.innerHTML = `<p class="catalog-empty">No ${fromServer ? "global" : "local"} scores yet. Be the first.</p>`;
     } else {
       leaderboardElement.innerHTML = topScores.map((entry, index) => `
         <article class="flappy-score-row${entry.deviceId === velDeviceId ? " is-you" : ""}">
@@ -12942,11 +13101,13 @@ const flappy = (() => {
     const myRank = leaderboard.findIndex((entry) => entry.deviceId === velDeviceId || entry.userId === velChatUser?.id);
     if (rankElement) rankElement.textContent = myRank >= 0 ? `#${myRank + 1}` : "--";
     if (persistent && topScores.length) {
+      leaderboardElement.insertAdjacentHTML("beforeend", '<p class="tiny-note">Global leaderboard synced.</p>');
+    } else if (topScores.length) {
       leaderboardElement.insertAdjacentHTML("beforeend", '<p class="tiny-note">Saved on this device.</p>');
     }
   }
 
-  function submitScore() {
+  async function submitScore() {
     if (!score) return;
     const userId = velChatUser?.id || "guest";
     const nextEntry = {
@@ -12961,7 +13122,28 @@ const flappy = (() => {
       .filter((entry) => (entry.userId || entry.deviceId) !== owner);
     leaderboard = normalizeLocalScores([nextEntry, ...previous]);
     storage.set(localLeaderboardKey, JSON.stringify(leaderboard));
-    renderLeaderboard(true);
+    renderLeaderboard(false, false);
+    if (!velChatPin) {
+      if (statusElement) statusElement.textContent = `Run ended at ${score}. Login with the site PIN to post global scores.`;
+      return;
+    }
+    try {
+      const response = await fetch("/api/games/flappy", {
+        method: "POST",
+        headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(nextEntry)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Global score could not save.");
+      leaderboard = normalizeLocalScores(data.scores || []);
+      leaderboardPersistent = Boolean(data.persistent);
+      renderLeaderboard(leaderboardPersistent, true);
+      if (statusElement) statusElement.textContent = data.persistent
+        ? `Run ended at ${score}. Global leaderboard updated.`
+        : `Run ended at ${score}. Temporary leaderboard updated.`;
+    } catch (error) {
+      if (statusElement) statusElement.textContent = `${error.message || "Global score could not save."} Local score saved.`;
+    }
   }
 
   function endRun() {
@@ -12973,7 +13155,7 @@ const flappy = (() => {
       storage.set("vel-flappy-best", best);
     }
     updateCopy();
-    if (statusElement) statusElement.textContent = `Run ended at ${score}. Score saved on this device.`;
+    if (statusElement) statusElement.textContent = `Run ended at ${score}. Saving score...`;
     submitScore();
     draw();
   }
@@ -13089,7 +13271,12 @@ const flappy = (() => {
     loadLeaderboard();
   }, 0);
 
-  return { start, reset, pause, refresh: resizeCanvas, flap };
+  function refresh() {
+    resizeCanvas();
+    loadLeaderboard();
+  }
+
+  return { start, reset, pause, refresh, flap };
 })();
 
 const wordWarp = (() => {
