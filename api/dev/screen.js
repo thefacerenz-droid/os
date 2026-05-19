@@ -5,7 +5,7 @@ const SCREEN_TTL_MS = 1000 * 60 * 8;
 const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
 const { broadcastLiveEvent } = require("../../lib/live.js");
-const BUILT_IN_ADMIN_DEVICE_IDS = ["f1a9b3e9", "f1a9b3e9-a51e-4f20-9ffe-ada48165a354"];
+const BUILT_IN_ADMIN_DEVICE_IDS = ["f1a9b3e9-a51e-4f20-9ffe-ada48165a354"];
 const ADMIN_DEVICE_IDS = [
   ...(process.env.VEL_OS_ADMIN_DEVICE_IDS || "").split(/[\s,]+/),
   ...BUILT_IN_ADMIN_DEVICE_IDS
