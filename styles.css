@@ -7306,7 +7306,7 @@ body[data-taskbar-style="terminal"] .taskbar {
   left: clamp(0.55rem, 1.4vw, 1rem);
   bottom: calc(4.05rem + env(safe-area-inset-bottom));
   z-index: 72;
-  width: min(430px, calc(100dvw - 1rem));
+  width: min(var(--chat-width, 560px), calc(100dvw - 1rem));
   pointer-events: none;
 }
 
@@ -7363,13 +7363,15 @@ body.is-booting .vel-chat {
 }
 
 .vel-chat-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  width: min(430px, calc(100dvw - 1rem));
-  max-height: min(620px, calc(100dvh - 6.5rem));
+  width: 100%;
+  height: min(var(--chat-height, 650px), calc(100dvh - 6.5rem));
+  min-height: min(390px, calc(100dvh - 6.5rem));
   margin-bottom: 0.6rem;
-  padding: 0.75rem;
+  padding: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 26px;
   background:
@@ -7641,7 +7643,6 @@ body.is-booting .vel-chat {
   align-content: start;
   gap: 0.55rem;
   min-height: 0;
-  max-height: clamp(230px, 46dvh, 430px);
   padding: 0.15rem 0.55rem 0.15rem 0;
   overflow: auto;
   overscroll-behavior: contain;
@@ -7864,13 +7865,39 @@ body.is-booting .vel-chat {
 }
 
 .vel-chat-form {
-  padding-top: 0.1rem;
+  padding-top: 0.55rem;
   flex: 0 0 auto;
   position: sticky;
   bottom: 0;
   z-index: 2;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(10, 10, 10, 0.78), rgba(5, 5, 5, 0.94));
+}
+
+.vel-chat-resize-handle {
+  position: absolute;
+  bottom: 0.45rem;
+  right: 0.45rem;
+  z-index: 5;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 0;
+  border-radius: 0.38rem;
+  background:
+    linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, 0.82) 46%, rgba(255, 255, 255, 0.82) 54%, transparent 55%),
+    linear-gradient(135deg, transparent 62%, rgba(255, 255, 255, 0.42) 63%, rgba(255, 255, 255, 0.42) 70%, transparent 71%),
+    rgba(255, 255, 255, 0.08);
+  cursor: nesw-resize;
+  opacity: 0.74;
+  touch-action: none;
+}
+
+.vel-chat-resize-handle:hover,
+.vel-chat-resize-handle:focus-visible,
+.vel-chat-panel.is-resizing .vel-chat-resize-handle {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.16);
+  outline: none;
 }
 
 .vel-chat-attach-button {
@@ -9130,7 +9157,8 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
   }
 
   .vel-chat-panel {
-    max-height: min(510px, calc(100dvh - 6rem));
+    height: min(var(--chat-height, 560px), calc(100dvh - 6rem));
+    min-height: min(380px, calc(100dvh - 6rem));
     border-radius: 22px;
   }
 

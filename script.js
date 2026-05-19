@@ -2033,6 +2033,7 @@ const proxyNoteReadout = document.getElementById("proxyNoteReadout");
 const velChat = document.getElementById("velChat");
 const velChatToggle = document.getElementById("velChatToggle");
 const velChatPanel = document.getElementById("velChatPanel");
+const velChatResizeHandle = document.getElementById("velChatResizeHandle");
 const velChatHide = document.getElementById("velChatHide");
 const velChatClearLog = document.getElementById("velChatClearLog");
 const velChatBottomButton = document.getElementById("velChatBottomButton");
@@ -2175,6 +2176,7 @@ const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
+const VEL_CHAT_SIZE_KEY = "vel-chat-size";
 const VEL_CHAT_POLL_MS = 3000;
 const VEL_CHAT_TYPING_POLL_MS = 1300;
 const VEL_CHAT_TYPING_IDLE_MS = 2600;
@@ -3512,6 +3514,94 @@ function setVelChatCollapsed(collapsed) {
   } else {
     renderVelChatUnread();
   }
+}
+
+function getVelChatSizeBounds() {
+  const taskbarReserve = getTaskbarReserve();
+  return {
+    minWidth: Math.min(340, Math.max(280, window.innerWidth - 16)),
+    maxWidth: Math.max(320, window.innerWidth - 16),
+    minHeight: Math.min(390, Math.max(300, window.innerHeight - taskbarReserve - 24)),
+    maxHeight: Math.max(360, window.innerHeight - taskbarReserve - 24)
+  };
+}
+
+function normalizeVelChatSize(size = {}) {
+  const bounds = getVelChatSizeBounds();
+  const fallback = {
+    width: Math.min(560, bounds.maxWidth),
+    height: Math.min(650, bounds.maxHeight)
+  };
+  return {
+    width: clampNumber(Number(size.width) || fallback.width, bounds.minWidth, bounds.maxWidth),
+    height: clampNumber(Number(size.height) || fallback.height, bounds.minHeight, bounds.maxHeight)
+  };
+}
+
+function applyVelChatSize(size = readStoredJson(VEL_CHAT_SIZE_KEY, {}), save = false) {
+  if (!velChat) return;
+  const nextSize = normalizeVelChatSize(size);
+  velChat.style.setProperty("--chat-width", `${nextSize.width}px`);
+  velChat.style.setProperty("--chat-height", `${nextSize.height}px`);
+  if (save) storage.set(VEL_CHAT_SIZE_KEY, JSON.stringify(nextSize));
+}
+
+function initVelChatResize() {
+  if (!velChat || !velChatPanel || !velChatResizeHandle) return;
+  applyVelChatSize();
+
+  let resizeState = null;
+  const stopResize = () => {
+    if (!resizeState) return;
+    velChatPanel.classList.remove("is-resizing");
+    storage.set(VEL_CHAT_SIZE_KEY, JSON.stringify(normalizeVelChatSize({
+      width: resizeState.currentWidth,
+      height: resizeState.currentHeight
+    })));
+    resizeState = null;
+    document.removeEventListener("pointermove", moveResize);
+    document.removeEventListener("pointerup", stopResize);
+    document.removeEventListener("pointercancel", stopResize);
+  };
+
+  const moveResize = (event) => {
+    if (!resizeState) return;
+    event.preventDefault();
+    const nextSize = normalizeVelChatSize({
+      width: resizeState.startWidth + event.clientX - resizeState.startX,
+      height: resizeState.startHeight + resizeState.startY - event.clientY
+    });
+    resizeState.currentWidth = nextSize.width;
+    resizeState.currentHeight = nextSize.height;
+    applyVelChatSize(nextSize);
+  };
+
+  velChatResizeHandle.addEventListener("pointerdown", (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = velChatPanel.getBoundingClientRect();
+    resizeState = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      currentWidth: rect.width,
+      currentHeight: rect.height
+    };
+    velChatPanel.classList.add("is-resizing");
+    velChatResizeHandle.setPointerCapture?.(event.pointerId);
+    document.addEventListener("pointermove", moveResize, { passive: false });
+    document.addEventListener("pointerup", stopResize);
+    document.addEventListener("pointercancel", stopResize);
+  });
+
+  velChatResizeHandle.addEventListener("dblclick", () => {
+    storage.set(VEL_CHAT_SIZE_KEY, JSON.stringify({ width: 560, height: 650 }));
+    applyVelChatSize({ width: 560, height: 650 });
+  });
+
+  window.addEventListener("resize", () => applyVelChatSize(readStoredJson(VEL_CHAT_SIZE_KEY, {}), true));
 }
 
 function renderVelChatAuth() {
@@ -14581,6 +14671,7 @@ initHomeClockDrag();
 renderLauncherCatalog();
 renderDesktopShortcuts();
 renderRecentApps();
+initVelChatResize();
 initVelChat();
 updateYouTubeGlobalImportUi();
 renderLobbyState();
