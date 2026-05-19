@@ -2189,6 +2189,65 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   padding-right: 0.12rem;
 }
 
+.remote-sound-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.2rem + env(safe-area-inset-bottom));
+  z-index: 110;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(560px, calc(100dvw - 1rem));
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(22, 22, 22, 0.94), rgba(4, 4, 4, 0.96));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+  color: var(--text);
+  transform: translateX(-50%);
+  backdrop-filter: blur(22px);
+}
+
+.remote-sound-prompt[hidden] {
+  display: none !important;
+}
+
+.remote-sound-prompt div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.remote-sound-prompt strong,
+.remote-sound-prompt span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote-sound-prompt span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.remote-sound-prompt button {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-weight: 900;
+  padding: 0.62rem 0.9rem;
+}
+
+.remote-sound-prompt button:first-of-type {
+  background: #fff;
+  color: #050505;
+}
+
 .remote-deck-panel:fullscreen,
 .remote-deck-panel:-webkit-full-screen {
   width: 100vw;
@@ -9218,6 +9277,11 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
 
   .remote-deck-layout {
     grid-template-columns: 1fr;
+  }
+
+  .remote-sound-prompt {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .dev-auth-form,

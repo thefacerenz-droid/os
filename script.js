@@ -2109,6 +2109,11 @@ const remoteDeckGrid = document.getElementById("remoteDeckGrid");
 const remoteDeckMain = remoteDeckGrid?.closest(".remote-deck-main");
 const remoteDeckFullscreen = document.getElementById("remoteDeckFullscreen");
 const remoteDeckStop = document.getElementById("remoteDeckStop");
+const remoteSoundPrompt = document.getElementById("remoteSoundPrompt");
+const remoteSoundPromptTitle = document.getElementById("remoteSoundPromptTitle");
+const remoteSoundPromptText = document.getElementById("remoteSoundPromptText");
+const remoteSoundPromptPlay = document.getElementById("remoteSoundPromptPlay");
+const remoteSoundPromptDismiss = document.getElementById("remoteSoundPromptDismiss");
 const devAuthCard = document.getElementById("devAuthCard");
 const devAuthForm = document.getElementById("devAuthForm");
 const devCodeInput = document.getElementById("devCodeInput");
@@ -2344,6 +2349,8 @@ let screenShareQueuedIce = [];
 let soundboardAudioContext = null;
 let soundboardActiveNodes = [];
 let soundboardActiveMedia = [];
+let soundboardLoadPromise = null;
+let soundboardBufferCache = new Map();
 let soundboardRealSounds = [];
 let soundboardImportedSounds = [];
 let soundboardLoading = false;
@@ -2358,6 +2365,7 @@ let remoteDeckAllowed = storage.get(REMOTE_DECK_ALLOW_KEY, "0") === "1";
 let remoteDeckChannel = null;
 let remoteDeckOnlineUsers = [];
 let remoteDeckTargetsLoading = false;
+let remoteDeckPendingPayload = null;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -4234,6 +4242,28 @@ function getSoundboardContext() {
   return soundboardAudioContext;
 }
 
+function armSoundboardAudio() {
+  const ctx = getSoundboardContext();
+  if (!ctx) return Promise.resolve(false);
+  return Promise.resolve(ctx.resume?.())
+    .catch(() => {})
+    .then(() => {
+      try {
+        const source = ctx.createBufferSource();
+        const buffer = ctx.createBuffer(1, 1, Math.max(1, ctx.sampleRate));
+        const gain = ctx.createGain();
+        gain.gain.value = 0.00001;
+        source.buffer = buffer;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        source.start(0);
+      } catch (error) {
+        return ctx.state === "running";
+      }
+      return ctx.state === "running";
+    });
+}
+
 function getSoundboardVolume() {
   const value = Number(soundboardVolume?.value || 72);
   return Math.max(0, Math.min(1, value / 100));
@@ -4243,28 +4273,46 @@ function setSoundboardStatus(message = "Pick a pad to play a sound.") {
   if (soundboardStatus) soundboardStatus.textContent = message;
 }
 
+async function getSoundboardBuffer(sound) {
+  const ctx = getSoundboardContext();
+  if (!ctx) return null;
+  if (soundboardBufferCache.has(sound.id)) return soundboardBufferCache.get(sound.id);
+  const response = await fetch(sound.url, { cache: "force-cache" });
+  if (!response.ok) throw new Error("Sound file could not load.");
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+  soundboardBufferCache.set(sound.id, buffer);
+  return buffer;
+}
+
 async function loadSoundboardFiles() {
-  if (soundboardLoading || soundboardLoaded) return;
-  soundboardLoading = true;
-  setSoundboardStatus("Loading real sound files...");
-  try {
-    const response = await fetch("/api/soundboard", { cache: "no-store" });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || "Soundboard files could not load.");
-    soundboardRealSounds = (Array.isArray(data.sounds) ? data.sounds : [])
-      .map((item, index) => normalizeSoundboardFile(item, index, "project"))
-      .filter(Boolean);
-    soundboardLoaded = true;
-    setSoundboardStatus(soundboardRealSounds.length
-      ? `${soundboardRealSounds.length} real sound${soundboardRealSounds.length === 1 ? "" : "s"} loaded.`
-      : "No real sound files yet. Add MP3/WAV/M4A files to assets/soundboard or import them here.");
-  } catch (error) {
-    setSoundboardStatus(error.message || "Real sound files could not load.");
-  } finally {
-    soundboardLoading = false;
-    renderSoundboard();
-    if (isDrawerOpen("remoteDeck")) renderRemoteDeckGrid();
-  }
+  if (soundboardLoaded) return soundboardRealSounds;
+  if (soundboardLoadPromise) return soundboardLoadPromise;
+  soundboardLoadPromise = (async () => {
+    soundboardLoading = true;
+    setSoundboardStatus("Loading real sound files...");
+    try {
+      const response = await fetch("/api/soundboard", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Soundboard files could not load.");
+      soundboardRealSounds = (Array.isArray(data.sounds) ? data.sounds : [])
+        .map((item, index) => normalizeSoundboardFile(item, index, "project"))
+        .filter(Boolean);
+      soundboardLoaded = true;
+      setSoundboardStatus(soundboardRealSounds.length
+        ? `${soundboardRealSounds.length} real sound${soundboardRealSounds.length === 1 ? "" : "s"} loaded.`
+        : "No real sound files yet. Add MP3/WAV/M4A files to assets/soundboard or import them here.");
+    } catch (error) {
+      setSoundboardStatus(error.message || "Real sound files could not load.");
+    } finally {
+      soundboardLoading = false;
+      soundboardLoadPromise = null;
+      renderSoundboard();
+      if (isDrawerOpen("remoteDeck")) renderRemoteDeckGrid();
+    }
+    return soundboardRealSounds;
+  })();
+  return soundboardLoadPromise;
 }
 
 function trackSoundboardNode(node) {
@@ -4333,7 +4381,7 @@ function pulseSoundPad(id = "") {
 
 function playSoundboardSound(id = "") {
   const sound = soundboardGeneratedSounds.find((item) => item.id === id);
-  if (!sound) return;
+  if (!sound) return false;
   pulseSoundPad(id);
   setSoundboardStatus(`Playing ${sound.title}.`);
 
@@ -4375,11 +4423,34 @@ function playSoundboardSound(id = "") {
       window.setTimeout(() => playSoundTone(freq, 0.045, { type: "square", gain: 0.18 }), index * 48);
     });
   }
+  return true;
 }
 
-function playSoundboardFile(id = "") {
+async function playSoundboardFile(id = "") {
   const sound = getAllSoundboardRealSounds().find((item) => item.id === id);
-  if (!sound?.url) return;
+  if (!sound?.url) return false;
+  const ctx = getSoundboardContext();
+  if (ctx) {
+    try {
+      await ctx.resume?.();
+      if (ctx.state !== "running") throw new Error("Audio is not armed yet.");
+      const buffer = await getSoundboardBuffer(sound);
+      if (!buffer) throw new Error("Audio is not supported in this browser.");
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = buffer;
+      gain.gain.value = getSoundboardVolume();
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
+      trackSoundboardNode(source);
+      pulseSoundPad(id);
+      setSoundboardStatus(`Playing real sound: ${sound.title}.`);
+      return true;
+    } catch (error) {
+      setSoundboardStatus("Tap Play on this device to allow audio.");
+    }
+  }
   const audio = new Audio(sound.url);
   audio.preload = "auto";
   audio.volume = getSoundboardVolume();
@@ -4387,11 +4458,16 @@ function playSoundboardFile(id = "") {
   audio.addEventListener("ended", () => {
     soundboardActiveMedia = soundboardActiveMedia.filter((item) => item !== audio);
   }, { once: true });
-  audio.play().catch(() => {
+  try {
+    await audio.play();
+  } catch (error) {
+    soundboardActiveMedia = soundboardActiveMedia.filter((item) => item !== audio);
     setSoundboardStatus("Tap again if the browser blocked autoplay.");
-  });
+    return false;
+  }
   pulseSoundPad(id);
   setSoundboardStatus(`Playing real sound: ${sound.title}.`);
+  return true;
 }
 
 function importSoundboardFiles(fileList) {
@@ -4675,13 +4751,28 @@ function isRemoteDeckPayloadForThisDevice(payload = {}) {
   );
 }
 
+function showRemoteSoundPrompt(payload = {}, reason = "Your browser needs one tap before it can play this sound.") {
+  remoteDeckPendingPayload = payload;
+  if (!remoteSoundPrompt) return;
+  if (remoteSoundPromptTitle) remoteSoundPromptTitle.textContent = payload.soundTitle || "Remote sound ready";
+  if (remoteSoundPromptText) {
+    remoteSoundPromptText.textContent = `${payload.fromUsername || "Remote Deck"} sent a sound. ${reason}`;
+  }
+  remoteSoundPrompt.hidden = false;
+}
+
+function hideRemoteSoundPrompt() {
+  remoteDeckPendingPayload = null;
+  if (remoteSoundPrompt) remoteSoundPrompt.hidden = true;
+}
+
 async function playRemoteDeckPayload(payload = {}) {
   if (payload.soundType === "file") {
     await loadSoundboardFiles();
-    playSoundboardFile(payload.soundId || "");
-    return;
+    return playSoundboardFile(payload.soundId || "");
   }
-  playSoundboardSound(payload.soundId || "");
+  await armSoundboardAudio();
+  return playSoundboardSound(payload.soundId || "");
 }
 
 async function handleRemoteDeckServerSound(payload = {}) {
@@ -4694,7 +4785,13 @@ async function handleRemoteDeckServerSound(payload = {}) {
     storage.set(REMOTE_DECK_ALLOW_KEY, "1");
     renderRemoteDeck();
   }
-  await playRemoteDeckPayload(payload);
+  const played = await playRemoteDeckPayload(payload);
+  if (!played) {
+    showRemoteSoundPrompt(payload);
+    setRemoteDeckStatus("Sound is waiting. Tap Play on this device to allow audio.", "warn");
+    return;
+  }
+  hideRemoteSoundPrompt();
   setRemoteDeckStatus(`Received ${payload.soundTitle || "sound"} from ${payload.fromUsername || "Remote Deck"}.`, "live");
 }
 
@@ -11278,12 +11375,34 @@ remoteDeckGrid?.addEventListener("click", (event) => {
   sendRemoteDeckSound("generated", button.dataset.remoteSoundId || "", sound?.title || "Sound");
 });
 
-remoteDeckAllow?.addEventListener("click", () => {
+remoteDeckAllow?.addEventListener("click", async () => {
   remoteDeckAllowed = !remoteDeckAllowed;
   storage.set(REMOTE_DECK_ALLOW_KEY, remoteDeckAllowed ? "1" : "0");
-  if (remoteDeckAllowed) getSoundboardContext();
+  if (remoteDeckAllowed) await armSoundboardAudio();
   renderRemoteDeck();
   setRemoteDeckStatus(remoteDeckAllowed ? "This device can receive Remote Deck sounds." : "This device will not receive Remote Deck sounds.", remoteDeckAllowed ? "live" : "warn");
+});
+
+remoteSoundPromptPlay?.addEventListener("click", async () => {
+  if (!remoteDeckPendingPayload) {
+    hideRemoteSoundPrompt();
+    return;
+  }
+  remoteDeckAllowed = true;
+  storage.set(REMOTE_DECK_ALLOW_KEY, "1");
+  await armSoundboardAudio();
+  const played = await playRemoteDeckPayload(remoteDeckPendingPayload);
+  if (played) {
+    setRemoteDeckStatus(`Played ${remoteDeckPendingPayload.soundTitle || "remote sound"}.`, "live");
+    hideRemoteSoundPrompt();
+    renderRemoteDeck();
+  } else {
+    setRemoteDeckStatus("Audio is still blocked. Tap Play again with silent mode off and volume up.", "warn");
+  }
+});
+
+remoteSoundPromptDismiss?.addEventListener("click", () => {
+  hideRemoteSoundPrompt();
 });
 
 remoteDeckRefresh?.addEventListener("click", async () => {

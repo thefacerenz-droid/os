@@ -1447,6 +1447,16 @@
           <button class="vel-chat-resize-handle" type="button" id="velChatResizeHandle" aria-label="Resize chat"></button>
         </section>
       </aside>
+
+      <aside class="remote-sound-prompt" id="remoteSoundPrompt" hidden aria-live="assertive">
+        <div>
+          <p class="micro-label">Remote Deck</p>
+          <strong id="remoteSoundPromptTitle">Sound ready</strong>
+          <span id="remoteSoundPromptText">Tap play to let this device play the sound.</span>
+        </div>
+        <button type="button" id="remoteSoundPromptPlay">Play</button>
+        <button type="button" id="remoteSoundPromptDismiss" aria-label="Dismiss remote sound">Dismiss</button>
+      </aside>
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
