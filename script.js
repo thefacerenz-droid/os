@@ -2362,6 +2362,7 @@ let screenShareQueuedIce = [];
 let soundboardAudioContext = null;
 let soundboardActiveNodes = [];
 let soundboardActiveMedia = [];
+let soundboardActiveTimers = [];
 let soundboardLoadPromise = null;
 let soundboardBufferCache = new Map();
 let soundboardRealSounds = [];
@@ -2392,6 +2393,7 @@ let remoteDeckPollTimer = null;
 let remoteDeckPolling = false;
 let remoteDeckHandledSoundIds = new Set();
 let soundboardAudioPrimed = false;
+let soundboardStopGeneration = 0;
 let lobbyState = {
   mode: storage.get("vel-lobby-mode", "notes") === "sketch" ? "sketch" : "notes",
   lobby: storage.get("vel-lobby-name", "Main"),
@@ -2991,6 +2993,10 @@ function suspendPanelPlayback(name) {
   }
 
   if (name === "soundboard") {
+    stopSoundboardSounds();
+  }
+
+  if (name === "remoteDeck") {
     stopSoundboardSounds();
   }
 
@@ -4365,6 +4371,17 @@ function trackSoundboardNode(node) {
   }, 2400);
 }
 
+function scheduleSoundboardTimer(callback, delay = 0) {
+  const generation = soundboardStopGeneration;
+  const timer = window.setTimeout(() => {
+    soundboardActiveTimers = soundboardActiveTimers.filter((item) => item !== timer);
+    if (generation !== soundboardStopGeneration) return;
+    callback();
+  }, delay);
+  soundboardActiveTimers.push(timer);
+  return timer;
+}
+
 function playSoundTone(freq = 440, duration = 0.18, options = {}) {
   const ctx = getSoundboardContext();
   if (!ctx) {
@@ -4426,43 +4443,52 @@ function playSoundboardSound(id = "") {
   if (!sound) return false;
   pulseSoundPad(id);
   setSoundboardStatus(`Playing ${sound.title}.`);
+  const generation = soundboardStopGeneration;
+  const playTone = (freq, duration, options) => {
+    if (soundboardStopGeneration !== generation) return;
+    playSoundTone(freq, duration, options);
+  };
+  const playNoise = (duration, options) => {
+    if (soundboardStopGeneration !== generation) return;
+    playSoundNoise(duration, options);
+  };
 
   if (id === "airhorn") {
-    playSoundTone(466, 0.22, { type: "square", to: 523, gain: 0.28 });
-    window.setTimeout(() => playSoundTone(392, 0.24, { type: "square", to: 466, gain: 0.26 }), 170);
+    playTone(466, 0.22, { type: "square", to: 523, gain: 0.28 });
+    scheduleSoundboardTimer(() => playTone(392, 0.24, { type: "square", to: 466, gain: 0.26 }), 170);
   } else if (id === "boom") {
-    playSoundTone(92, 0.42, { type: "sine", to: 38, gain: 0.62 });
-    playSoundNoise(0.28, { filter: "lowpass", frequency: 180, gain: 0.24 });
+    playTone(92, 0.42, { type: "sine", to: 38, gain: 0.62 });
+    playNoise(0.28, { filter: "lowpass", frequency: 180, gain: 0.24 });
   } else if (id === "laser") {
-    playSoundTone(1200, 0.28, { type: "sawtooth", to: 170, gain: 0.24 });
+    playTone(1200, 0.28, { type: "sawtooth", to: 170, gain: 0.24 });
   } else if (id === "coin") {
-    playSoundTone(988, 0.09, { type: "triangle", gain: 0.26 });
-    window.setTimeout(() => playSoundTone(1568, 0.12, { type: "triangle", gain: 0.24 }), 70);
+    playTone(988, 0.09, { type: "triangle", gain: 0.26 });
+    scheduleSoundboardTimer(() => playTone(1568, 0.12, { type: "triangle", gain: 0.24 }), 70);
   } else if (id === "pop") {
-    playSoundTone(180, 0.08, { type: "sine", to: 540, gain: 0.22 });
+    playTone(180, 0.08, { type: "sine", to: 540, gain: 0.22 });
   } else if (id === "bell") {
-    playSoundTone(1046, 0.42, { type: "sine", gain: 0.2 });
-    playSoundTone(1568, 0.34, { type: "sine", gain: 0.12 });
+    playTone(1046, 0.42, { type: "sine", gain: 0.2 });
+    playTone(1568, 0.34, { type: "sine", gain: 0.12 });
   } else if (id === "error") {
-    playSoundTone(210, 0.12, { type: "square", gain: 0.22 });
-    window.setTimeout(() => playSoundTone(150, 0.18, { type: "square", gain: 0.22 }), 115);
+    playTone(210, 0.12, { type: "square", gain: 0.22 });
+    scheduleSoundboardTimer(() => playTone(150, 0.18, { type: "square", gain: 0.22 }), 115);
   } else if (id === "whoosh") {
-    playSoundNoise(0.38, { filter: "highpass", frequency: 760, gain: 0.28 });
-    playSoundTone(620, 0.28, { type: "sine", to: 120, gain: 0.1 });
+    playNoise(0.38, { filter: "highpass", frequency: 760, gain: 0.28 });
+    playTone(620, 0.28, { type: "sine", to: 120, gain: 0.1 });
   } else if (id === "drum") {
     [160, 130, 105, 82].forEach((freq, index) => {
-      window.setTimeout(() => playSoundTone(freq, 0.12, { type: "sine", to: freq * 0.55, gain: 0.34 }), index * 88);
+      scheduleSoundboardTimer(() => playTone(freq, 0.12, { type: "sine", to: freq * 0.55, gain: 0.34 }), index * 88);
     });
   } else if (id === "victory") {
     [523, 659, 784, 1046].forEach((freq, index) => {
-      window.setTimeout(() => playSoundTone(freq, 0.16, { type: "triangle", gain: 0.24 }), index * 115);
+      scheduleSoundboardTimer(() => playTone(freq, 0.16, { type: "triangle", gain: 0.24 }), index * 115);
     });
   } else if (id === "sad") {
-    playSoundTone(330, 0.32, { type: "sawtooth", to: 294, gain: 0.2 });
-    window.setTimeout(() => playSoundTone(277, 0.44, { type: "sawtooth", to: 196, gain: 0.2 }), 260);
+    playTone(330, 0.32, { type: "sawtooth", to: 294, gain: 0.2 });
+    scheduleSoundboardTimer(() => playTone(277, 0.44, { type: "sawtooth", to: 196, gain: 0.2 }), 260);
   } else if (id === "glitch") {
     [680, 240, 920, 180, 740].forEach((freq, index) => {
-      window.setTimeout(() => playSoundTone(freq, 0.045, { type: "square", gain: 0.18 }), index * 48);
+      scheduleSoundboardTimer(() => playTone(freq, 0.045, { type: "square", gain: 0.18 }), index * 48);
     });
   }
   return true;
@@ -4538,6 +4564,9 @@ function importSoundboardFiles(fileList) {
 }
 
 function stopSoundboardSounds() {
+  soundboardStopGeneration += 1;
+  soundboardActiveTimers.forEach((timer) => window.clearTimeout(timer));
+  soundboardActiveTimers = [];
   soundboardActiveNodes.forEach((node) => {
     try {
       node.stop?.();
@@ -4550,9 +4579,14 @@ function stopSoundboardSounds() {
   soundboardActiveMedia.forEach((audio) => {
     audio.pause();
     audio.currentTime = 0;
+    audio.src = "";
+    audio.load?.();
   });
   soundboardActiveMedia = [];
+  soundboardGrid?.querySelectorAll(".is-playing").forEach((button) => button.classList.remove("is-playing"));
+  remoteDeckGrid?.querySelectorAll(".is-playing").forEach((button) => button.classList.remove("is-playing"));
   setSoundboardStatus("Stopped all soundboard sounds.");
+  setRemoteDeckStatus("Stopped local audio on this device.", "live");
 }
 
 function renderSoundboard() {
