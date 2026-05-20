@@ -1835,6 +1835,8 @@ const welcomeGate = document.getElementById("welcomeGate");
 const welcomeGateTitle = document.getElementById("welcomeGateTitle");
 const welcomeNameForm = document.getElementById("welcomeNameForm");
 const welcomeNameInput = document.getElementById("welcomeNameInput");
+const welcomePasswordInput = document.getElementById("welcomePasswordInput");
+const welcomeLocalButton = document.getElementById("welcomeLocalButton");
 const welcomePinForm = document.getElementById("welcomePinForm");
 const welcomePinInput = document.getElementById("welcomePinInput");
 const welcomeStatus = document.getElementById("welcomeStatus");
@@ -2178,6 +2180,7 @@ if (!gameSourceLabels[launcherGameSource]) {
 }
 let networkNote = storage.get("vel-network-note", "");
 const VEL_CHAT_USER_KEY = "vel-chat-user";
+const VEL_ACCOUNT_TOKEN_KEY = "vel-account-token";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
@@ -2305,6 +2308,7 @@ let youtubeGlobalImportType = "video";
 let youtubeGlobalIds = new Set();
 let youtubeGlobalSavingIds = new Set();
 let velChatUser = readStoredJson(VEL_CHAT_USER_KEY, null);
+let velAccountToken = storage.get(VEL_ACCOUNT_TOKEN_KEY, "");
 let velChatItems = [];
 let velChatTypingUsers = [];
 let velChatRenderSignature = "";
@@ -2358,7 +2362,16 @@ let soundboardRealSounds = [];
 let soundboardImportedSounds = [];
 let soundboardLoading = false;
 let soundboardLoaded = false;
-const REMOTE_DECK_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
+
+// Admin device template:
+// Add another permanent admin by pasting their Device ID below, then redeploy.
+// Example:
+//   "friend-device-id-goes-here",
+const HARDCODED_ADMIN_DEVICE_IDS = [
+  "3fa56c0a",
+  "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"
+];
+const REMOTE_DECK_ADMIN_DEVICE_IDS = HARDCODED_ADMIN_DEVICE_IDS;
 const REMOTE_DECK_PEERS_KEY = "vel-remote-deck-peers";
 const REMOTE_DECK_ALLOW_KEY = "vel-remote-deck-allow";
 let remoteDeckSelectedDevices = new Set();
@@ -3236,6 +3249,50 @@ function saveVelChatUser(user) {
     }
   }
   syncVelIdentity();
+}
+
+function saveVelAccountToken(token = "") {
+  velAccountToken = String(token || "");
+  if (velAccountToken) {
+    storage.set(VEL_ACCOUNT_TOKEN_KEY, velAccountToken);
+    return;
+  }
+  try {
+    window.localStorage.removeItem(VEL_ACCOUNT_TOKEN_KEY);
+  } catch (error) {
+    return;
+  }
+}
+
+async function loginVelAccount(username = "", password = "") {
+  const response = await fetch("/api/accounts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "login-or-register",
+      username,
+      password
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || "Account login failed.");
+  }
+  saveVelAccountToken(data.token);
+  saveVelChatUser(data.user);
+  return data;
+}
+
+function continueWelcomeWithLocalName(username = "") {
+  const existing = normalizeVelChatUser(velChatUser);
+  saveVelAccountToken("");
+  saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
+  renderVelChatAuth();
+  if (velChatPin) {
+    completeWelcomeGate();
+    return;
+  }
+  showWelcomeGate("pin");
 }
 
 function formatVelChatTime(value) {
@@ -9688,8 +9745,9 @@ function showWelcomeGate(step = "") {
   if (welcomeNameForm) welcomeNameForm.hidden = welcomeGateStep !== "name";
   if (welcomePinForm) welcomePinForm.hidden = welcomeGateStep !== "pin";
   if (welcomeGateStep === "name") {
-    typeWelcomeText("Welcome user, what should we call you?");
+    typeWelcomeText("Welcome user, sign into vel.os.");
     if (welcomeNameInput) welcomeNameInput.value = hasUser ? velChatUser.username : "";
+    if (welcomePasswordInput) welcomePasswordInput.value = "";
     window.setTimeout(() => welcomeNameInput?.focus({ preventScroll: true }), 420);
     return;
   }
@@ -9709,19 +9767,34 @@ function maybeShowWelcomeGate() {
 
 async function submitWelcomeName() {
   const username = cleanVelChatName(welcomeNameInput?.value || "");
+  const password = String(welcomePasswordInput?.value || "");
   if (!username) {
     setWelcomeStatus("Type a name first.", "error");
     welcomeNameInput?.focus({ preventScroll: true });
     return;
   }
-  const existing = normalizeVelChatUser(velChatUser);
-  saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
-  renderVelChatAuth();
-  if (velChatPin) {
-    completeWelcomeGate();
+  if (!password) {
+    setWelcomeStatus("Add a password, or use Local only.", "error");
+    welcomePasswordInput?.focus({ preventScroll: true });
     return;
   }
-  showWelcomeGate("pin");
+  setWelcomeStatus("Signing in...");
+  welcomeNameForm?.querySelectorAll("button").forEach((button) => button.toggleAttribute("disabled", true));
+  try {
+    const account = await loginVelAccount(username, password);
+    renderVelChatAuth();
+    setWelcomeStatus(account.created ? "Account created." : "Signed in.");
+    if (velChatPin) {
+      completeWelcomeGate();
+      return;
+    }
+    showWelcomeGate("pin");
+  } catch (error) {
+    setWelcomeStatus(error.message || "Could not sign in.", "error");
+    welcomePasswordInput?.focus({ preventScroll: true });
+  } finally {
+    welcomeNameForm?.querySelectorAll("button").forEach((button) => button.toggleAttribute("disabled", false));
+  }
 }
 
 async function submitWelcomePin() {
@@ -11213,6 +11286,16 @@ velChatClearLog?.addEventListener("click", () => {
 welcomeNameForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   submitWelcomeName();
+});
+
+welcomeLocalButton?.addEventListener("click", () => {
+  const username = cleanVelChatName(welcomeNameInput?.value || "");
+  if (!username) {
+    setWelcomeStatus("Type a name first.", "error");
+    welcomeNameInput?.focus({ preventScroll: true });
+    return;
+  }
+  continueWelcomeWithLocalName(username);
 });
 
 welcomePinForm?.addEventListener("submit", (event) => {
@@ -13213,6 +13296,34 @@ const flappy = (() => {
     draw();
   }
 
+  function roundedPath(x, y, w, h, radius = 18) {
+    const r = Math.max(0, Math.min(radius, Math.abs(w) / 2, Math.abs(h) / 2));
+    context.beginPath();
+    if (typeof context.roundRect === "function") {
+      context.roundRect(x, y, w, h, r);
+      return;
+    }
+    context.moveTo(x + r, y);
+    context.lineTo(x + w - r, y);
+    context.quadraticCurveTo(x + w, y, x + w, y + r);
+    context.lineTo(x + w, y + h - r);
+    context.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    context.lineTo(x + r, y + h);
+    context.quadraticCurveTo(x, y + h, x, y + h - r);
+    context.lineTo(x, y + r);
+    context.quadraticCurveTo(x, y, x + r, y);
+  }
+
+  function fillRoundedRect(x, y, w, h, radius = 18) {
+    roundedPath(x, y, w, h, radius);
+    context.fill();
+  }
+
+  function strokeRoundedRect(x, y, w, h, radius = 18) {
+    roundedPath(x, y, w, h, radius);
+    context.stroke();
+  }
+
   function drawBackground() {
     const gradient = context.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, "#78dcff");
@@ -13251,11 +13362,14 @@ const flappy = (() => {
     context.closePath();
     context.fill();
 
-    context.fillStyle = "#d99632";
-    context.fillRect(0, height - 34, width, 34);
+    const groundGradient = context.createLinearGradient(0, height - 46, 0, height);
+    groundGradient.addColorStop(0, "#f4c449");
+    groundGradient.addColorStop(1, "#d78729");
+    context.fillStyle = groundGradient;
+    fillRoundedRect(-18, height - 44, width + 36, 58, 24);
     context.fillStyle = "#fff05a";
     for (let x = -40 - (drift % 48); x < width + 48; x += 48) {
-      context.fillRect(x, height - 34, 24, 6);
+      fillRoundedRect(x, height - 37, 26, 7, 4);
     }
   }
 
@@ -13271,21 +13385,17 @@ const flappy = (() => {
       context.fillStyle = tubeGradient;
       context.strokeStyle = "#0b5818";
       context.lineWidth = 3;
-      context.beginPath();
-      if (typeof context.roundRect === "function") context.roundRect(x, y, w, h, 10);
-      else context.rect(x, y, w, h);
-      context.fill();
-      context.stroke();
+      fillRoundedRect(x, y, w, h, 18);
+      strokeRoundedRect(x, y, w, h, 18);
       context.fillStyle = "rgba(255,255,255,0.32)";
-      context.fillRect(x + 10, y + 8, Math.max(5, w * 0.16), Math.max(0, h - 16));
-      const capY = flip ? y + h - 18 : y - 2;
+      fillRoundedRect(x + 10, y + 12, Math.max(5, w * 0.14), Math.max(0, h - 24), 6);
+      const capY = flip ? y + h - 24 : y - 4;
       context.fillStyle = "#78db43";
       context.strokeStyle = "#0b5818";
-      context.beginPath();
-      if (typeof context.roundRect === "function") context.roundRect(x - 8, capY, w + 16, 22, 8);
-      else context.rect(x - 8, capY, w + 16, 22);
-      context.fill();
-      context.stroke();
+      fillRoundedRect(x - 11, capY, w + 22, 28, 14);
+      strokeRoundedRect(x - 11, capY, w + 22, 28, 14);
+      context.fillStyle = "rgba(255,255,255,0.24)";
+      fillRoundedRect(x - 3, capY + 6, Math.max(6, w * 0.22), 8, 5);
     };
     [
       { y: -8, h: gapTop + 8, flip: true },
@@ -13297,13 +13407,21 @@ const flappy = (() => {
     context.save();
     context.translate(bird.x, bird.y);
     context.rotate(Math.max(-0.45, Math.min(0.7, bird.vy / 520)));
-    context.fillStyle = "#ffdf38";
+    const bodyGradient = context.createRadialGradient(-5, -7, 2, -1, 1, 23);
+    bodyGradient.addColorStop(0, "#fff58e");
+    bodyGradient.addColorStop(0.5, "#ffdf38");
+    bodyGradient.addColorStop(1, "#f5a51d");
+    context.fillStyle = bodyGradient;
     context.strokeStyle = "#a86a12";
-    context.lineWidth = 3;
+    context.lineWidth = 3.2;
     context.beginPath();
-    context.ellipse(0, 0, 18, 15, 0, 0, Math.PI * 2);
+    context.ellipse(0, 0, 19, 16, 0, 0, Math.PI * 2);
     context.fill();
     context.stroke();
+    context.fillStyle = "rgba(255,255,255,0.42)";
+    context.beginPath();
+    context.ellipse(-7, -7, 7, 4, -0.45, 0, Math.PI * 2);
+    context.fill();
     context.fillStyle = "#ff9d2f";
     context.beginPath();
     context.moveTo(14, -1);
@@ -13333,6 +13451,10 @@ const flappy = (() => {
 
   function draw() {
     if (!context) return;
+    context.clearRect(0, 0, width, height);
+    context.save();
+    roundedPath(0, 0, width, height, 28);
+    context.clip();
     drawBackground();
     pipes.forEach(drawPipe);
     drawBird();
@@ -13347,6 +13469,7 @@ const flappy = (() => {
     context.fillStyle = "#fff";
     context.fillText(String(score), width / 2, 62);
     context.textAlign = "start";
+    context.restore();
   }
 
   function normalizeLocalScores(items = []) {
