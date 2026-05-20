@@ -1835,8 +1835,6 @@ const welcomeGate = document.getElementById("welcomeGate");
 const welcomeGateTitle = document.getElementById("welcomeGateTitle");
 const welcomeNameForm = document.getElementById("welcomeNameForm");
 const welcomeNameInput = document.getElementById("welcomeNameInput");
-const welcomePasswordInput = document.getElementById("welcomePasswordInput");
-const welcomeLocalButton = document.getElementById("welcomeLocalButton");
 const welcomePinForm = document.getElementById("welcomePinForm");
 const welcomePinInput = document.getElementById("welcomePinInput");
 const welcomeStatus = document.getElementById("welcomeStatus");
@@ -2180,7 +2178,6 @@ if (!gameSourceLabels[launcherGameSource]) {
 }
 let networkNote = storage.get("vel-network-note", "");
 const VEL_CHAT_USER_KEY = "vel-chat-user";
-const VEL_ACCOUNT_TOKEN_KEY = "vel-account-token";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
@@ -2308,7 +2305,6 @@ let youtubeGlobalImportType = "video";
 let youtubeGlobalIds = new Set();
 let youtubeGlobalSavingIds = new Set();
 let velChatUser = readStoredJson(VEL_CHAT_USER_KEY, null);
-let velAccountToken = storage.get(VEL_ACCOUNT_TOKEN_KEY, "");
 let velChatItems = [];
 let velChatTypingUsers = [];
 let velChatRenderSignature = "";
@@ -3249,50 +3245,6 @@ function saveVelChatUser(user) {
     }
   }
   syncVelIdentity();
-}
-
-function saveVelAccountToken(token = "") {
-  velAccountToken = String(token || "");
-  if (velAccountToken) {
-    storage.set(VEL_ACCOUNT_TOKEN_KEY, velAccountToken);
-    return;
-  }
-  try {
-    window.localStorage.removeItem(VEL_ACCOUNT_TOKEN_KEY);
-  } catch (error) {
-    return;
-  }
-}
-
-async function loginVelAccount(username = "", password = "") {
-  const response = await fetch("/api/accounts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action: "login-or-register",
-      username,
-      password
-    })
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || "Account login failed.");
-  }
-  saveVelAccountToken(data.token);
-  saveVelChatUser(data.user);
-  return data;
-}
-
-function continueWelcomeWithLocalName(username = "") {
-  const existing = normalizeVelChatUser(velChatUser);
-  saveVelAccountToken("");
-  saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
-  renderVelChatAuth();
-  if (velChatPin) {
-    completeWelcomeGate();
-    return;
-  }
-  showWelcomeGate("pin");
 }
 
 function formatVelChatTime(value) {
@@ -4689,7 +4641,7 @@ function getRemoteDeckDevices() {
 
 function getRemoteDeckSelectedTargets() {
   const devices = getRemoteDeckDevices();
-  return devices.filter((device) => device.online && remoteDeckSelectedDevices.has(device.deviceId));
+  return devices.filter((device) => remoteDeckSelectedDevices.has(device.deviceId));
 }
 
 function renderRemoteDeckTargets() {
@@ -4706,7 +4658,7 @@ function renderRemoteDeckTargets() {
   if (remoteDeckMain) {
     remoteDeckMain.hidden = !selected.length;
   }
-  const visibleDevices = devices.filter((device) => device.online);
+  const visibleDevices = devices.filter((device) => device.online || remoteDeckSelectedDevices.has(device.deviceId));
   if (!visibleDevices.length) {
     remoteDeckTargets.innerHTML = `
       <article class="remote-device-card is-empty">
@@ -4786,9 +4738,12 @@ async function fetchRemoteDeckTargets() {
     remoteDeckOnlineUsers = (Array.isArray(data.users) ? data.users : []).filter((user) => user?.deviceId);
     remoteDeckOnlineUsers.forEach((user) => rememberRemoteDeckPeer(user));
     renderRemoteDeck();
+    const selectedOfflineCount = getRemoteDeckSelectedTargets().filter((device) => !device.online).length;
     setRemoteDeckStatus(remoteDeckOnlineUsers.length
       ? `Found ${remoteDeckOnlineUsers.length} online device${remoteDeckOnlineUsers.length === 1 ? "" : "s"}.`
-      : "No one else online yet.", remoteDeckOnlineUsers.length ? "live" : "warn");
+      : selectedOfflineCount
+        ? `${selectedOfflineCount} selected target${selectedOfflineCount === 1 ? " is" : "s are"} offline but pinned.`
+        : "No one else online yet.", remoteDeckOnlineUsers.length ? "live" : selectedOfflineCount ? "warn" : "warn");
   } catch (error) {
     setRemoteDeckStatus(error.message || "Remote Deck could not load online users.", "error");
   } finally {
@@ -4953,8 +4908,7 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
   }
   const selected = getRemoteDeckSelectedTargets();
   if (!selected.length) {
-    setRemoteDeckStatus("The selected device is not online anymore. Refresh and pick again.", "warn");
-    remoteDeckSelectedDevices.clear();
+    setRemoteDeckStatus("That selected device is no longer in the saved target list. Refresh and pick again.", "warn");
     renderRemoteDeck();
     return;
   }
@@ -5005,7 +4959,10 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
     }
   }
   if (sent) {
-    setRemoteDeckStatus(`Sent ${soundTitle} to ${sent} target${sent === 1 ? "" : "s"}.`, "live");
+    const offlineCount = selected.filter((target) => !target.online && target.deviceId !== velDeviceId).length;
+    setRemoteDeckStatus(offlineCount
+      ? `Queued ${soundTitle} for ${sent} target${sent === 1 ? "" : "s"} (${offlineCount} offline).`
+      : `Sent ${soundTitle} to ${sent} target${sent === 1 ? "" : "s"}.`, offlineCount ? "warn" : "live");
   }
 }
 
@@ -9745,9 +9702,8 @@ function showWelcomeGate(step = "") {
   if (welcomeNameForm) welcomeNameForm.hidden = welcomeGateStep !== "name";
   if (welcomePinForm) welcomePinForm.hidden = welcomeGateStep !== "pin";
   if (welcomeGateStep === "name") {
-    typeWelcomeText("Welcome user, sign into vel.os.");
+    typeWelcomeText("Welcome user, what should we call you?");
     if (welcomeNameInput) welcomeNameInput.value = hasUser ? velChatUser.username : "";
-    if (welcomePasswordInput) welcomePasswordInput.value = "";
     window.setTimeout(() => welcomeNameInput?.focus({ preventScroll: true }), 420);
     return;
   }
@@ -9767,34 +9723,19 @@ function maybeShowWelcomeGate() {
 
 async function submitWelcomeName() {
   const username = cleanVelChatName(welcomeNameInput?.value || "");
-  const password = String(welcomePasswordInput?.value || "");
   if (!username) {
     setWelcomeStatus("Type a name first.", "error");
     welcomeNameInput?.focus({ preventScroll: true });
     return;
   }
-  if (!password) {
-    setWelcomeStatus("Add a password, or use Local only.", "error");
-    welcomePasswordInput?.focus({ preventScroll: true });
+  const existing = normalizeVelChatUser(velChatUser);
+  saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
+  renderVelChatAuth();
+  if (velChatPin) {
+    completeWelcomeGate();
     return;
   }
-  setWelcomeStatus("Signing in...");
-  welcomeNameForm?.querySelectorAll("button").forEach((button) => button.toggleAttribute("disabled", true));
-  try {
-    const account = await loginVelAccount(username, password);
-    renderVelChatAuth();
-    setWelcomeStatus(account.created ? "Account created." : "Signed in.");
-    if (velChatPin) {
-      completeWelcomeGate();
-      return;
-    }
-    showWelcomeGate("pin");
-  } catch (error) {
-    setWelcomeStatus(error.message || "Could not sign in.", "error");
-    welcomePasswordInput?.focus({ preventScroll: true });
-  } finally {
-    welcomeNameForm?.querySelectorAll("button").forEach((button) => button.toggleAttribute("disabled", false));
-  }
+  showWelcomeGate("pin");
 }
 
 async function submitWelcomePin() {
@@ -11286,16 +11227,6 @@ velChatClearLog?.addEventListener("click", () => {
 welcomeNameForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   submitWelcomeName();
-});
-
-welcomeLocalButton?.addEventListener("click", () => {
-  const username = cleanVelChatName(welcomeNameInput?.value || "");
-  if (!username) {
-    setWelcomeStatus("Type a name first.", "error");
-    welcomeNameInput?.focus({ preventScroll: true });
-    return;
-  }
-  continueWelcomeWithLocalName(username);
 });
 
 welcomePinForm?.addEventListener("submit", (event) => {

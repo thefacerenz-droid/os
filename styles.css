@@ -8116,24 +8116,6 @@ body.is-onboarding .lyrics-show-button {
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.07);
 }
 
-.welcome-form-actions {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.6rem;
-  align-items: center;
-}
-
-.welcome-form-actions .ghost-button {
-  min-height: 48px;
-  justify-content: center;
-}
-
-@media (max-width: 520px) {
-  .welcome-form-actions {
-    grid-template-columns: 1fr;
-  }
-}
-
 .welcome-status {
   min-height: 1.3em;
   margin: 0.85rem 0 0;
