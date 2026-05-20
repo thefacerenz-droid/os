@@ -6,7 +6,7 @@ const SITE_PIN = process.env.VEL_OS_PIN || "74281";
 const ADMIN_CODE = process.env.VEL_OS_ADMIN_CODE || "admin7945";
 const { broadcastLiveEvent } = require("../../lib/live.js");
 // Hard-bind Dev Panel access to the owner devices provided.
-const BUILT_IN_ADMIN_DEVICE_IDS = ["3fa56c0a", "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"];
+const BUILT_IN_ADMIN_DEVICE_IDS = ["f1a9b3e9-a51e-4f20-9ffe-ada48165a354"];
 const ADMIN_DEVICE_IDS = [
   ...(process.env.VEL_OS_ADMIN_DEVICE_IDS || "").split(/[\s,]+/),
   ...BUILT_IN_ADMIN_DEVICE_IDS
@@ -105,9 +105,9 @@ function normalizeAnnouncement(value = null) {
 function getEnvAdminDevices() {
   return ADMIN_DEVICE_IDS.map((deviceId) => ({
     deviceId,
-    username: deviceId === "3fa56c0a"
+    username: deviceId === "f1a9b3e9-a51e-4f20-9ffe-ada48165a354"
       ? "Owner iPad"
-      : deviceId === "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"
+      : deviceId === "f1a9b3e9-a51e-4f20-9ffe-ada48165a354"
         ? "Owner PC"
         : "Owner",
     deviceName: "Permanent whitelist",
