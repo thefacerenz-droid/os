@@ -13431,10 +13431,10 @@ const flappy = (() => {
     groundGradient.addColorStop(0, "#f4c449");
     groundGradient.addColorStop(1, "#d78729");
     context.fillStyle = groundGradient;
-    fillRoundedRect(-18, height - 44, width + 36, 58, 24);
+    fillRoundedRect(-22, height - 48, width + 44, 64, 34);
     context.fillStyle = "#fff05a";
     for (let x = -40 - (drift % 48); x < width + 48; x += 48) {
-      fillRoundedRect(x, height - 37, 26, 7, 4);
+      fillRoundedRect(x, height - 39, 28, 8, 999);
     }
   }
 
@@ -13450,17 +13450,17 @@ const flappy = (() => {
       context.fillStyle = tubeGradient;
       context.strokeStyle = "#0b5818";
       context.lineWidth = 3;
-      fillRoundedRect(x, y, w, h, 18);
-      strokeRoundedRect(x, y, w, h, 18);
+      fillRoundedRect(x, y, w, h, 26);
+      strokeRoundedRect(x, y, w, h, 26);
       context.fillStyle = "rgba(255,255,255,0.32)";
-      fillRoundedRect(x + 10, y + 12, Math.max(5, w * 0.14), Math.max(0, h - 24), 6);
-      const capY = flip ? y + h - 24 : y - 4;
+      fillRoundedRect(x + 10, y + 14, Math.max(5, w * 0.14), Math.max(0, h - 28), 999);
+      const capY = flip ? y + h - 28 : y - 4;
       context.fillStyle = "#78db43";
       context.strokeStyle = "#0b5818";
-      fillRoundedRect(x - 11, capY, w + 22, 28, 14);
-      strokeRoundedRect(x - 11, capY, w + 22, 28, 14);
+      fillRoundedRect(x - 12, capY, w + 24, 32, 22);
+      strokeRoundedRect(x - 12, capY, w + 24, 32, 22);
       context.fillStyle = "rgba(255,255,255,0.24)";
-      fillRoundedRect(x - 3, capY + 6, Math.max(6, w * 0.22), 8, 5);
+      fillRoundedRect(x - 3, capY + 7, Math.max(6, w * 0.22), 9, 999);
     };
     [
       { y: -8, h: gapTop + 8, flip: true },
@@ -13480,7 +13480,7 @@ const flappy = (() => {
     context.strokeStyle = "#a86a12";
     context.lineWidth = 3.2;
     context.beginPath();
-    context.ellipse(0, 0, 19, 16, 0, 0, Math.PI * 2);
+    context.ellipse(0, 0, 21, 17.5, 0, 0, Math.PI * 2);
     context.fill();
     context.stroke();
     context.fillStyle = "rgba(255,255,255,0.42)";
@@ -13518,7 +13518,7 @@ const flappy = (() => {
     if (!context) return;
     context.clearRect(0, 0, width, height);
     context.save();
-    roundedPath(0, 0, width, height, 28);
+    roundedPath(0, 0, width, height, 42);
     context.clip();
     drawBackground();
     pipes.forEach(drawPipe);
@@ -13575,13 +13575,17 @@ const flappy = (() => {
     if (!topScores.length) {
       leaderboardElement.innerHTML = `<p class="catalog-empty">No ${fromServer ? "global" : "local"} scores yet. Be the first.</p>`;
     } else {
-      leaderboardElement.innerHTML = topScores.map((entry, index) => `
-        <article class="flappy-score-row${entry.deviceId === velDeviceId ? " is-you" : ""}">
-          <span>${index + 1}</span>
+      const rankLabels = ["1st", "2nd", "3rd"];
+      leaderboardElement.innerHTML = topScores.map((entry, index) => {
+        const topClass = index < 3 ? ` is-top-${index + 1}` : "";
+        return `
+        <article class="flappy-score-row${topClass}${entry.deviceId === velDeviceId ? " is-you" : ""}">
+          <span class="flappy-rank-medal">${rankLabels[index] || index + 1}</span>
           <strong>${escapeHtml(entry.username || "Guest")}</strong>
           <em>${escapeHtml(String(entry.score || 0))}</em>
         </article>
-      `).join("");
+      `;
+      }).join("");
     }
     const myRank = leaderboard.findIndex((entry) => entry.deviceId === velDeviceId || entry.userId === velChatUser?.id);
     if (rankElement) rankElement.textContent = myRank >= 0 ? `#${myRank + 1}` : "--";
