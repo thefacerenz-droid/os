@@ -73,6 +73,25 @@
         </div>
       </section>
 
+      <section class="terms-gate" id="termsGate" aria-modal="true" role="dialog" aria-labelledby="termsGateTitle" hidden>
+        <div class="terms-card">
+          <p class="micro-label">vel.os terms</p>
+          <h2 id="termsGateTitle">Before you enter</h2>
+          <p>By entering vel.os, you understand this site has live chat, admin controls, Remote Deck sounds, and screen-share requests.</p>
+          <ul>
+            <li>Remote Deck sounds can play on this device only if you allow them here.</li>
+            <li>Screen sharing still requires the browser share prompt and shows an active sharing badge.</li>
+            <li>Admins may moderate the site with kicks, locks, bans, announcements, and app controls.</li>
+          </ul>
+          <label class="terms-check" for="termsSoundOptIn">
+            <input id="termsSoundOptIn" type="checkbox" checked />
+            <span>Allow Remote Deck sounds on this device after I accept.</span>
+          </label>
+          <button class="ghost-button is-solid" type="button" id="termsAcceptButton">Accept Terms</button>
+          <p class="terms-status" id="termsStatus" aria-live="polite">You can turn Remote Deck sounds off later from the Remote Deck panel.</p>
+        </div>
+      </section>
+
       <section class="owner-lock-overlay" id="ownerLockOverlay" aria-modal="true" role="dialog" aria-labelledby="ownerLockTitle" hidden>
         <div class="owner-lock-card">
           <span class="owner-lock-icon" aria-hidden="true"></span>
@@ -102,6 +121,12 @@
           <button type="button" id="screenViewerClose">Stop</button>
         </div>
         <video id="screenViewerVideo" autoplay playsinline></video>
+      </section>
+
+      <section class="screen-share-indicator" id="screenShareIndicator" aria-live="assertive" hidden>
+        <span class="screen-share-dot" aria-hidden="true"></span>
+        <strong id="screenShareIndicatorText">Screen sharing active.</strong>
+        <button type="button" id="screenShareIndicatorStop">Stop</button>
       </section>
 
       <section class="global-announcement" id="globalAnnouncement" aria-live="assertive" hidden>

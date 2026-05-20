@@ -1838,6 +1838,10 @@ const welcomeNameInput = document.getElementById("welcomeNameInput");
 const welcomePinForm = document.getElementById("welcomePinForm");
 const welcomePinInput = document.getElementById("welcomePinInput");
 const welcomeStatus = document.getElementById("welcomeStatus");
+const termsGate = document.getElementById("termsGate");
+const termsAcceptButton = document.getElementById("termsAcceptButton");
+const termsSoundOptIn = document.getElementById("termsSoundOptIn");
+const termsStatus = document.getElementById("termsStatus");
 const desktopShortcuts = document.getElementById("desktopShortcuts");
 const launcherGameSearch = document.getElementById("launcherGameSearch");
 const launcherOfflineToggle = document.getElementById("launcherOfflineToggle");
@@ -2139,6 +2143,9 @@ const screenViewerTitle = document.getElementById("screenViewerTitle");
 const screenViewerStatus = document.getElementById("screenViewerStatus");
 const screenViewerVideo = document.getElementById("screenViewerVideo");
 const screenViewerClose = document.getElementById("screenViewerClose");
+const screenShareIndicator = document.getElementById("screenShareIndicator");
+const screenShareIndicatorText = document.getElementById("screenShareIndicatorText");
+const screenShareIndicatorStop = document.getElementById("screenShareIndicatorStop");
 const globalAnnouncement = document.getElementById("globalAnnouncement");
 const globalAnnouncementText = document.getElementById("globalAnnouncementText");
 const globalAnnouncementDismiss = document.getElementById("globalAnnouncementDismiss");
@@ -2177,6 +2184,9 @@ if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
 let networkNote = storage.get("vel-network-note", "");
+const VEL_TERMS_VERSION = "remote-consent-v1";
+const VEL_TERMS_ACCEPTED_KEY = "vel-terms-accepted-version";
+const VEL_TERMS_ACCEPTED_AT_KEY = "vel-terms-accepted-at";
 const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
@@ -5622,6 +5632,27 @@ function setScreenViewerStatus(message = "") {
   if (screenViewerStatus) screenViewerStatus.textContent = message;
 }
 
+function setScreenShareIndicator(active, details = {}) {
+  if (!screenShareIndicator) return;
+  if (!active) {
+    screenShareIndicator.hidden = true;
+    delete screenShareIndicator.dataset.role;
+    return;
+  }
+  const role = details.role === "admin" ? "admin" : "target";
+  const name = String(details.name || "").replace(/\s+/g, " ").trim();
+  screenShareIndicator.dataset.role = role;
+  screenShareIndicator.hidden = false;
+  if (screenShareIndicatorText) {
+    screenShareIndicatorText.textContent = role === "admin"
+      ? `Watching ${name || "shared screen"}`
+      : "Screen sharing active. Owner can see this screen.";
+  }
+  if (screenShareIndicatorStop) {
+    screenShareIndicatorStop.textContent = role === "admin" ? "Close" : "Stop";
+  }
+}
+
 function stopScreenShare(options = {}) {
   const sessionId = options.sessionId || screenViewer?.dataset.sessionId || pendingScreenShare?.sessionId || "";
   const role = options.role || screenViewer?.dataset.role || (activeScreenShareStream ? "target" : "");
@@ -5652,6 +5683,7 @@ function stopScreenShare(options = {}) {
     delete screenViewer.dataset.role;
   }
   if (screenViewerVideo) screenViewerVideo.srcObject = null;
+  setScreenShareIndicator(false);
 }
 
 async function sendScreenSignal(sessionId, role, type, payload = null, admin = false) {
@@ -5715,7 +5747,7 @@ async function handleScreenSignal(message, role, sessionId, admin) {
   }
   if (message.type === "stopped") {
     setScreenViewerStatus("Screen sharing stopped.");
-    if (role === "target") stopScreenShare({ silent: true });
+    stopScreenShare({ silent: true });
   }
 }
 
@@ -5774,6 +5806,7 @@ async function startAdminScreenViewer(target = {}) {
     }
     if (screenViewerTitle) screenViewerTitle.textContent = `Watching ${targetName}`;
     setScreenViewerStatus("Waiting for approval...");
+    setScreenShareIndicator(true, { role: "admin", name: targetName });
     screenSharePeer = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     });
@@ -5788,6 +5821,7 @@ async function startAdminScreenViewer(target = {}) {
         screenViewerVideo.play?.().catch(() => {});
       }
       setScreenViewerStatus("Screen connected.");
+      setScreenShareIndicator(true, { role: "admin", name: targetName });
     };
     screenSharePeer.onconnectionstatechange = () => {
       const state = screenSharePeer?.connectionState || "";
@@ -5847,6 +5881,7 @@ async function acceptScreenShareRequest() {
     });
     stopScreenShare({ silent: true });
     activeScreenShareStream = stream;
+    setScreenShareIndicator(true, { role: "target" });
     if (screenShareRequest) screenShareRequest.hidden = true;
     screenSharePeer = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
@@ -9663,6 +9698,12 @@ function setWelcomeStatus(message = "", tone = "") {
   welcomeStatus.dataset.tone = tone;
 }
 
+function setTermsStatus(message = "", tone = "") {
+  if (!termsStatus) return;
+  termsStatus.textContent = message;
+  termsStatus.dataset.tone = tone;
+}
+
 function typeWelcomeText(text = "") {
   if (!welcomeGateTitle) return;
   window.clearInterval(welcomeTypeTimer);
@@ -9676,6 +9717,55 @@ function typeWelcomeText(text = "") {
       welcomeTypeTimer = null;
     }
   }, 32);
+}
+
+function needsTermsGate() {
+  return Boolean(termsGate) && storage.get(VEL_TERMS_ACCEPTED_KEY, "") !== VEL_TERMS_VERSION;
+}
+
+function showTermsGate() {
+  if (!termsGate) return;
+  if (welcomeGate) welcomeGate.hidden = true;
+  termsGate.hidden = false;
+  document.body.classList.add("is-onboarding");
+  setTermsStatus("You can turn Remote Deck sounds off later from the Remote Deck panel.");
+  window.setTimeout(() => termsAcceptButton?.focus({ preventScroll: true }), 180);
+}
+
+function completeTermsGate() {
+  if (termsGate) termsGate.hidden = true;
+  if (!needsWelcomeGate()) {
+    document.body.classList.remove("is-onboarding");
+  }
+}
+
+function maybeShowTermsGate() {
+  if (needsTermsGate()) {
+    showTermsGate();
+    return true;
+  }
+  return false;
+}
+
+async function acceptTermsGate() {
+  termsAcceptButton?.toggleAttribute("disabled", true);
+  setTermsStatus("Saving terms...");
+  try {
+    storage.set(VEL_TERMS_ACCEPTED_KEY, VEL_TERMS_VERSION);
+    storage.set(VEL_TERMS_ACCEPTED_AT_KEY, String(Date.now()));
+    if (termsSoundOptIn?.checked) {
+      remoteDeckAllowed = true;
+      storage.set(REMOTE_DECK_ALLOW_KEY, "1");
+      await armSoundboardAudio();
+      loadSoundboardFiles();
+      syncRemoteDeckLaunchButton();
+      renderRemoteDeck();
+    }
+    completeTermsGate();
+    maybeShowWelcomeGate();
+  } finally {
+    termsAcceptButton?.toggleAttribute("disabled", false);
+  }
 }
 
 function needsWelcomeGate() {
@@ -9765,7 +9855,9 @@ function showBootScreen() {
   clearLegacyStoredChatPin();
   if (bootScreen) bootScreen.classList.add("is-hidden");
   document.body.classList.remove("is-booting");
-  maybeShowWelcomeGate();
+  if (!maybeShowTermsGate()) {
+    maybeShowWelcomeGate();
+  }
 }
 
 function setActiveLocalGame(gameId, displayMeta = null) {
@@ -11229,6 +11321,10 @@ welcomeNameForm?.addEventListener("submit", (event) => {
   submitWelcomeName();
 });
 
+termsAcceptButton?.addEventListener("click", () => {
+  acceptTermsGate();
+});
+
 welcomePinForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   submitWelcomePin();
@@ -12251,6 +12347,10 @@ screenShareDismiss?.addEventListener("click", () => {
 
 screenViewerClose?.addEventListener("click", () => {
   stopScreenShare({ reason: "owner-stopped" });
+});
+
+screenShareIndicatorStop?.addEventListener("click", () => {
+  stopScreenShare({ reason: "indicator-stopped" });
 });
 
 globalAnnouncementDismiss?.addEventListener("click", () => {
