@@ -4686,15 +4686,21 @@ function renderSoundboard() {
   const realSounds = getAllSoundboardRealSounds();
   const realPads = realSounds.map((sound) => `
     <button class="sound-pad is-real" type="button" data-sound-file-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Play ${escapeHtml(sound.title)}">
-      <em>REAL</em>
-      <strong>${escapeHtml(sound.title)}</strong>
-      <span>${escapeHtml(sound.detail)}</span>
+      <span class="sound-pad-button" aria-hidden="true"></span>
+      <span class="sound-pad-copy">
+        <em>REAL</em>
+        <strong>${escapeHtml(sound.title)}</strong>
+        <span>${escapeHtml(sound.detail)}</span>
+      </span>
     </button>
   `).join("");
   const generatedPads = soundboardGeneratedSounds.map((sound) => `
     <button class="sound-pad" type="button" data-sound-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Play ${escapeHtml(sound.title)}">
-      <strong>${escapeHtml(sound.title)}</strong>
-      <span>${escapeHtml(sound.detail)}</span>
+      <span class="sound-pad-button" aria-hidden="true"></span>
+      <span class="sound-pad-copy">
+        <strong>${escapeHtml(sound.title)}</strong>
+        <span>${escapeHtml(sound.detail)}</span>
+      </span>
     </button>
   `).join("");
   const emptyReal = realSounds.length ? "" : `
@@ -4840,15 +4846,21 @@ function renderRemoteDeckGrid() {
   const realSounds = getAllSoundboardRealSounds();
   const realPads = realSounds.map((sound) => `
     <button class="sound-pad is-real" type="button" data-remote-sound-file-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Send ${escapeHtml(sound.title)}">
-      <em>REAL</em>
-      <strong>${escapeHtml(sound.title)}</strong>
-      <span>${escapeHtml(sound.detail)}</span>
+      <span class="sound-pad-button" aria-hidden="true"></span>
+      <span class="sound-pad-copy">
+        <em>REAL</em>
+        <strong>${escapeHtml(sound.title)}</strong>
+        <span>${escapeHtml(sound.detail)}</span>
+      </span>
     </button>
   `).join("");
   const generatedPads = soundboardGeneratedSounds.map((sound) => `
     <button class="sound-pad" type="button" data-remote-sound-id="${escapeHtml(sound.id)}" style="--sound-accent: ${escapeHtml(sound.accent)}" aria-label="Send ${escapeHtml(sound.title)}">
-      <strong>${escapeHtml(sound.title)}</strong>
-      <span>${escapeHtml(sound.detail)}</span>
+      <span class="sound-pad-button" aria-hidden="true"></span>
+      <span class="sound-pad-copy">
+        <strong>${escapeHtml(sound.title)}</strong>
+        <span>${escapeHtml(sound.detail)}</span>
+      </span>
     </button>
   `).join("");
   remoteDeckGrid.innerHTML = `${realPads}${generatedPads}`;
