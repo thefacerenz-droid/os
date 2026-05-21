@@ -5317,6 +5317,7 @@ function renderDevPanel(users = [], meta = {}) {
           ${user.deviceId === velDeviceId ? `
             <span class="dev-self-badge">This is you</span>
             <button type="button" data-dev-clear-locks="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Clear My Locks</button>
+            <button type="button" data-dev-flappy-remove="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove</button>
             <input type="number" min="1" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
           ` : `
@@ -5337,6 +5338,7 @@ function renderDevPanel(users = [], meta = {}) {
             </select>
             <button type="button" data-dev-lock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Lock app</button>
             <button type="button" data-dev-unlock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Unlock app</button>
+            <button type="button" data-dev-flappy-remove="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove</button>
             <input type="number" min="1" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
             <button type="button" data-dev-screen-request="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Watch screen</button>
@@ -5546,6 +5548,9 @@ function handleDevAccessData(data = {}) {
   if (Array.isArray(data.remoteSounds)) {
     data.remoteSounds.forEach((sound) => handleRemoteDeckServerSound(sound));
   }
+  if (data.flappyPipeClear?.createdAt) {
+    flappy.removePipes("Flappy tubes removed by Dev Panel.");
+  }
   if (data.vcGrant?.amount) {
     awardVelCredits(Number(data.vcGrant.amount) || 0);
   }
@@ -5612,6 +5617,7 @@ async function sendDevControl(command, payload = {}) {
     "lock-app": "Locking app",
     "unlock-app": "Unlocking app",
     "grant-vc": "Granting VC",
+    "flappy-remove-pipes": "Removing Flappy tubes",
     "screen-request": "Requesting screen share",
     "whitelist-admin": "Whitelisting device",
     "revoke-admin": "Removing whitelist",
@@ -5652,6 +5658,7 @@ async function sendDevControl(command, payload = {}) {
       "lock-app": "App locked.",
       "unlock-app": "App unlocked.",
       "grant-vc": "VC grant sent.",
+      "flappy-remove-pipes": "Flappy tubes removed.",
       "screen-request": "Screen request sent.",
       "whitelist-admin": "Device whitelisted.",
       "revoke-admin": "Whitelist removed.",
@@ -11874,6 +11881,19 @@ devOnlineList?.addEventListener("click", (event) => {
     return;
   }
 
+  const flappyRemoveButton = event.target.closest("[data-dev-flappy-remove]");
+  if (flappyRemoveButton) {
+    const targetDeviceId = flappyRemoveButton.dataset.devDevice || "";
+    sendDevControl("flappy-remove-pipes", {
+      targetUserId: flappyRemoveButton.dataset.devFlappyRemove || "",
+      targetDeviceId
+    });
+    if (targetDeviceId === velDeviceId) {
+      flappy.removePipes("Flappy tubes removed.");
+    }
+    return;
+  }
+
   const unlockAppButton = event.target.closest("[data-dev-unlock-app]");
   if (unlockAppButton) {
     const row = unlockAppButton.closest(".dev-user-row");
@@ -13393,7 +13413,8 @@ const flappy = (() => {
       reset() {},
       pause() {},
       refresh() {},
-      flap() {}
+      flap() {},
+      removePipes() {}
     };
   }
   const context = canvas.getContext("2d");
@@ -13580,12 +13601,17 @@ const flappy = (() => {
     context.fill();
     context.fillStyle = "#ff9d2f";
     context.beginPath();
-    context.moveTo(14, -1);
-    context.lineTo(32, 4);
-    context.lineTo(14, 9);
+    context.moveTo(13, -2);
+    context.quadraticCurveTo(24, -5, 33, 4);
+    context.quadraticCurveTo(24, 13, 13, 10);
+    context.quadraticCurveTo(17, 4, 13, -2);
     context.closePath();
     context.fill();
     context.strokeStyle = "#a85610";
+    context.stroke();
+    context.beginPath();
+    context.moveTo(16, 4.5);
+    context.quadraticCurveTo(24, 6.5, 31, 4);
     context.stroke();
     context.fillStyle = "#fff";
     context.beginPath();
@@ -13834,6 +13860,13 @@ const flappy = (() => {
     resetState();
   }
 
+  function removePipes(message = "Flappy tubes removed.") {
+    pipes = [];
+    spawnTimer = -0.85;
+    if (statusElement) statusElement.textContent = message;
+    draw();
+  }
+
   startButton?.addEventListener("click", start);
   resetButton?.addEventListener("click", reset);
   refreshButton?.addEventListener("click", loadLeaderboard);
@@ -13856,7 +13889,7 @@ const flappy = (() => {
     loadLeaderboard();
   }
 
-  return { start, reset, pause, refresh, flap };
+  return { start, reset, pause, refresh, flap, removePipes };
 })();
 
 const wordWarp = (() => {
