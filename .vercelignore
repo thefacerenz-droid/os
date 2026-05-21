@@ -1,6 +1,7 @@
 .env
 node_modules
 data/*.json
+!data/vault-videos.json
 
 # Hobby plan safety: deploy exactly one serverless API function.
 # Older commits may still have nested api files; ignore all of them

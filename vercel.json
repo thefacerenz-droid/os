@@ -1,4 +1,10 @@
 {
+  "buildCommand": "node scripts/generate-vault-manifest.js",
+  "functions": {
+    "api/index.js": {
+      "excludeFiles": "assets/secret-videos/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",

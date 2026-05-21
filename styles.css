@@ -2412,7 +2412,17 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   text-align: left;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 170ms ease, border-color 170ms ease, background 170ms ease;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.018) 35%, rgba(0, 0, 0, 0.44) 100%),
+    radial-gradient(circle at 22% 8%, rgba(255, 255, 255, 0.36), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.52);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -18px 34px rgba(0, 0, 0, 0.34),
+    0 14px 28px rgba(0, 0, 0, 0.34);
+  transition: transform 170ms ease, border-color 170ms ease, background 170ms ease, box-shadow 170ms ease, filter 170ms ease;
 }
 
 .sound-pad.is-real {
@@ -2423,22 +2433,65 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   content: "";
   position: absolute;
   inset: auto -18% -42% auto;
-  width: 84px;
+  z-index: 0;
+  width: 96px;
   aspect-ratio: 1;
   border-radius: 50%;
   background: var(--sound-accent, rgba(255, 255, 255, 0.18));
-  opacity: 0.42;
-  filter: blur(2px);
+  opacity: 0.5;
+  filter: blur(1px) saturate(1.25);
+  box-shadow:
+    0 0 34px var(--sound-accent, rgba(255, 255, 255, 0.18)),
+    inset 0 1px 18px rgba(255, 255, 255, 0.22);
+}
+
+.sound-pad::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto;
+  z-index: 0;
+  height: 42%;
+  border-radius: 22px 22px 46px 46px;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 42%, rgba(255, 255, 255, 0.78) 50%, rgba(255, 255, 255, 0.22) 58%, transparent 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.04));
+  opacity: 0.38;
+  transform: translateX(-58%) skewX(-16deg);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 360ms ease;
 }
 
 .sound-pad:hover,
 .sound-pad:focus-visible,
 .sound-pad.is-playing {
   transform: translateY(-4px) scale(1.025);
-  border-color: rgba(255, 255, 255, 0.34);
+  border-color: rgba(255, 255, 255, 0.44);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.035)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.12) 34%, rgba(255, 255, 255, 0.025) 35%, rgba(0, 0, 0, 0.42) 100%),
+    radial-gradient(circle at 22% 8%, rgba(255, 255, 255, 0.48), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.04)),
     rgba(0, 0, 0, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    inset 0 -18px 34px rgba(0, 0, 0, 0.28),
+    0 18px 42px rgba(0, 0, 0, 0.46),
+    0 0 28px rgba(255, 255, 255, 0.14);
+  filter: saturate(1.12);
+}
+
+.sound-pad:hover::after,
+.sound-pad:focus-visible::after,
+.sound-pad.is-playing::after {
+  opacity: 0.64;
+  transform: translateX(42%) skewX(-16deg);
+}
+
+.sound-pad:active {
+  transform: translateY(-1px) scale(0.99);
+  box-shadow:
+    inset 0 2px 14px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 8px 18px rgba(0, 0, 0, 0.38);
 }
 
 .sound-pad strong,
