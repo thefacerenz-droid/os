@@ -5287,6 +5287,17 @@ function getDevAppLockOptions(activeApp = "") {
   return options.map(([id, label]) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join("");
 }
 
+function getDevFlappySpeedOptions() {
+  return [
+    ["0.5", "0.5x"],
+    ["0.75", "0.75x"],
+    ["1", "1x"],
+    ["1.25", "1.25x"],
+    ["1.5", "1.5x"],
+    ["2", "2x"]
+  ].map(([value, label]) => `<option value="${value}"${value === "1" ? " selected" : ""}>${label}</option>`).join("");
+}
+
 function renderDevPanel(users = [], meta = {}) {
   if (!devOnlineList) return;
   const bans = Array.isArray(meta.bans) ? meta.bans : [];
@@ -5318,6 +5329,10 @@ function renderDevPanel(users = [], meta = {}) {
             <span class="dev-self-badge">This is you</span>
             <button type="button" data-dev-clear-locks="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Clear My Locks</button>
             <button type="button" data-dev-flappy-remove="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove</button>
+            <select aria-label="Flappy speed" data-dev-flappy-speed="${escapeHtml(user.userId || "")}">
+              ${getDevFlappySpeedOptions()}
+            </select>
+            <button type="button" data-dev-flappy-speed-apply="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Speed</button>
             <input type="number" min="1" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
           ` : `
@@ -5339,6 +5354,10 @@ function renderDevPanel(users = [], meta = {}) {
             <button type="button" data-dev-lock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Lock app</button>
             <button type="button" data-dev-unlock-app="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Unlock app</button>
             <button type="button" data-dev-flappy-remove="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove</button>
+            <select aria-label="Flappy speed" data-dev-flappy-speed="${escapeHtml(user.userId || "")}">
+              ${getDevFlappySpeedOptions()}
+            </select>
+            <button type="button" data-dev-flappy-speed-apply="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Speed</button>
             <input type="number" min="1" placeholder="VC" aria-label="Vel Credits amount" data-dev-vc-amount="${escapeHtml(user.userId || "")}" />
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
             <button type="button" data-dev-screen-request="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Watch screen</button>
@@ -5548,8 +5567,15 @@ function handleDevAccessData(data = {}) {
   if (Array.isArray(data.remoteSounds)) {
     data.remoteSounds.forEach((sound) => handleRemoteDeckServerSound(sound));
   }
-  if (data.flappyPipeClear?.createdAt) {
-    flappy.removePipes("Flappy tubes removed by Dev Panel.");
+  if (data.flappyControl?.createdAt) {
+    if (data.flappyControl.noCollision) {
+      flappy.removePipes("Flappy tubes are visible, but pipe hits are off.");
+    }
+    if (data.flappyControl.speed) {
+      flappy.setSpeed(data.flappyControl.speed, `Flappy speed set to ${data.flappyControl.speed}x.`);
+    }
+  } else if (data.flappyPipeClear?.createdAt) {
+    flappy.removePipes("Flappy tubes are visible, but pipe hits are off.");
   }
   if (data.vcGrant?.amount) {
     awardVelCredits(Number(data.vcGrant.amount) || 0);
@@ -5617,7 +5643,8 @@ async function sendDevControl(command, payload = {}) {
     "lock-app": "Locking app",
     "unlock-app": "Unlocking app",
     "grant-vc": "Granting VC",
-    "flappy-remove-pipes": "Removing Flappy tubes",
+    "flappy-remove-pipes": "Removing Flappy pipe hits",
+    "flappy-set-speed": "Setting Flappy speed",
     "screen-request": "Requesting screen share",
     "whitelist-admin": "Whitelisting device",
     "revoke-admin": "Removing whitelist",
@@ -5658,7 +5685,8 @@ async function sendDevControl(command, payload = {}) {
       "lock-app": "App locked.",
       "unlock-app": "App unlocked.",
       "grant-vc": "VC grant sent.",
-      "flappy-remove-pipes": "Flappy tubes removed.",
+      "flappy-remove-pipes": "Flappy pipe hits removed.",
+      "flappy-set-speed": "Flappy speed updated.",
       "screen-request": "Screen request sent.",
       "whitelist-admin": "Device whitelisted.",
       "revoke-admin": "Whitelist removed.",
@@ -11889,7 +11917,23 @@ devOnlineList?.addEventListener("click", (event) => {
       targetDeviceId
     });
     if (targetDeviceId === velDeviceId) {
-      flappy.removePipes("Flappy tubes removed.");
+      flappy.removePipes("Flappy tubes are visible, but pipe hits are off.");
+    }
+    return;
+  }
+
+  const flappySpeedButton = event.target.closest("[data-dev-flappy-speed-apply]");
+  if (flappySpeedButton) {
+    const row = flappySpeedButton.closest(".dev-user-row");
+    const speed = row?.querySelector("[data-dev-flappy-speed]")?.value || "1";
+    const targetDeviceId = flappySpeedButton.dataset.devDevice || "";
+    sendDevControl("flappy-set-speed", {
+      targetUserId: flappySpeedButton.dataset.devFlappySpeedApply || "",
+      targetDeviceId,
+      speed
+    });
+    if (targetDeviceId === velDeviceId) {
+      flappy.setSpeed(speed, `Flappy speed set to ${speed}x.`);
     }
     return;
   }
@@ -13414,7 +13458,8 @@ const flappy = (() => {
       pause() {},
       refresh() {},
       flap() {},
-      removePipes() {}
+      removePipes() {},
+      setSpeed() {}
     };
   }
   const context = canvas.getContext("2d");
@@ -13427,6 +13472,7 @@ const flappy = (() => {
   const refreshButton = document.getElementById("flappyLeaderboardRefresh");
   const leaderboardElement = document.getElementById("flappyLeaderboardList");
   const localLeaderboardKey = "vel-flappy-local-leaderboard";
+  const speedStorageKey = "vel-flappy-speed";
 
   let width = 430;
   let height = 520;
@@ -13434,6 +13480,8 @@ const flappy = (() => {
   let pipes = [];
   let score = 0;
   let best = storage.get("vel-flappy-best", 0);
+  let speedMultiplier = Math.max(0.45, Math.min(2.5, Number.parseFloat(storage.get(speedStorageKey, "1")) || 1));
+  let pipeCollisionDisabled = false;
   let running = false;
   let over = false;
   let animationId = 0;
@@ -13468,8 +13516,9 @@ const flappy = (() => {
     over = false;
     spawnTimer = 0;
     lastFrame = 0;
+    pipeCollisionDisabled = false;
     updateCopy();
-    if (statusElement) statusElement.textContent = "Tap, click, Space, W, or Up to flap through the pipes.";
+    if (statusElement) statusElement.textContent = `Tap, click, Space, W, or Up to flap through the pipes. Speed ${speedMultiplier}x.`;
     draw();
   }
 
@@ -13651,6 +13700,20 @@ const flappy = (() => {
     context.fillStyle = "#fff";
     context.fillText(String(score), width / 2, 62);
     context.textAlign = "start";
+    if (pipeCollisionDisabled) {
+      context.font = "900 12px Arial";
+      context.fillStyle = "rgba(255,255,255,0.9)";
+      fillRoundedRect(width - 116, 15, 98, 24, 999);
+      context.fillStyle = "#1c7a2e";
+      context.fillText("NO PIPE HIT", width - 104, 32);
+    }
+    if (speedMultiplier !== 1) {
+      context.font = "900 12px Arial";
+      context.fillStyle = "rgba(255,255,255,0.86)";
+      fillRoundedRect(width - 84, pipeCollisionDisabled ? 45 : 15, 66, 24, 999);
+      context.fillStyle = "#1c345f";
+      context.fillText(`${speedMultiplier}x`, width - 62, pipeCollisionDisabled ? 62 : 32);
+    }
     context.restore();
   }
 
@@ -13789,8 +13852,9 @@ const flappy = (() => {
     }
     bird.vy += 1120 * delta;
     bird.y += bird.vy * delta;
+    const pipeSpeed = (190 + Math.min(score, 24) * 4) * speedMultiplier;
     pipes.forEach((pipe) => {
-      pipe.x -= (190 + Math.min(score, 24) * 4) * delta;
+      pipe.x -= pipeSpeed * delta;
       if (!pipe.scored && pipe.x + pipe.w < bird.x) {
         pipe.scored = true;
         score += 1;
@@ -13803,7 +13867,7 @@ const flappy = (() => {
     });
     pipes = pipes.filter((pipe) => pipe.x + pipe.w > -20);
     const birdRadius = 14;
-    const hitPipe = pipes.some((pipe) => {
+    const hitPipe = !pipeCollisionDisabled && pipes.some((pipe) => {
       const inX = bird.x + birdRadius > pipe.x && bird.x - birdRadius < pipe.x + pipe.w;
       const gapTop = pipe.gapY - pipe.gap / 2;
       const gapBottom = pipe.gapY + pipe.gap / 2;
@@ -13842,7 +13906,9 @@ const flappy = (() => {
     lastFrame = 0;
     if (!pipes.length) addPipe();
     updateCopy();
-    if (statusElement) statusElement.textContent = "Run live. Keep flapping through the gaps.";
+    if (statusElement) statusElement.textContent = pipeCollisionDisabled
+      ? `Run live at ${speedMultiplier}x. Pipes still score, but pipe hits are off.`
+      : `Run live at ${speedMultiplier}x. Keep flapping through the gaps.`;
     window.cancelAnimationFrame(animationId);
     animationId = window.requestAnimationFrame(step);
   }
@@ -13860,10 +13926,17 @@ const flappy = (() => {
     resetState();
   }
 
-  function removePipes(message = "Flappy tubes removed.") {
-    pipes = [];
-    spawnTimer = -0.85;
+  function removePipes(message = "Flappy pipe hits are off.") {
+    pipeCollisionDisabled = true;
     if (statusElement) statusElement.textContent = message;
+    draw();
+  }
+
+  function setSpeed(value = 1, message = "") {
+    const nextSpeed = Math.max(0.45, Math.min(2.5, Number.parseFloat(value) || 1));
+    speedMultiplier = Number(nextSpeed.toFixed(2));
+    storage.set(speedStorageKey, String(speedMultiplier));
+    if (statusElement) statusElement.textContent = message || `Flappy speed set to ${speedMultiplier}x.`;
     draw();
   }
 
@@ -13889,7 +13962,7 @@ const flappy = (() => {
     loadLeaderboard();
   }
 
-  return { start, reset, pause, refresh, flap, removePipes };
+  return { start, reset, pause, refresh, flap, removePipes, setSpeed };
 })();
 
 const wordWarp = (() => {
