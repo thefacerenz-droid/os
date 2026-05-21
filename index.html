@@ -1150,7 +1150,13 @@
                   <p class="section-label">After Picking A Device</p>
                   <h3>Tap A Sound</h3>
                 </div>
-                <button class="ghost-button" type="button" id="remoteDeckStop">Stop Local Audio</button>
+                <div class="remote-deck-actions">
+                  <label class="remote-deck-volume">
+                    <span>Send volume <b id="remoteDeckVolumeValue">72%</b></span>
+                    <input id="remoteDeckVolume" type="range" min="0" max="100" value="72" aria-label="Remote Deck send volume" />
+                  </label>
+                  <button class="ghost-button" type="button" id="remoteDeckStop">Stop Local Audio</button>
+                </div>
               </div>
               <div class="soundboard-grid remote-sound-grid" id="remoteDeckGrid" aria-label="Remote soundboard pads"></div>
             </section>

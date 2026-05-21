@@ -2113,6 +2113,8 @@ const remoteDeckGrid = document.getElementById("remoteDeckGrid");
 const remoteDeckMain = remoteDeckGrid?.closest(".remote-deck-main");
 const remoteDeckFullscreen = document.getElementById("remoteDeckFullscreen");
 const remoteDeckStop = document.getElementById("remoteDeckStop");
+const remoteDeckVolume = document.getElementById("remoteDeckVolume");
+const remoteDeckVolumeValue = document.getElementById("remoteDeckVolumeValue");
 const remoteSoundPrompt = document.getElementById("remoteSoundPrompt");
 const remoteSoundPromptTitle = document.getElementById("remoteSoundPromptTitle");
 const remoteSoundPromptText = document.getElementById("remoteSoundPromptText");
@@ -2381,6 +2383,7 @@ const HARDCODED_ADMIN_DEVICE_IDS = [
 const REMOTE_DECK_ADMIN_DEVICE_IDS = HARDCODED_ADMIN_DEVICE_IDS;
 const REMOTE_DECK_PEERS_KEY = "vel-remote-deck-peers";
 const REMOTE_DECK_ALLOW_KEY = "vel-remote-deck-allow";
+const REMOTE_DECK_SEND_VOLUME_KEY = "vel-remote-deck-send-volume";
 let remoteDeckSelectedDevices = new Set();
 let remoteDeckPeers = readStoredJson(REMOTE_DECK_PEERS_KEY, {});
 remoteDeckPeers = remoteDeckPeers && typeof remoteDeckPeers === "object" && !Array.isArray(remoteDeckPeers) ? remoteDeckPeers : {};
@@ -4312,9 +4315,57 @@ function initSoundboardGestureUnlock() {
   document.addEventListener("keydown", unlock, true);
 }
 
-function getSoundboardVolume() {
-  const value = Number(soundboardVolume?.value || 72);
-  return Math.max(0, Math.min(1, value / 100));
+function getSoundboardVolume(volumePercent = null) {
+  return getSoundboardVolumePercent(volumePercent) / 100;
+}
+
+function getSoundboardVolumePercent(volumePercent = null) {
+  const value = Number(volumePercent ?? soundboardVolume?.value ?? 72);
+  if (!Number.isFinite(value)) return 72;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getRemoteDeckSendVolumePercent() {
+  return getSoundboardVolumePercent(remoteDeckVolume?.value ?? storage.get(REMOTE_DECK_SEND_VOLUME_KEY, "72"));
+}
+
+function syncRemoteDeckVolumeLabel() {
+  const value = getRemoteDeckSendVolumePercent();
+  if (remoteDeckVolume) remoteDeckVolume.value = String(value);
+  if (remoteDeckVolumeValue) remoteDeckVolumeValue.textContent = `${value}%`;
+}
+
+function getRemoteDeckAudioPresence() {
+  const volume = getSoundboardVolumePercent();
+  return {
+    remoteDeckAllowed,
+    soundboardVolume: volume,
+    remoteSilent: !remoteDeckAllowed || volume <= 0
+  };
+}
+
+function normalizeRemoteDeckAudioInfo(info = {}) {
+  const rawVolume = info.soundboardVolume ?? info.remoteVolume;
+  const hasVolume = rawVolume !== undefined && rawVolume !== null && rawVolume !== "";
+  const parsedVolume = Number(rawVolume);
+  const soundboardVolume = hasVolume && Number.isFinite(parsedVolume)
+    ? Math.max(0, Math.min(100, Math.round(parsedVolume)))
+    : null;
+  const remoteDeckAllowed = info.remoteDeckAllowed === true
+    || info.remoteDeckAllowed === "true"
+    || info.remoteDeckAllowed === "1";
+  const remoteSilent = info.remoteSilent === true
+    || info.remoteSilent === "true"
+    || info.remoteSilent === "1"
+    || !remoteDeckAllowed
+    || soundboardVolume === 0;
+  return { remoteDeckAllowed, soundboardVolume, remoteSilent };
+}
+
+function getRemoteDeckAudioLabel(device = {}) {
+  const audio = normalizeRemoteDeckAudioInfo(device);
+  const volumeLabel = Number.isFinite(Number(audio.soundboardVolume)) ? `${audio.soundboardVolume}%` : "--";
+  return `${audio.remoteSilent ? "App silent" : "Sound ready"} - Vol ${volumeLabel}`;
 }
 
 function setSoundboardStatus(message = "Pick a pad to play a sound.") {
@@ -4397,7 +4448,7 @@ function playSoundTone(freq = 440, duration = 0.18, options = {}) {
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, options.to), now + duration);
   }
   gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, (options.gain || 0.42) * getSoundboardVolume()), now + (options.attack || 0.012));
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, (options.gain || 0.42) * getSoundboardVolume(options.volumePercent)), now + (options.attack || 0.012));
   gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   oscillator.connect(gain);
   gain.connect(ctx.destination);
@@ -4421,7 +4472,7 @@ function playSoundNoise(duration = 0.2, options = {}) {
   filter.type = options.filter || "bandpass";
   filter.frequency.value = options.frequency || 900;
   filter.Q.value = options.q || 1.2;
-  gain.gain.value = (options.gain || 0.22) * getSoundboardVolume();
+  gain.gain.value = (options.gain || 0.22) * getSoundboardVolume(options.volumePercent);
   source.buffer = buffer;
   source.connect(filter);
   filter.connect(gain);
@@ -4438,19 +4489,20 @@ function pulseSoundPad(id = "") {
   window.setTimeout(() => button.classList.remove("is-playing"), 360);
 }
 
-function playSoundboardSound(id = "") {
+function playSoundboardSound(id = "", options = {}) {
   const sound = soundboardGeneratedSounds.find((item) => item.id === id);
   if (!sound) return false;
   pulseSoundPad(id);
   setSoundboardStatus(`Playing ${sound.title}.`);
   const generation = soundboardStopGeneration;
+  const volumePercent = getSoundboardVolumePercent(options.volumePercent);
   const playTone = (freq, duration, options) => {
     if (soundboardStopGeneration !== generation) return;
-    playSoundTone(freq, duration, options);
+    playSoundTone(freq, duration, { ...options, volumePercent });
   };
   const playNoise = (duration, options) => {
     if (soundboardStopGeneration !== generation) return;
-    playSoundNoise(duration, options);
+    playSoundNoise(duration, { ...options, volumePercent });
   };
 
   if (id === "airhorn") {
@@ -4494,9 +4546,10 @@ function playSoundboardSound(id = "") {
   return true;
 }
 
-async function playSoundboardFile(id = "") {
+async function playSoundboardFile(id = "", options = {}) {
   const sound = getAllSoundboardRealSounds().find((item) => item.id === id);
   if (!sound?.url) return false;
+  const volumePercent = getSoundboardVolumePercent(options.volumePercent);
   const ctx = getSoundboardContext();
   if (ctx) {
     try {
@@ -4507,7 +4560,7 @@ async function playSoundboardFile(id = "") {
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
       source.buffer = buffer;
-      gain.gain.value = getSoundboardVolume();
+      gain.gain.value = getSoundboardVolume(volumePercent);
       source.connect(gain);
       gain.connect(ctx.destination);
       source.start(0);
@@ -4521,7 +4574,7 @@ async function playSoundboardFile(id = "") {
   }
   const audio = new Audio(sound.url);
   audio.preload = "auto";
-  audio.volume = getSoundboardVolume();
+  audio.volume = getSoundboardVolume(volumePercent);
   soundboardActiveMedia.push(audio);
   audio.addEventListener("ended", () => {
     soundboardActiveMedia = soundboardActiveMedia.filter((item) => item !== audio);
@@ -4621,18 +4674,23 @@ function setRemoteDeckStatus(message = "Pick someone online, then choose a sound
 }
 
 function getRemoteDeckBuiltInDevices() {
+  const localAudio = getRemoteDeckAudioPresence();
+  const ipadOnline = velDeviceId.startsWith("3fa56c0a");
+  const pcOnline = velDeviceId === "a9f794a2-9e8f-4d01-acdc-3b707472ae2e";
   return [
     {
       deviceId: "3fa56c0a",
       username: "Owner iPad",
       deviceName: "Permanent whitelist",
-      online: velDeviceId.startsWith("3fa56c0a")
+      online: ipadOnline,
+      ...(ipadOnline ? localAudio : normalizeRemoteDeckAudioInfo())
     },
     {
       deviceId: "a9f794a2-9e8f-4d01-acdc-3b707472ae2e",
       username: "Owner PC",
       deviceName: "Permanent whitelist",
-      online: velDeviceId === "a9f794a2-9e8f-4d01-acdc-3b707472ae2e"
+      online: pcOnline,
+      ...(pcOnline ? localAudio : normalizeRemoteDeckAudioInfo())
     }
   ];
 }
@@ -4640,12 +4698,14 @@ function getRemoteDeckBuiltInDevices() {
 function rememberRemoteDeckPeer(peer = {}) {
   const deviceId = String(peer.deviceId || "").replace(/[^\w.-]/g, "").slice(0, 96);
   if (!deviceId) return;
+  const audio = normalizeRemoteDeckAudioInfo(peer);
   remoteDeckPeers[deviceId] = {
     deviceId,
     username: cleanVelChatName(peer.username) || (deviceId === velDeviceId ? "This device" : "Whitelisted"),
     deviceName: String(peer.deviceName || "vel.os device").slice(0, 48),
     userId: String(peer.userId || "").replace(/[^\w.-]/g, "").slice(0, 64),
     appTitle: String(peer.appTitle || peer.app || "").replace(/\s+/g, " ").trim().slice(0, 36),
+    ...audio,
     online: true,
     lastSeen: Date.now()
   };
@@ -4656,7 +4716,8 @@ function getRemoteDeckDevices() {
   rememberRemoteDeckPeer({
     deviceId: velDeviceId,
     username: velChatUser?.username || "This device",
-    deviceName: getVelDeviceName()
+    deviceName: getVelDeviceName(),
+    ...getRemoteDeckAudioPresence()
   });
   const builtIns = getRemoteDeckBuiltInDevices();
   const map = new Map(builtIns.map((device) => [device.deviceId, device]));
@@ -4669,6 +4730,7 @@ function getRemoteDeckDevices() {
       username: cleanVelChatName(user.username) || "Online user",
       deviceName: String(user.deviceName || "vel.os device").slice(0, 48),
       appTitle: String(user.appTitle || user.app || "").replace(/\s+/g, " ").trim().slice(0, 36),
+      ...normalizeRemoteDeckAudioInfo(user),
       online: true,
       lastSeen: Number(user.lastSeen) || Date.now()
     });
@@ -4716,9 +4778,13 @@ function renderRemoteDeckTargets() {
     const selected = remoteDeckSelectedDevices.has(device.deviceId);
     const isThisDevice = device.deviceId === velDeviceId;
     const detail = device.appTitle ? `${device.deviceName || "vel.os device"} - ${device.appTitle}` : device.deviceName || "vel.os device";
+    const audio = normalizeRemoteDeckAudioInfo(device);
     return `
       <button class="remote-device-card${selected ? " is-selected" : ""}" type="button" data-remote-target="${escapeHtml(device.deviceId)}" aria-pressed="${selected}">
-        <strong>${escapeHtml(isThisDevice ? "This device" : device.username || "Whitelisted")}</strong>
+        <div class="remote-device-card-head">
+          <strong>${escapeHtml(isThisDevice ? "This device" : device.username || "Whitelisted")}</strong>
+          <span class="remote-device-audio${audio.remoteSilent ? " is-silent" : " is-ready"}">${escapeHtml(getRemoteDeckAudioLabel(device))}</span>
+        </div>
         <span>${escapeHtml(detail)}</span>
         <small>${escapeHtml(`${device.online ? "Online" : "Offline"} - ${device.deviceId.slice(0, 12)}`)}</small>
       </button>
@@ -4901,12 +4967,13 @@ async function pollRemoteDeckSounds() {
 }
 
 async function playRemoteDeckPayload(payload = {}) {
+  const volumePercent = getSoundboardVolumePercent(payload.remoteVolume ?? payload.volumePercent);
   if (payload.soundType === "file") {
     await loadSoundboardFiles();
-    return playSoundboardFile(payload.soundId || "");
+    return playSoundboardFile(payload.soundId || "", { volumePercent });
   }
   await armSoundboardAudio();
-  return playSoundboardSound(payload.soundId || "");
+  return playSoundboardSound(payload.soundId || "", { volumePercent });
 }
 
 async function handleRemoteDeckServerSound(payload = {}) {
@@ -4957,6 +5024,7 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
     return;
   }
   let sent = 0;
+  const remoteVolume = getRemoteDeckSendVolumePercent();
   for (const target of selected) {
     const targetDeviceId = target.deviceId || "";
     const payload = {
@@ -4967,7 +5035,8 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
       targetDeviceName: target.deviceName || "",
       soundType,
       soundId,
-      soundTitle
+      soundTitle,
+      remoteVolume
     };
     if (targetDeviceId === velDeviceId) {
       if (!remoteDeckAllowed) {
@@ -4991,7 +5060,8 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
           targetDeviceName: target.deviceName || "",
           soundType,
           soundId,
-          soundTitle
+          soundTitle,
+          remoteVolume
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -5005,8 +5075,8 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
   if (sent) {
     const offlineCount = selected.filter((target) => !target.online && target.deviceId !== velDeviceId).length;
     setRemoteDeckStatus(offlineCount
-      ? `Queued ${soundTitle} for ${sent} target${sent === 1 ? "" : "s"} (${offlineCount} offline).`
-      : `Sent ${soundTitle} to ${sent} target${sent === 1 ? "" : "s"}.`, offlineCount ? "warn" : "live");
+      ? `Queued ${soundTitle} at ${remoteVolume}% for ${sent} target${sent === 1 ? "" : "s"} (${offlineCount} offline).`
+      : `Sent ${soundTitle} at ${remoteVolume}% to ${sent} target${sent === 1 ? "" : "s"}.`, offlineCount ? "warn" : "live");
   }
 }
 
@@ -5016,7 +5086,8 @@ function announceRemoteDeckPeer() {
     type: "hello",
     deviceId: velDeviceId,
     username: velChatUser?.username || "Whitelisted",
-    deviceName: getVelDeviceName()
+    deviceName: getVelDeviceName(),
+    ...getRemoteDeckAudioPresence()
   });
 }
 
@@ -5025,7 +5096,8 @@ function initRemoteDeckChannel() {
   rememberRemoteDeckPeer({
     deviceId: velDeviceId,
     username: velChatUser?.username || "This device",
-    deviceName: getVelDeviceName()
+    deviceName: getVelDeviceName(),
+    ...getRemoteDeckAudioPresence()
   });
   if ("BroadcastChannel" in window && !remoteDeckChannel) {
     remoteDeckChannel = new BroadcastChannel("vel-remote-deck");
@@ -5234,6 +5306,7 @@ function renderDevPanel(users = [], meta = {}) {
             <b class="dev-activity">${escapeHtml(user.activity || "Live on vel.os")}</b>
             <small>${escapeHtml(user.deviceName || "Unknown device")}</small>
             <small>${escapeHtml(user.deviceId ? `Device ${user.deviceId.slice(0, 8)}` : "No device ID")}</small>
+            <small class="dev-audio-note${normalizeRemoteDeckAudioInfo(user).remoteSilent ? " is-silent" : " is-ready"}">${escapeHtml(getRemoteDeckAudioLabel(user))}</small>
             ${user.devWhitelisted || whitelistedKeys.has(user.deviceId) ? '<small class="dev-lock-note">Dev Panel whitelisted</small>' : ""}
             ${user.siteLocked ? '<small class="dev-lock-note">Site locked by owner</small>' : ""}
             ${Array.isArray(user.lockedApps) && user.lockedApps.length ? `<small class="dev-lock-note">Locked apps: ${escapeHtml(user.lockedApps.join(", "))}</small>` : ""}
@@ -5602,6 +5675,7 @@ function reportDevPresence() {
     body: JSON.stringify({
       ...getDevIdentityPayload(),
       ...active,
+      ...getRemoteDeckAudioPresence(),
       path: window.location.pathname || "/"
     }),
     keepalive: true
@@ -11568,7 +11642,22 @@ soundboardFileInput?.addEventListener("change", () => {
 });
 
 soundboardVolume?.addEventListener("input", () => {
-  setSoundboardStatus(`Volume ${soundboardVolume.value}%.`);
+  setSoundboardStatus(`Volume ${getSoundboardVolumePercent()}%.`);
+  rememberRemoteDeckPeer({
+    deviceId: velDeviceId,
+    username: velChatUser?.username || "This device",
+    deviceName: getVelDeviceName(),
+    ...getRemoteDeckAudioPresence()
+  });
+  renderRemoteDeckTargets();
+  reportDevPresence();
+});
+
+remoteDeckVolume?.addEventListener("input", () => {
+  const value = getRemoteDeckSendVolumePercent();
+  storage.set(REMOTE_DECK_SEND_VOLUME_KEY, String(value));
+  syncRemoteDeckVolumeLabel();
+  setRemoteDeckStatus(`Remote Deck send volume set to ${value}%.`, "live");
 });
 
 remoteDeckTargets?.addEventListener("click", (event) => {
@@ -11607,6 +11696,8 @@ remoteDeckAllow?.addEventListener("click", async () => {
     scheduleRemoteDeckPoll(80);
   }
   renderRemoteDeck();
+  reportDevPresence();
+  announceRemoteDeckPeer();
   setRemoteDeckStatus(remoteDeckAllowed ? "This device can receive Remote Deck sounds." : "This device will not receive Remote Deck sounds.", remoteDeckAllowed ? "live" : "warn");
 });
 
@@ -15075,6 +15166,10 @@ renderLobbyState();
 clearLobbyCanvas();
 renderSoundboard();
 syncRemoteDeckLaunchButton();
+if (remoteDeckVolume) {
+  remoteDeckVolume.value = storage.get(REMOTE_DECK_SEND_VOLUME_KEY, remoteDeckVolume.value || "72");
+}
+syncRemoteDeckVolumeLabel();
 initRemoteDeckChannel();
 initDraggableDrawers();
 initScrollAssist();
