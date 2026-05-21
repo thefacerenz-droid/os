@@ -4206,7 +4206,7 @@ function submitCalculator() {
   try {
     const result = calculateExpression(expression);
     calculatorResult.textContent = String(result);
-    if (normalized === "67+7") {
+    if (normalized === "789+432") {
       calculatorExpression.value = "";
       calculatorResult.textContent = "Vault unlocked";
       unlockSecretVault();
@@ -5567,15 +5567,20 @@ function handleDevAccessData(data = {}) {
   if (Array.isArray(data.remoteSounds)) {
     data.remoteSounds.forEach((sound) => handleRemoteDeckServerSound(sound));
   }
-  if (data.flappyControl?.createdAt) {
-    if (data.flappyControl.noCollision) {
-      flappy.removePipes("Flappy tubes are visible, but pipe hits are off.");
-    }
-    if (data.flappyControl.speed) {
-      flappy.setSpeed(data.flappyControl.speed, `Flappy speed set to ${data.flappyControl.speed}x.`);
-    }
+  const flappyControls = Array.isArray(data.flappyControls)
+    ? data.flappyControls
+    : data.flappyControl?.createdAt
+      ? [data.flappyControl]
+      : data.flappyPipeClear?.createdAt
+        ? [{ noCollision: true }]
+        : [];
+  if (flappyControls.length) {
+    flappyControls.forEach((control) => {
+      if (control.noCollision) flappy.removePipes();
+      if (control.speed) flappy.setSpeed(control.speed);
+    });
   } else if (data.flappyPipeClear?.createdAt) {
-    flappy.removePipes("Flappy tubes are visible, but pipe hits are off.");
+    flappy.removePipes();
   }
   if (data.vcGrant?.amount) {
     awardVelCredits(Number(data.vcGrant.amount) || 0);
@@ -11917,7 +11922,7 @@ devOnlineList?.addEventListener("click", (event) => {
       targetDeviceId
     });
     if (targetDeviceId === velDeviceId) {
-      flappy.removePipes("Flappy tubes are visible, but pipe hits are off.");
+      flappy.removePipes();
     }
     return;
   }
@@ -11933,7 +11938,7 @@ devOnlineList?.addEventListener("click", (event) => {
       speed
     });
     if (targetDeviceId === velDeviceId) {
-      flappy.setSpeed(speed, `Flappy speed set to ${speed}x.`);
+      flappy.setSpeed(speed);
     }
     return;
   }
@@ -13518,7 +13523,7 @@ const flappy = (() => {
     lastFrame = 0;
     pipeCollisionDisabled = false;
     updateCopy();
-    if (statusElement) statusElement.textContent = `Tap, click, Space, W, or Up to flap through the pipes. Speed ${speedMultiplier}x.`;
+    if (statusElement) statusElement.textContent = "Tap, click, Space, W, or Up to flap through the pipes.";
     draw();
   }
 
@@ -13700,20 +13705,6 @@ const flappy = (() => {
     context.fillStyle = "#fff";
     context.fillText(String(score), width / 2, 62);
     context.textAlign = "start";
-    if (pipeCollisionDisabled) {
-      context.font = "900 12px Arial";
-      context.fillStyle = "rgba(255,255,255,0.9)";
-      fillRoundedRect(width - 116, 15, 98, 24, 999);
-      context.fillStyle = "#1c7a2e";
-      context.fillText("NO PIPE HIT", width - 104, 32);
-    }
-    if (speedMultiplier !== 1) {
-      context.font = "900 12px Arial";
-      context.fillStyle = "rgba(255,255,255,0.86)";
-      fillRoundedRect(width - 84, pipeCollisionDisabled ? 45 : 15, 66, 24, 999);
-      context.fillStyle = "#1c345f";
-      context.fillText(`${speedMultiplier}x`, width - 62, pipeCollisionDisabled ? 62 : 32);
-    }
     context.restore();
   }
 
@@ -13845,7 +13836,7 @@ const flappy = (() => {
     if (!lastFrame) lastFrame = timestamp;
     const delta = Math.min(34, timestamp - lastFrame) / 1000;
     lastFrame = timestamp;
-    spawnTimer += delta;
+    spawnTimer += delta * speedMultiplier;
     if (spawnTimer > 1.42) {
       spawnTimer = 0;
       addPipe();
@@ -13906,9 +13897,7 @@ const flappy = (() => {
     lastFrame = 0;
     if (!pipes.length) addPipe();
     updateCopy();
-    if (statusElement) statusElement.textContent = pipeCollisionDisabled
-      ? `Run live at ${speedMultiplier}x. Pipes still score, but pipe hits are off.`
-      : `Run live at ${speedMultiplier}x. Keep flapping through the gaps.`;
+    if (statusElement) statusElement.textContent = "Run live. Keep flapping through the gaps.";
     window.cancelAnimationFrame(animationId);
     animationId = window.requestAnimationFrame(step);
   }
@@ -13926,9 +13915,9 @@ const flappy = (() => {
     resetState();
   }
 
-  function removePipes(message = "Flappy pipe hits are off.") {
+  function removePipes(message = "") {
     pipeCollisionDisabled = true;
-    if (statusElement) statusElement.textContent = message;
+    if (message && statusElement) statusElement.textContent = message;
     draw();
   }
 
@@ -13936,7 +13925,7 @@ const flappy = (() => {
     const nextSpeed = Math.max(0.45, Math.min(2.5, Number.parseFloat(value) || 1));
     speedMultiplier = Number(nextSpeed.toFixed(2));
     storage.set(speedStorageKey, String(speedMultiplier));
-    if (statusElement) statusElement.textContent = message || `Flappy speed set to ${speedMultiplier}x.`;
+    if (message && statusElement) statusElement.textContent = message;
     draw();
   }
 
