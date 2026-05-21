@@ -1,4 +1,5 @@
 {
+  "outputDirectory": ".",
   "buildCommand": "node scripts/generate-vault-manifest.js",
   "functions": {
     "api/index.js": {
