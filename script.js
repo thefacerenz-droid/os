@@ -4149,13 +4149,52 @@ function renderSecretVault() {
     secretVaultGrid.innerHTML = '<p class="catalog-empty">No videos yet. Add MP4, WEBM, OGG, or MOV files to assets/secret-videos, then publish.</p>';
     return;
   }
-  secretVaultGrid.innerHTML = secretVaultVideos.map((video) => `
-    <article class="secret-video-card">
-      <video src="${escapeHtml(video.url)}" controls playsinline preload="metadata"></video>
+  secretVaultGrid.innerHTML = secretVaultVideos.map((video, index) => {
+    const playable = video.playable !== false && !video.lfsPointer;
+    const issue = video.issue || (playable ? "" : "This video file is not available for browser playback.");
+    return `
+    <article class="secret-video-card${playable ? "" : " has-video-warning"}">
+      ${playable ? `
+        <video controls playsinline preload="metadata" data-vault-video="${index}">
+          <source src="${escapeHtml(video.url)}" type="${escapeHtml(video.type || "video/mp4")}">
+        </video>
+      ` : `
+        <div class="secret-video-placeholder">
+          <strong>Video not ready</strong>
+          <span>${escapeHtml(issue)}</span>
+        </div>
+      `}
       <strong>${escapeHtml(video.name || video.fileName || "Vault Video")}</strong>
-      <span>${escapeHtml(formatVaultSize(video.size))}</span>
+      <span>${escapeHtml(formatVaultSize(video.size))}${video.lfsPointer ? " - LFS pointer" : ""}</span>
+      <div class="secret-video-actions">
+        <a href="${escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer">Open video</a>
+      </div>
+      <p class="secret-video-error" data-vault-video-error="${index}"${issue ? "" : " hidden"}>${escapeHtml(issue)}</p>
     </article>
-  `).join("");
+  `;
+  }).join("");
+  bindSecretVaultVideoErrors();
+}
+
+function getSecretVideoErrorMessage(videoElement) {
+  const code = videoElement?.error?.code || 0;
+  if (code === 2) return "Network error while loading this video. Try Open video or redeploy.";
+  if (code === 3) return "The browser could not decode this video. Re-export it as MP4 with H.264 video and AAC audio.";
+  if (code === 4) return "This video format is not supported here. Use MP4/H.264/AAC, WebM, or OGG.";
+  return "This video could not play. Try opening it directly or re-exporting it as MP4/H.264/AAC.";
+}
+
+function bindSecretVaultVideoErrors() {
+  if (!secretVaultGrid) return;
+  secretVaultGrid.querySelectorAll("[data-vault-video]").forEach((videoElement) => {
+    videoElement.addEventListener("error", () => {
+      const index = videoElement.dataset.vaultVideo || "";
+      const errorElement = secretVaultGrid.querySelector(`[data-vault-video-error="${CSS.escape(index)}"]`);
+      if (!errorElement) return;
+      errorElement.hidden = false;
+      errorElement.textContent = getSecretVideoErrorMessage(videoElement);
+    });
+  });
 }
 
 function closeSecretVault() {

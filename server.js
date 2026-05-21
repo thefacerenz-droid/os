@@ -67,6 +67,16 @@ function sendJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function isGitLfsPointer(filePath, stat) {
+  if (!stat || stat.size > 1024) return false;
+  try {
+    const head = fs.readFileSync(filePath, "utf8").slice(0, 220);
+    return head.startsWith("version https://git-lfs.github.com/spec/v1");
+  } catch (error) {
+    return false;
+  }
+}
+
 function sendRedirect(res, location) {
   res.writeHead(302, { Location: location });
   res.end();
@@ -536,12 +546,18 @@ function handleSecretVideos(req, res) {
       if (!SECRET_VIDEO_EXTENSIONS.has(extension)) return null;
       const filePath = path.join(SECRET_VIDEO_DIR, file.name);
       const stat = fs.statSync(filePath);
+      const lfsPointer = isGitLfsPointer(filePath, stat);
       return {
         name: path.basename(file.name, extension).replace(/[-_]+/g, " "),
         fileName: file.name,
         url: `/assets/secret-videos/${encodeURIComponent(file.name)}`,
         type: getSecretVideoType(extension),
-        size: stat.size
+        size: stat.size,
+        playable: !lfsPointer,
+        lfsPointer,
+        issue: lfsPointer
+          ? "This deploy has a Git LFS pointer instead of the real video file. Enable Git LFS in Vercel and redeploy."
+          : ""
       };
     })
     .filter(Boolean)

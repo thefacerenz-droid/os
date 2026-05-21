@@ -2853,12 +2853,41 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   background: rgba(0, 0, 0, 0.32);
 }
 
+.secret-video-card.has-video-warning {
+  border-color: rgba(255, 214, 92, 0.28);
+  background: rgba(255, 214, 92, 0.07);
+}
+
 .secret-video-card video {
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 14px;
   background: #000;
   object-fit: cover;
+}
+
+.secret-video-placeholder {
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  min-height: 150px;
+  padding: 1rem;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.1), transparent 34%),
+    #050505;
+  text-align: center;
+}
+
+.secret-video-placeholder strong {
+  color: #fff;
+}
+
+.secret-video-placeholder span,
+.secret-video-error {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .secret-video-card strong {
@@ -2869,6 +2898,35 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
 .secret-video-card span {
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.secret-video-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.secret-video-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.62rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.secret-video-error {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(255, 214, 92, 0.24);
+  border-radius: 12px;
+  background: rgba(255, 214, 92, 0.08);
 }
 
 .web-toolbar {
