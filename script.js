@@ -1378,6 +1378,14 @@ const themePacks = {
     icon: "mono",
     boot: "classic"
   },
+  revamp: {
+    title: "Revamp Shell",
+    cost: 0,
+    wallpaper: "vel",
+    taskbar: "revamp",
+    icon: "revamp",
+    boot: "scan"
+  },
   frost: {
     title: "Frost Byte",
     cost: 120,
@@ -2165,7 +2173,12 @@ if (!["cinema", "clear"].includes(currentWallpaperEffect)) currentWallpaperEffec
 let currentFontKey = storage.get("vel-font", "system");
 let currentDensityKey = storage.get("vel-density", "roomy");
 let currentZoomKey = storage.get("vel-zoom", "normal");
-let currentThemePackKey = storage.get("vel-theme-pack", "noir");
+let currentThemePackKey = storage.get("vel-theme-pack", "revamp");
+if (storage.get("vel-revamp-theme-v1", "0") !== "1") {
+  currentThemePackKey = "revamp";
+  storage.set("vel-theme-pack", currentThemePackKey);
+  storage.set("vel-revamp-theme-v1", "1");
+}
 let currentTaskbarPosition = storage.get("vel-taskbar-position", "bottom");
 let currentWebUrl = "https://rocketgoal.io/";
 let currentWebMirrorIndex = 0;
@@ -2427,8 +2440,8 @@ velofyRecentTrackRefs = Array.isArray(velofyRecentTrackRefs)
   ? velofyRecentTrackRefs.filter((ref) => String(ref).startsWith("local:"))
   : [];
 let velCredits = Number.parseInt(storage.get("vel-theme-credits", "80"), 10) || 80;
-let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir"]);
-unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", ...unlockedThemePacks])] : ["noir"];
+let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir", "revamp"]);
+unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", "revamp", ...unlockedThemePacks])] : ["noir", "revamp"];
 let installedApps = readStoredJson("vel-installed-apps", [
   "panel:youtube",
   "panel:velhub",
@@ -15283,7 +15296,7 @@ if (currentWallpaperKey === "custom") {
   storage.set("vel-wallpaper", currentWallpaperKey);
 }
 if (currentThemePackKey === "custom") {
-  currentThemePackKey = "noir";
+  currentThemePackKey = "revamp";
   storage.set("vel-theme-pack", currentThemePackKey);
 }
 renderSavedWallpaperOptions();

@@ -79,6 +79,18 @@ body[data-theme-pack="terminal"] {
   --muted: #9bd9b1;
 }
 
+body[data-theme-pack="revamp"] {
+  --panel: rgba(5, 10, 14, 0.94);
+  --panel-strong: rgba(2, 5, 8, 0.98);
+  --surface: rgba(10, 18, 24, 0.94);
+  --surface-soft: rgba(14, 24, 30, 0.9);
+  --line: rgba(123, 255, 216, 0.16);
+  --line-strong: rgba(123, 255, 216, 0.42);
+  --muted: #8ea7a3;
+  --text: #f5fffc;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+}
+
 button,
 input {
   font: inherit;
@@ -144,6 +156,19 @@ body[data-theme-pack="violet"] .wallpaper-shade {
   background:
     radial-gradient(circle at 68% 22%, rgba(135, 115, 255, 0.18), transparent 32%),
     linear-gradient(180deg, rgba(30, 20, 70, 0.06), rgba(0, 0, 0, 0.6));
+}
+
+body[data-theme-pack="revamp"] .desktop-wallpaper {
+  filter: contrast(1.16) saturate(0.72) brightness(0.46);
+}
+
+body[data-theme-pack="revamp"] .wallpaper-shade {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(98, 255, 209, 0.12), transparent 26%),
+    radial-gradient(circle at 78% 74%, rgba(86, 145, 255, 0.1), transparent 30%),
+    repeating-linear-gradient(90deg, rgba(123, 255, 216, 0.028) 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(0deg, rgba(123, 255, 216, 0.022) 0 1px, transparent 1px 42px),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.74) 62%, rgba(0, 0, 0, 0.92));
 }
 
 body[data-wallpaper-effect="clear"] .desktop-wallpaper {
@@ -713,6 +738,55 @@ body.is-home-editing .desktop-shortcut {
   text-align: center;
 }
 
+body[data-theme-pack="revamp"] .hero-clock {
+  text-shadow:
+    0 0 26px rgba(123, 255, 216, 0.16),
+    0 8px 30px rgba(0, 0, 0, 0.72);
+}
+
+body[data-theme-pack="revamp"] .clock-time {
+  letter-spacing: -0.075em;
+}
+
+body[data-theme-pack="revamp"] .desktop-status {
+  border-color: rgba(123, 255, 216, 0.2);
+  background:
+    linear-gradient(180deg, rgba(15, 30, 38, 0.82), rgba(3, 8, 11, 0.82));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 44px rgba(0, 0, 0, 0.42);
+}
+
+body[data-theme-pack="revamp"] .desktop-status strong {
+  background: rgba(123, 255, 216, 0.1);
+  color: #cafff1;
+}
+
+body[data-theme-pack="revamp"] .status-pill-button {
+  border-color: rgba(123, 255, 216, 0.28);
+  background: rgba(123, 255, 216, 0.16);
+  color: #effffb;
+}
+
+body[data-theme-pack="revamp"] .desktop-shortcut {
+  border-color: rgba(123, 255, 216, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
+    rgba(0, 0, 0, 0.16);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.26);
+}
+
+body[data-theme-pack="revamp"] .desktop-shortcut:hover,
+body[data-theme-pack="revamp"] .desktop-shortcut:focus-visible {
+  border-color: rgba(123, 255, 216, 0.34);
+  background:
+    linear-gradient(180deg, rgba(123, 255, 216, 0.1), rgba(255, 255, 255, 0.03)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(123, 255, 216, 0.08);
+}
+
 .drawer {
   position: fixed;
   inset: 0;
@@ -778,6 +852,53 @@ body.is-home-editing .desktop-shortcut {
   transition:
     opacity 240ms ease,
     transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+body[data-theme-pack="revamp"] .drawer-scrim {
+  background:
+    radial-gradient(circle at 50% 46%, rgba(123, 255, 216, 0.08), transparent 34%),
+    rgba(0, 0, 0, 0.68);
+}
+
+body[data-theme-pack="revamp"] .drawer-panel {
+  border-color: rgba(123, 255, 216, 0.2);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(16, 29, 36, 0.97), rgba(3, 7, 10, 0.98)),
+    repeating-linear-gradient(90deg, rgba(123, 255, 216, 0.026) 0 1px, transparent 1px 18px);
+  box-shadow:
+    0 30px 92px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(123, 255, 216, 0.05);
+}
+
+body[data-theme-pack="revamp"] .drawer-panel::before {
+  content: "";
+  position: sticky;
+  top: -0.64rem;
+  z-index: 3;
+  display: block;
+  height: 4px;
+  margin: -0.64rem -0.64rem 0.54rem;
+  border-radius: 22px 22px 0 0;
+  background: linear-gradient(90deg, transparent, rgba(123, 255, 216, 0.82), rgba(87, 132, 255, 0.46), transparent);
+  pointer-events: none;
+}
+
+body[data-theme-pack="revamp"] .drawer-head {
+  margin: 0 -0.16rem 0.9rem;
+  padding: 0.74rem 0.86rem 0.86rem;
+  border: 1px solid rgba(123, 255, 216, 0.12);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
+    rgba(0, 0, 0, 0.18);
+}
+
+body[data-theme-pack="revamp"] .micro-label,
+body[data-theme-pack="revamp"] .section-label {
+  color: #7dffda;
+  text-shadow: 0 0 18px rgba(123, 255, 216, 0.22);
 }
 
 .drawer-panel::-webkit-scrollbar,
@@ -1538,6 +1659,68 @@ body.is-home-editing .desktop-shortcut {
   transition-delay: 150ms;
 }
 
+body[data-theme-pack="revamp"] .mini-search-input,
+body[data-theme-pack="revamp"] .catalog-filter-button,
+body[data-theme-pack="revamp"] .app-store-tab,
+body[data-theme-pack="revamp"] .catalog-source-tab,
+body[data-theme-pack="revamp"] .close-button,
+body[data-theme-pack="revamp"] .ghost-button,
+body[data-theme-pack="revamp"] .transport-button,
+body[data-theme-pack="revamp"] .switch-chip,
+body[data-theme-pack="revamp"] .brand-pill,
+body[data-theme-pack="revamp"] .load-more,
+body[data-theme-pack="revamp"] .media-card-action {
+  border-color: rgba(123, 255, 216, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
+    rgba(3, 9, 12, 0.48);
+}
+
+body[data-theme-pack="revamp"] .app-store-tab.is-active,
+body[data-theme-pack="revamp"] .catalog-source-tab.is-active,
+body[data-theme-pack="revamp"] .catalog-filter-button.is-active,
+body[data-theme-pack="revamp"] .ghost-button.is-solid,
+body[data-theme-pack="revamp"] .store-action-primary {
+  border-color: rgba(123, 255, 216, 0.62);
+  background: linear-gradient(180deg, #baffef, #69e9c7);
+  color: #02120e;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 10px 28px rgba(91, 255, 211, 0.14);
+}
+
+body[data-theme-pack="revamp"] .app-icon,
+body[data-theme-pack="revamp"] .settings-card,
+body[data-theme-pack="revamp"] .soundboard-control-card,
+body[data-theme-pack="revamp"] .remote-deck-side,
+body[data-theme-pack="revamp"] .remote-deck-main,
+body[data-theme-pack="revamp"] .lobby-card,
+body[data-theme-pack="revamp"] .dev-admin-card,
+body[data-theme-pack="revamp"] .watch-card,
+body[data-theme-pack="revamp"] .wallpaper-option,
+body[data-theme-pack="revamp"] .font-option,
+body[data-theme-pack="revamp"] .theme-pack-card {
+  border-color: rgba(123, 255, 216, 0.13);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(123, 255, 216, 0.07), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.018)),
+    rgba(2, 8, 11, 0.4);
+}
+
+body[data-theme-pack="revamp"] .app-icon:hover,
+body[data-theme-pack="revamp"] .app-icon:focus-visible,
+body[data-theme-pack="revamp"] .theme-pack-card:hover,
+body[data-theme-pack="revamp"] .theme-pack-card:focus-visible,
+body[data-theme-pack="revamp"] .font-option:hover,
+body[data-theme-pack="revamp"] .font-option:focus-visible,
+body[data-theme-pack="revamp"] .wallpaper-option:hover,
+body[data-theme-pack="revamp"] .wallpaper-option:focus-visible {
+  border-color: rgba(123, 255, 216, 0.38);
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.4),
+    0 0 28px rgba(123, 255, 216, 0.08);
+}
+
 .app-store-card {
   position: relative;
   align-content: start;
@@ -1663,6 +1846,28 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   box-shadow:
     inset 0 0 18px rgba(140, 255, 181, 0.09),
     0 12px 26px rgba(0, 0, 0, 0.38);
+}
+
+body[data-icon-pack="revamp"] .desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .app-badge,
+body[data-icon-pack="revamp"] .taskbar-icon,
+body[data-icon-pack="revamp"] .taskbar-icon-text {
+  border-radius: 12px;
+  border-color: rgba(123, 255, 216, 0.24);
+  background:
+    linear-gradient(135deg, rgba(123, 255, 216, 0.2), transparent 42%),
+    linear-gradient(180deg, rgba(15, 31, 39, 0.98), rgba(3, 7, 10, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 18px rgba(123, 255, 216, 0.08),
+    0 14px 30px rgba(0, 0, 0, 0.42);
+}
+
+body[data-icon-pack="revamp"] .youtube-badge {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.34), transparent 34%),
+    linear-gradient(145deg, #fff, #d8e7e3 36%, #ff0033 37%, #7a0018);
+  color: #050505;
 }
 
 .badge-text,
@@ -4649,6 +4854,14 @@ body[data-icon-pack="terminal"] .taskbar-icon-text {
   background-size: 100% 7px, auto;
 }
 
+.theme-pack-revamp {
+  background:
+    linear-gradient(90deg, rgba(125, 255, 218, 0.22) 0 1px, transparent 1px 12px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 28%),
+    radial-gradient(circle at 26% 24%, #7dffda, transparent 18%),
+    linear-gradient(135deg, #10222a, #03070a 64%, #000);
+}
+
 .theme-pack-card em {
   justify-self: start;
   padding: 0.32rem 0.52rem;
@@ -7492,6 +7705,45 @@ body[data-taskbar-style="terminal"] .taskbar {
   box-shadow:
     0 -14px 38px rgba(0, 0, 0, 0.44),
     inset 0 1px 0 rgba(140, 255, 181, 0.14);
+}
+
+body[data-taskbar-style="revamp"] .taskbar {
+  min-height: 58px;
+  padding-inline: clamp(0.55rem, 1.6vw, 1.1rem);
+  border-top-color: rgba(123, 255, 216, 0.18);
+  background:
+    linear-gradient(180deg, rgba(20, 32, 39, 0.92), rgba(3, 7, 10, 0.96)),
+    repeating-linear-gradient(90deg, rgba(123, 255, 216, 0.035) 0 1px, transparent 1px 16px);
+  box-shadow:
+    0 -18px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 28px rgba(123, 255, 216, 0.045);
+}
+
+body[data-taskbar-style="revamp"] .taskbar-center,
+body[data-taskbar-style="revamp"] .taskbar-now-playing {
+  border-color: rgba(123, 255, 216, 0.15);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)),
+    rgba(0, 0, 0, 0.26);
+}
+
+body[data-taskbar-style="revamp"] .start-button,
+body[data-taskbar-style="revamp"] .taskbar-app,
+body[data-taskbar-style="revamp"] .taskbar-search {
+  border-color: rgba(123, 255, 216, 0.12);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body[data-taskbar-style="revamp"] .start-button:hover,
+body[data-taskbar-style="revamp"] .start-button:focus-visible,
+body[data-taskbar-style="revamp"] .taskbar-app:hover,
+body[data-taskbar-style="revamp"] .taskbar-app:focus-visible,
+body[data-taskbar-style="revamp"] .taskbar-search:hover,
+body[data-taskbar-style="revamp"] .taskbar-search:focus-visible,
+body[data-taskbar-style="revamp"] .taskbar-app.is-active {
+  border-color: rgba(123, 255, 216, 0.34);
+  background: rgba(123, 255, 216, 0.09);
 }
 
 .taskbar-left,
