@@ -965,6 +965,51 @@ body[data-theme-pack="revamp"] .section-label {
   width: min(1180px, calc(100% - 2.3rem));
 }
 
+.drawer.is-web-fullscreen {
+  z-index: 70;
+  align-items: stretch;
+}
+
+.drawer.is-web-fullscreen .drawer-scrim {
+  opacity: 1;
+  background: #000;
+}
+
+.drawer.is-web-fullscreen .web-panel,
+.web-panel:fullscreen,
+.web-panel:-webkit-full-screen {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0.52rem;
+  transform: none !important;
+  overflow: hidden;
+}
+
+.drawer.is-web-fullscreen .web-shell,
+.drawer.is-web-fullscreen .web-frame-wrap,
+.drawer.is-web-fullscreen .web-frame,
+.web-panel:fullscreen .web-shell,
+.web-panel:fullscreen .web-frame-wrap,
+.web-panel:fullscreen .web-frame,
+.web-panel:-webkit-full-screen .web-shell,
+.web-panel:-webkit-full-screen .web-frame-wrap,
+.web-panel:-webkit-full-screen .web-frame {
+  min-height: 0;
+  height: 100%;
+}
+
+.drawer.is-web-fullscreen .web-shell,
+.web-panel:fullscreen .web-shell,
+.web-panel:-webkit-full-screen .web-shell {
+  margin-top: 0.52rem;
+}
+
 .youtube-panel {
   width: min(1220px, calc(100% - 2.2rem));
   max-height: calc(100dvh - 6.4rem);

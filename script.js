@@ -1538,6 +1538,464 @@ gameCatalog.splice(
   }))
 );
 
+
+const megaGameSlugs = [
+  "1v1-lol",
+  "2048",
+  "8-ball-billiards-classic",
+  "a-dance-of-fire-and-ice",
+  "adventure-drivers",
+  "age-of-war",
+  "air-wars-3",
+  "amazing-strange-rope-police",
+  "animal-arena",
+  "archery-world-tour",
+  "arkadium-bubble-shooter",
+  "awesome-tanks",
+  "awesome-tanks-2",
+  "bad-ice-cream",
+  "basket-random",
+  "basketball-stars",
+  "battle-arena",
+  "battle-wheels",
+  "big-shot-boxing",
+  "billiards-city",
+  "bitlife",
+  "blumgi-ball",
+  "blumgi-bloom",
+  "blumgi-castle",
+  "blumgi-dragon",
+  "blumgi-rocket",
+  "blumgi-slime",
+  "bob-the-robber-2",
+  "bomb-it-7",
+  "boxing-random",
+  "brain-test-tricky-puzzles",
+  "bubble-shooter",
+  "bubble-trouble",
+  "burger-bounty",
+  "burnout-drift",
+  "cannon-basketball-4",
+  "car-eats-car-2",
+  "car-rush",
+  "cars-thief",
+  "checkers-legend",
+  "chess",
+  "city-car-driving-stunt-master",
+  "city-rider",
+  "cluster-rush",
+  "color-switch",
+  "cookie-clicker",
+  "crossy-road",
+  "cubito-mayhem",
+  "cut-the-rope",
+  "death-run-3d",
+  "deepest-sword",
+  "doodle-jump",
+  "draw-the-hill",
+  "drive-mad",
+  "drift-boss",
+  "drift-hunters",
+  "duck-life",
+  "duck-life-2",
+  "duck-life-3",
+  "duck-life-4",
+  "eggy-car",
+  "elastic-man",
+  "escaping-the-prison",
+  "fireboy-and-watergirl-forest-temple",
+  "fireboy-and-watergirl-light-temple",
+  "fireboy-and-watergirl-ice-temple",
+  "flappy-bird",
+  "football-legends",
+  "free-kick-shooter",
+  "fruit-ninja",
+  "funny-shooter-2",
+  "geometry-dash",
+  "geometry-dash-lite",
+  "getaway-shootout",
+  "go-kart-go-ultra",
+  "gold-digger-frvr",
+  "google-feud",
+  "gravity-soccer",
+  "gun-mayhem",
+  "gun-mayhem-2",
+  "happy-wheels",
+  "helix-jump",
+  "hexanaut-io",
+  "highway-racer",
+  "house-of-hazards",
+  "idle-breakout",
+  "idle-mining-empire",
+  "jelly-truck",
+  "jetpack-joyride",
+  "johnny-upgrade",
+  "just-fall-lol",
+  "kart-race-3d",
+  "kingdom-rush",
+  "leader-strike",
+  "madalin-stunt-cars-2",
+  "madalin-stunt-cars-3",
+  "mario-combat",
+  "merge-cakes",
+  "minesweeper",
+  "mini-golf-world",
+  "monster-tracks",
+  "moto-road-rash-3d",
+  "moto-x3m",
+  "moto-x3m-pool-party",
+  "moto-x3m-spooky-land",
+  "moto-x3m-winter",
+  "murder",
+  "n-gon",
+  "neon-biker",
+  "ovo",
+  "parking-fury",
+  "parking-fury-2",
+  "parking-fury-3",
+  "penalty-kick-online",
+  "pixel-gun-3d",
+  "polytrack",
+  "poor-bunny",
+  "raft-wars",
+  "raft-wars-2",
+  "rally-champion",
+  "red-ball-4",
+  "retro-bowl",
+  "rocket-soccer-derby",
+  "rooftop-snipers",
+  "rooftop-snipers-2",
+  "run-3",
+  "sandspiel",
+  "school-bus-demolition-derby",
+  "shell-shockers",
+  "short-life",
+  "skribbl-io",
+  "slope",
+  "slope-2",
+  "slope-3",
+  "slope-run",
+  "smash-karts",
+  "soccer-random",
+  "soccer-skills-world-cup",
+  "solitaire",
+  "spacebar-clicker",
+  "speed-boat-extreme-racing",
+  "speed-run-4",
+  "stack",
+  "stick-merge",
+  "stickman-archer-2",
+  "stickman-bike",
+  "stickman-boost",
+  "stickman-hook",
+  "stickman-school-run",
+  "subway-surfers",
+  "super-bike-the-champion",
+  "super-mario-63",
+  "super-smash-flash",
+  "super-star-car",
+  "superhot",
+  "sushi-party-io",
+  "swingo",
+  "tanuki-sunset",
+  "temple-run-2",
+  "tetris",
+  "the-impossible-quiz",
+  "the-little-giant",
+  "there-is-no-game",
+  "tiny-fishing",
+  "top-speed-racing-3d",
+  "tower-defense-clash",
+  "traffic-mania",
+  "tunnel-rush",
+  "two-ball-3d",
+  "ultimate-car-driving",
+  "vex-3",
+  "vex-4",
+  "vex-5",
+  "vex-6",
+  "vex-7",
+  "volley-random",
+  "water-color-sort",
+  "we-become-what-we-behold",
+  "word-city-crossed",
+  "word-search",
+  "worlds-hardest-game",
+  "worlds-hardest-game-2",
+  "zombs-royale",
+  "among-us",
+  "angry-birds",
+  "animal-shelter-simulator",
+  "aquapark-io",
+  "archery-king",
+  "arena-battle-city",
+  "army-driver",
+  "asphalt-retro",
+  "astro-race",
+  "backflip-master",
+  "badminton-stars",
+  "ball-sort-puzzle",
+  "basket-bros",
+  "basketball-io",
+  "battle-dudes",
+  "battle-simulator",
+  "beach-buggy-racing",
+  "big-tower-tiny-square",
+  "bike-trials",
+  "block-blast",
+  "blockpost",
+  "bloons-tower-defense",
+  "bowmasters",
+  "boxing-physics",
+  "breakout",
+  "bullet-force",
+  "bumper-cars-soccer",
+  "candy-crush",
+  "car-crash-simulator",
+  "car-drift-racers-2",
+  "car-simulator-arena",
+  "car-simulator-royale",
+  "cat-gunner",
+  "cat-mario",
+  "city-blocks",
+  "classic-mahjong",
+  "classic-solitaire",
+  "color-tunnel",
+  "combat-reloaded",
+  "connect-4",
+  "crazy-cars",
+  "crazy-tunnel-3d",
+  "curve-ball-3d",
+  "dadish",
+  "dadish-2",
+  "dadish-3",
+  "doge-miner",
+  "doge-miner-2",
+  "dominoes",
+  "draw-climber",
+  "drive-classic",
+  "drunken-boxing",
+  "drunken-duel",
+  "dune",
+  "dunkers",
+  "earn-to-die",
+  "electric-man-2",
+  "extreme-car-driving-simulator",
+  "factory-balls",
+  "fancy-pants-adventures",
+  "five-nights-at-freddys",
+  "flappy-dunk",
+  "flip-master",
+  "flip-runner",
+  "freecell",
+  "friday-night-funkin",
+  "frogger",
+  "frying-nemo",
+  "g-switch-3",
+  "garden-tales",
+  "gobble",
+  "granny",
+  "grindcraft",
+  "gun-blood",
+  "gunspin",
+  "hobo",
+  "hobo-2",
+  "icy-purple-head",
+  "impostor",
+  "impossible-monster-truck",
+  "iron-snout",
+  "jellydad-hero",
+  "kirka-io",
+  "knife-hit",
+  "learn-to-fly",
+  "learn-to-fly-2",
+  "line-rider",
+  "little-alchemy",
+  "little-alchemy-2",
+  "ludo-hero",
+  "mahjong-connect",
+  "maze-path-of-light",
+  "merge-round-racers",
+  "minecraft-classic",
+  "mini-royale",
+  "monkey-mart",
+  "monster-truck-port-stunt",
+  "mr-bullet",
+  "mutilate-a-doll-2",
+  "neon-rider",
+  "noob-drive",
+  "nugget-royale",
+  "nunchuck-charlie",
+  "offroader-v5",
+  "one-more-line",
+  "pacman",
+  "papa-louie",
+  "papa-louie-2",
+  "papa-louie-3",
+  "papas-bakeria",
+  "papas-burgeria",
+  "papas-cheeseria",
+  "papas-cupcakeria",
+  "papas-donuteria",
+  "papas-freezeria",
+  "papas-hot-doggeria",
+  "papas-pancakeria",
+  "papas-pizzeria",
+  "papas-scooperia",
+  "papas-sushiria",
+  "papas-taco-mia",
+  "papas-wingeria",
+  "paper-minecraft",
+  "paper-io-2",
+  "pickleball",
+  "ping-pong-chaos",
+  "pixel-battle-royale",
+  "plants-vs-zombies",
+  "pool-8-ball",
+  "portal-2d",
+  "powerline-io",
+  "puppet-hockey",
+  "push-your-luck",
+  "riddle-school",
+  "riddle-school-2",
+  "riddle-school-3",
+  "riddle-school-4",
+  "riddle-school-5",
+  "rise-higher",
+  "road-crash",
+  "rodeo-stampede",
+  "rolling-sky",
+  "rowdy-wrestling",
+  "run",
+  "run-2",
+  "santa-run",
+  "scrap-metal",
+  "sketchful-io",
+  "skiing-fred",
+  "skywire",
+  "slime-laboratory",
+  "snail-bob",
+  "snail-bob-2",
+  "snake",
+  "snake-io",
+  "snow-rider-3d",
+  "snowball-io",
+  "soccer-heads",
+  "sonic-classic",
+  "space-is-key",
+  "spelunky",
+  "stack-ball",
+  "starsweeper",
+  "stealing-the-diamond",
+  "stick-war",
+  "stickman-fighter",
+  "stickman-golf",
+  "stickman-parkour",
+  "street-race-fury",
+  "stunt-car-challenge",
+  "superfighters",
+  "superfighters-deluxe",
+  "swarm-simulator",
+  "tank-trouble",
+  "tanuki-sunset-classic",
+  "tap-tap-shots",
+  "tennis-masters",
+  "territorial-io",
+  "tomb-runner",
+  "tosstheturtle",
+  "tube-jumpers",
+  "tunnel-runner",
+  "turbo-dismount",
+  "ultimate-tic-tac-toe",
+  "unfair-mario",
+  "uno-online",
+  "vector-runner",
+  "venge-io",
+  "volleyball-challenge",
+  "wheelie-bike",
+  "where-is-my-water",
+  "wild-west-shootout",
+  "wolf-simulator",
+  "wood-blocks",
+  "wormate-io",
+  "worms-zone",
+  "zombotron",
+  "zoo-boom"
+];
+
+function getMegaGameCategory(slug = "") {
+  if (/(ball|basket|soccer|football|tennis|golf|hockey|pool|billiard|volley|bowling|archery|penalty|pickle)/i.test(slug)) return { source: "sports", category: "Sports" };
+  if (/(mine|craft|sandbox|alchemy|sandspiel|grind|factory|city-block|build|paper-minecraft)/i.test(slug)) return { source: "sandbox", category: "Sandbox" };
+  if (/(io|royale|battle|shooter|gun|tank|force|krunker|kirka|venge|zombs|shell|bonk|territorial|worm|agar|diep)/i.test(slug)) return { source: "io", category: "IO" };
+  if (/(pacman|tetris|solitaire|mahjong|chess|checkers|2048|minesweeper|snake|frogger|breakout|riddle|papa|duck-life|worlds-hardest|run-3|vex|red-ball|fireboy)/i.test(slug)) return { source: "classic", category: "Classics" };
+  return { source: "arcade", category: "Arcade" };
+}
+
+const megaGameUrlOverrides = {
+  "1v1-lol": "https://1v1.lol/",
+  "2048": "https://play2048.co/",
+  "agar": "https://agar.io/",
+  "agar-io": "https://agar.io/",
+  "bloxd": "https://bloxd.io/",
+  "bonk": "https://bonk.io/",
+  "bonk-io": "https://bonk.io/",
+  "cookie-clicker": "https://orteil.dashnet.org/cookieclicker/",
+  "diep": "https://diep.io/",
+  "diep-io": "https://diep.io/",
+  "drift-hunters": "https://drifthunters.com/",
+  "drive-mad": "https://drivemad.me/",
+  "evowars": "https://evowars.io/",
+  "evowars-io": "https://evowars.io/",
+  "kirka-io": "https://kirka.io/",
+  "krunker": "https://krunker.io/",
+  "krunker-io": "https://krunker.io/",
+  "lichess": "https://lichess.org/",
+  "little-alchemy-2": "https://littlealchemy2.com/",
+  "littlebigsnake": "https://littlebigsnake.com/",
+  "minecraft-classic": "https://classic.minecraft.net/",
+  "miniroyale": "https://miniroyale.io/",
+  "mini-royale": "https://miniroyale.io/",
+  "paperio": "https://paper-io.com/",
+  "paper-io-2": "https://paper-io.com/",
+  "retrobowl": "https://retrobowl.me/",
+  "retro-bowl": "https://retrobowl.me/",
+  "sandspiel": "https://sandspiel.club/",
+  "shellshockers": "https://shellshock.io/",
+  "shell-shockers": "https://shellshock.io/",
+  "skribbl-io": "https://skribbl.io/",
+  "slowroads": "https://slowroads.io/",
+  "smashkarts": "https://smashkarts.io/",
+  "smash-karts": "https://smashkarts.io/",
+  "snow-rider-3d": "https://snowrider3d.io/",
+  "taming": "https://taming.io/",
+  "taming-io": "https://taming.io/",
+  "territorial-io": "https://territorial.io/",
+  "venge": "https://venge.io/",
+  "venge-io": "https://venge.io/",
+  "wormate-io": "https://wormate.io/",
+  "worms-zone": "https://worms.zone/",
+  "zombs-royale": "https://zombsroyale.io/"
+};
+
+function getMegaGameUrl(slug = "") {
+  if (megaGameUrlOverrides[slug]) return megaGameUrlOverrides[slug];
+  return `https://www.crazygames.com/embed/${slug}`;
+}
+
+megaGameSlugs.forEach((slug) => {
+  const title = titleFromSlug(slug.replace(/-io$/, "-io"));
+  const kind = getMegaGameCategory(slug);
+  addCatalogGame({
+    id: `mega-${slug}`,
+    title,
+    category: kind.category,
+    source: kind.source,
+    url: getMegaGameUrl(slug),
+    badgeText: getBadgeInitials(title),
+    note: `${title} catalog shortcut. Fullscreen is available from the game window.`
+  });
+});
+
 Object.keys(webApps).forEach((id) => {
   const app = webApps[id];
   if (/game/i.test(app?.tag || "") || app?.category) {
@@ -2223,6 +2681,9 @@ const webHelperMirrorButton = document.getElementById("webHelperMirrorButton");
 const webHelperLocalButton = document.getElementById("webHelperLocalButton");
 const webReloadButton = document.getElementById("webReloadButton");
 const webMirrorButton = document.getElementById("webMirrorButton");
+const webFullscreenButton = document.getElementById("webFullscreenButton");
+const webDrawer = document.getElementById("webDrawer");
+const webPanel = webDrawer?.querySelector(".web-panel");
 const youtubeDrawer = document.getElementById("youtubeDrawer");
 const youtubePanel = youtubeDrawer?.querySelector(".youtube-panel");
 const youtubeLaunch = document.getElementById("youtubeLaunch");
@@ -11608,6 +12069,34 @@ function openNextMirror() {
   setWebWindow(app, sources[nextIndex], nextIndex);
 }
 
+function setWebFullscreen(active) {
+  const next = Boolean(active);
+  webDrawer?.classList.toggle("is-web-fullscreen", next);
+  if (webFullscreenButton) {
+    webFullscreenButton.textContent = next ? "Exit Fullscreen" : "Fullscreen";
+    webFullscreenButton.setAttribute("aria-pressed", String(next));
+  }
+}
+
+function toggleWebFullscreen() {
+  const isActive = webDrawer?.classList.contains("is-web-fullscreen");
+  const next = !isActive;
+  setWebFullscreen(next);
+  try {
+    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+    if (next && webPanel?.requestFullscreen && !fullscreenElement) {
+      webPanel.requestFullscreen();
+    } else if (next && webPanel?.webkitRequestFullscreen && !fullscreenElement) {
+      webPanel.webkitRequestFullscreen();
+    } else if (!next && fullscreenElement === webPanel) {
+      document.exitFullscreen?.();
+      document.webkitExitFullscreen?.();
+    }
+  } catch (error) {
+    // CSS fullscreen still works when a browser limits the native API.
+  }
+}
+
 function openCustomWebUrl(value) {
   if (isDevAppLocked("web")) {
     showDevAppLocked("web");
@@ -12586,8 +13075,20 @@ function syncYouTubeFullscreenState() {
   }
 }
 
+function syncWebFullscreenState() {
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+  if (webDrawer?.classList.contains("is-web-fullscreen") && fullscreenElement && fullscreenElement !== webPanel) {
+    setWebFullscreen(false);
+  }
+  if (webDrawer?.classList.contains("is-web-fullscreen") && !fullscreenElement) {
+    setWebFullscreen(false);
+  }
+}
+
 document.addEventListener("fullscreenchange", syncYouTubeFullscreenState);
 document.addEventListener("webkitfullscreenchange", syncYouTubeFullscreenState);
+document.addEventListener("fullscreenchange", syncWebFullscreenState);
+document.addEventListener("webkitfullscreenchange", syncWebFullscreenState);
 
 gameLaunchButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -12960,6 +13461,8 @@ webReloadButton?.addEventListener("click", () => {
 webMirrorButton?.addEventListener("click", () => {
   openNextMirror();
 });
+
+webFullscreenButton?.addEventListener("click", toggleWebFullscreen);
 
 switchButtons.forEach((button) => {
   button.addEventListener("click", () => {
