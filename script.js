@@ -364,11 +364,12 @@ function createGameBadgeSrc(title, category = "Game") {
 
 const gameSourceLabels = {
   all: "All",
-  local: "Local",
-  gamepix: "GamePix",
-  poki: "Poki",
-  google: "Google",
-  crazygames: "CrazyGames",
+  io: "IO",
+  arcade: "Arcade",
+  classic: "Classics",
+  sports: "Sports",
+  sandbox: "Sandbox",
+  celestial: "Celestial",
   other: "More Sites"
 };
 
@@ -1244,6 +1245,304 @@ const gameSourceOverrides = {
     url,
     note: `${title} from the CrazyGames catalog.`
   });
+});
+
+const celestialGameCatalog = [
+  {
+    id: "bloxd",
+    title: "Bloxd.io",
+    category: "Sandbox",
+    source: "sandbox",
+    badgeText: "BX",
+    url: "https://bloxd.io/",
+    note: "Direct web game shortcut with a Celestial-style launcher feel."
+  },
+  {
+    id: "smashkarts",
+    title: "Smash Karts",
+    category: "Racing",
+    source: "io",
+    badgeText: "SK",
+    url: "https://smashkarts.io/",
+    note: "Fast kart arena game opened directly in vel.os."
+  },
+  {
+    id: "shellshockers",
+    title: "Shell Shockers",
+    category: "Shooter",
+    source: "io",
+    badgeText: "EG",
+    url: "https://shellshock.io/",
+    note: "Direct Shell Shockers shortcut. If the site blocks frames, use Open Source."
+  },
+  {
+    id: "krunker",
+    title: "Krunker",
+    category: "Shooter",
+    source: "io",
+    badgeText: "KR",
+    url: "https://krunker.io/",
+    note: "Direct Krunker shortcut."
+  },
+  {
+    id: "bonk",
+    title: "Bonk.io",
+    category: "Party",
+    source: "io",
+    badgeText: "BK",
+    url: "https://bonk.io/",
+    note: "Physics party game opened directly."
+  },
+  {
+    id: "taming",
+    title: "Taming.io",
+    category: "Survival",
+    source: "io",
+    badgeText: "TM",
+    url: "https://taming.io/",
+    note: "Survival arena shortcut."
+  },
+  {
+    id: "littlebigsnake",
+    title: "Little Big Snake",
+    category: "IO",
+    source: "io",
+    badgeText: "LS",
+    url: "https://littlebigsnake.com/",
+    note: "Snake arena shortcut."
+  },
+  {
+    id: "agar",
+    title: "Agar.io",
+    category: "IO",
+    source: "io",
+    badgeText: "AG",
+    url: "https://agar.io/",
+    note: "Classic cell arena shortcut."
+  },
+  {
+    id: "diep",
+    title: "Diep.io",
+    category: "IO",
+    source: "io",
+    badgeText: "DP",
+    url: "https://diep.io/",
+    note: "Tank arena shortcut."
+  },
+  {
+    id: "evowars",
+    title: "EvoWars.io",
+    category: "Arena",
+    source: "io",
+    badgeText: "EW",
+    url: "https://evowars.io/",
+    note: "Arena battler shortcut."
+  },
+  {
+    id: "zombsroyale",
+    title: "Zombs Royale",
+    category: "Battle",
+    source: "io",
+    badgeText: "ZR",
+    url: "https://zombsroyale.io/",
+    note: "Battle royale shortcut."
+  },
+  {
+    id: "miniroyale",
+    title: "Mini Royale",
+    category: "Shooter",
+    source: "io",
+    badgeText: "MR",
+    url: "https://miniroyale.io/",
+    note: "Direct Mini Royale shortcut."
+  },
+  {
+    id: "kirka",
+    title: "Kirka.io",
+    category: "Shooter",
+    source: "io",
+    badgeText: "KI",
+    url: "https://kirka.io/",
+    note: "Direct Kirka shooter shortcut."
+  },
+  {
+    id: "venge",
+    title: "Venge.io",
+    category: "Shooter",
+    source: "io",
+    badgeText: "VG",
+    url: "https://venge.io/",
+    note: "Direct Venge shooter shortcut."
+  },
+  {
+    id: "rocketbotroyale",
+    title: "Rocket Bot Royale",
+    category: "Battle",
+    source: "arcade",
+    badgeText: "RB",
+    url: "https://rocketbotroyale.winterpixel.io/",
+    note: "Winterpixel arcade battler shortcut."
+  },
+  {
+    id: "slowroads",
+    title: "Slow Roads",
+    category: "Driving",
+    source: "arcade",
+    badgeText: "SR",
+    url: "https://slowroads.io/",
+    note: "Relaxed endless driving game."
+  },
+  {
+    id: "snowrider",
+    title: "Snow Rider 3D",
+    category: "Runner",
+    source: "arcade",
+    badgeSrc: "./assets/images/apps/snow-rider.svg",
+    url: "https://snowrider3d.io/",
+    mirrors: ["https://snowrider-3d.io/"],
+    note: "Snow Rider with a backup direct mirror."
+  },
+  {
+    id: "drivemad",
+    title: "Drive Mad",
+    category: "Physics",
+    source: "arcade",
+    badgeText: "DM",
+    url: "https://drivemad.me/",
+    mirrors: ["https://drivemad.net/", "https://drivemad.org/"],
+    note: "Physics driving game with direct mirrors."
+  },
+  {
+    id: "subwaysurfers",
+    title: "Subway Surfers",
+    category: "Runner",
+    source: "arcade",
+    badgeText: "SS",
+    url: "https://subwaysurfersgame.io/",
+    mirrors: ["https://subwaysurfersgame.net/"],
+    note: "Runner game shortcut."
+  },
+  {
+    id: "slope",
+    title: "Slope",
+    category: "Runner",
+    source: "arcade",
+    badgeText: "SL",
+    url: "https://slopegame.com/",
+    mirrors: ["https://slope3.com/"],
+    note: "Fast slope runner shortcut."
+  },
+  {
+    id: "paperio",
+    title: "Paper.io",
+    category: "Arcade",
+    source: "arcade",
+    badgeText: "PI",
+    url: "https://paper-io.com/",
+    note: "Territory arcade shortcut."
+  },
+  {
+    id: "retrobowl",
+    title: "Retro Bowl",
+    category: "Sports",
+    source: "sports",
+    badgeText: "RB",
+    url: "https://retrobowl.me/",
+    mirrors: ["https://retrobowl.app/"],
+    note: "Retro football shortcut."
+  },
+  {
+    id: "basketballstars",
+    title: "Basketball Stars",
+    category: "Sports",
+    source: "sports",
+    badgeText: "BS",
+    url: "https://basketball-stars.io/",
+    note: "Basketball arcade shortcut."
+  },
+  {
+    id: "drifthunters",
+    title: "Drift Hunters",
+    category: "Driving",
+    source: "sports",
+    badgeText: "DH",
+    url: "https://drifthunters.com/",
+    note: "Driving and drifting shortcut."
+  },
+  {
+    id: "cookieclicker",
+    title: "Cookie Clicker",
+    category: "Idle",
+    source: "classic",
+    badgeText: "CC",
+    url: "https://orteil.dashnet.org/cookieclicker/",
+    note: "Classic idle game shortcut."
+  },
+  {
+    id: "minecraftclassic",
+    title: "Minecraft Classic",
+    category: "Sandbox",
+    source: "sandbox",
+    badgeText: "MC",
+    url: "https://classic.minecraft.net/",
+    note: "Official Minecraft Classic web shortcut."
+  },
+  {
+    id: "sandspiel",
+    title: "Sandspiel",
+    category: "Sandbox",
+    source: "sandbox",
+    badgeText: "SP",
+    url: "https://sandspiel.club/",
+    note: "Creative falling-sand sandbox."
+  },
+  {
+    id: "littlealchemy2",
+    title: "Little Alchemy 2",
+    category: "Puzzle",
+    source: "classic",
+    badgeText: "LA",
+    url: "https://littlealchemy2.com/",
+    note: "Classic combination puzzle shortcut."
+  },
+  {
+    id: "play2048",
+    title: "2048",
+    category: "Puzzle",
+    source: "classic",
+    badgeText: "20",
+    url: "https://play2048.co/",
+    note: "Classic 2048 shortcut."
+  },
+  {
+    id: "lichess",
+    title: "Lichess",
+    category: "Board",
+    source: "classic",
+    badgeText: "CH",
+    url: "https://lichess.org/",
+    note: "Chess shortcut. If it blocks iframe loading, use Open Source."
+  }
+];
+
+gameCatalog.splice(
+  0,
+  gameCatalog.length,
+  ...celestialGameCatalog.map((game) => ({
+    badgeText: getBadgeInitials(game.title),
+    mirrors: [],
+    embedBlocked: false,
+    ...game,
+    source: game.source || inferGameSource(game),
+    badgeSrc: game.badgeSrc || createGameBadgeSrc(game.title, game.category)
+  }))
+);
+
+Object.keys(webApps).forEach((id) => {
+  const app = webApps[id];
+  if (/game/i.test(app?.tag || "") || app?.category) {
+    delete webApps[id];
+  }
 });
 
 gameCatalog.forEach((game) => {
@@ -2164,7 +2463,7 @@ const devAnnouncementInput = document.getElementById("devAnnouncementInput");
 const devAnnouncementClear = document.getElementById("devAnnouncementClear");
 
 let activeLocalGame = "snake";
-let activeWeb = "rocketgoal";
+let activeWeb = "bloxd";
 let activePanel = "";
 let currentTrackIndex = 0;
 let currentWallpaperKey = storage.get("vel-wallpaper", "vel");
@@ -2180,7 +2479,7 @@ if (storage.get("vel-revamp-theme-v1", "0") !== "1") {
   storage.set("vel-revamp-theme-v1", "1");
 }
 let currentTaskbarPosition = storage.get("vel-taskbar-position", "bottom");
-let currentWebUrl = "https://rocketgoal.io/";
+let currentWebUrl = "https://bloxd.io/";
 let currentWebMirrorIndex = 0;
 let feedVideoObserver = null;
 let youtubePlayer = null;
@@ -2190,7 +2489,10 @@ let youtubeLaunchTimer = null;
 let mediaSearchDebounceTimer = null;
 let launcherGameQuery = "";
 let launcherStoreCategory = storage.get("vel-launcher-store-category", "games");
-if (!["games", "local", "tools", "music", "movies", "youtube"].includes(launcherStoreCategory)) {
+if (["music", "movies", "youtube"].includes(launcherStoreCategory)) {
+  launcherStoreCategory = "media";
+}
+if (!["games", "local", "media", "tools"].includes(launcherStoreCategory)) {
   launcherStoreCategory = "games";
 }
 let launcherOfflineOnly = storage.get("vel-launcher-offline-only", isLikelyIpad() ? "1" : "0") === "1";
@@ -9380,12 +9682,10 @@ function renderLauncherCatalog() {
   if (!launcherGameGrid) return;
 
   const categoryMeta = {
-    games: ["Featured Games", "Big web catalog with source filters and quick-open recent apps."],
+    games: ["Celestial Games", "Direct web game shortcuts inspired by the reference shell."],
     local: ["Local Arcade", "Offline games that run directly inside vel.os."],
-    tools: ["System Tools", "Utilities, settings, network status, and browser tools."],
-    music: ["Music", "Velofy and music tools in one clean section."],
-    movies: ["Movies", "Install Vel Hub for a huge in-app cinema catalog."],
-    youtube: ["YouTube", "YouTube search, player, favorites, and Global Favs."]
+    media: ["Media", "YouTube, Velofy, Vel Hub, sound tools, and the browser in one section."],
+    tools: ["System Tools", "Utilities, settings, network status, and browser tools."]
   };
   const [sectionLabel, sectionNote] = categoryMeta[launcherStoreCategory] || categoryMeta.games;
   if (launcherSectionLabel) launcherSectionLabel.textContent = sectionLabel;
@@ -9401,6 +9701,7 @@ function renderLauncherCatalog() {
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
       tools: ["browser", "lobbies", "soundboard", "remoteDeck", "dev", "calculator", "settings", "network"],
+      media: ["youtube", "music", "velhub", "soundboard", "browser"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -9453,19 +9754,11 @@ function renderLauncherCatalog() {
   }
 
   if (gameSourceTabs) gameSourceTabs.hidden = false;
-  if (launcherOfflineToggle) launcherOfflineToggle.hidden = false;
+  if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
 
-  const localGameIds = Object.keys(localGameMeta);
-  const wantsLocal = launcherGameSource === "all" || launcherGameSource === "local";
-  const wantsWeb = launcherGameSource === "all" || launcherGameSource !== "local";
-  const localItems = wantsLocal
-    ? localGameIds
-      .map((gameId) => ({ id: gameId, ...localGameMeta[gameId], local: true }))
-      .filter((game) => matchesSearchQuery([game.title, game.category, "offline local"], launcherGameQuery))
-    : [];
-  const webItems = launcherOfflineOnly || !wantsWeb
-    ? []
-    : gameCatalog.filter((game) => {
+  const localGameIds = [];
+  const localItems = [];
+  const webItems = gameCatalog.filter((game) => {
       const sourceMatches = launcherGameSource === "all" || game.source === launcherGameSource;
       return sourceMatches && matchesSearchQuery(
         [game.title, game.category, getGameSourceLabel(game.source)],
@@ -9502,14 +9795,12 @@ function renderLauncherCatalog() {
   }
 
   if (catalogCount) {
-    const totalLocal = wantsLocal ? localGameIds.length : 0;
-    const totalWeb = launcherOfflineOnly || !wantsWeb
-      ? 0
-      : gameCatalog.filter((game) => launcherGameSource === "all" || game.source === launcherGameSource).length;
+    const totalLocal = localGameIds.length;
+    const totalWeb = gameCatalog.filter((game) => launcherGameSource === "all" || game.source === launcherGameSource).length;
     const totalCount = totalLocal + totalWeb;
     const visibleCount = localItems.length + webItems.length;
     const suffix = launcherGameSource === "all"
-      ? launcherOfflineOnly ? "offline games" : "games"
+      ? "games"
       : `${getGameSourceLabel(launcherGameSource)} games`;
     catalogCount.textContent = launcherGameQuery
       ? `${visibleCount} / ${totalCount} ${suffix}`
@@ -12092,7 +12383,7 @@ appStoreTabs?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-store-category]");
   if (!button) return;
   launcherStoreCategory = button.dataset.storeCategory;
-  if (!["games", "local", "tools", "music", "movies", "youtube"].includes(launcherStoreCategory)) {
+  if (!["games", "local", "media", "tools"].includes(launcherStoreCategory)) {
     launcherStoreCategory = "games";
   }
   storage.set("vel-launcher-store-category", launcherStoreCategory);
@@ -12101,11 +12392,6 @@ appStoreTabs?.addEventListener("click", (event) => {
 
 launcherOfflineToggle?.addEventListener("click", () => {
   launcherOfflineOnly = !launcherOfflineOnly;
-  if (launcherOfflineOnly) {
-    launcherGameSource = "local";
-  } else if (launcherGameSource === "local") {
-    launcherGameSource = "all";
-  }
   storage.set("vel-launcher-offline-only", launcherOfflineOnly ? "1" : "0");
   storage.set("vel-launcher-game-source", launcherGameSource);
   renderLauncherCatalog();

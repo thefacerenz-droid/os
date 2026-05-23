@@ -11,7 +11,7 @@
     <title>vel.os</title>
     <link rel="icon" type="image/svg+xml" href="./assets/images/favicon.svg" />
     <link rel="shortcut icon" href="./assets/images/favicon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=revamp-v1" />
+    <link rel="stylesheet" href="./styles.css?v=catalog-revamp-v1" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -188,23 +188,20 @@
             <div class="app-store-tabs" id="appStoreTabs" role="tablist" aria-label="App Store sections">
               <button class="app-store-tab is-active" type="button" data-store-category="games" role="tab" aria-selected="true">Games</button>
               <button class="app-store-tab" type="button" data-store-category="local" role="tab" aria-selected="false">Local</button>
+              <button class="app-store-tab" type="button" data-store-category="media" role="tab" aria-selected="false">Media</button>
               <button class="app-store-tab" type="button" data-store-category="tools" role="tab" aria-selected="false">Tools</button>
-              <button class="app-store-tab" type="button" data-store-category="music" role="tab" aria-selected="false">Music</button>
-              <button class="app-store-tab" type="button" data-store-category="movies" role="tab" aria-selected="false">Movies</button>
-              <button class="app-store-tab" type="button" data-store-category="youtube" role="tab" aria-selected="false">YouTube</button>
             </div>
             <div class="catalog-tools">
-              <input class="mini-search-input" id="launcherGameSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search apps or games" aria-label="Search apps or games" />
+              <input class="mini-search-input" id="launcherGameSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search games or media" aria-label="Search games or media" />
               <button class="catalog-filter-button" id="launcherOfflineToggle" type="button" aria-pressed="false">Offline Only</button>
             </div>
             <div class="catalog-source-tabs" id="gameSourceTabs" role="tablist" aria-label="Game source filters">
               <button class="catalog-source-tab is-active" type="button" data-game-source="all" role="tab" aria-selected="true">All</button>
-              <button class="catalog-source-tab" type="button" data-game-source="gamepix" role="tab" aria-selected="false">GamePix</button>
-              <button class="catalog-source-tab" type="button" data-game-source="poki" role="tab" aria-selected="false">Poki</button>
-              <button class="catalog-source-tab" type="button" data-game-source="google" role="tab" aria-selected="false">Google</button>
-              <button class="catalog-source-tab" type="button" data-game-source="crazygames" role="tab" aria-selected="false">CrazyGames</button>
-              <button class="catalog-source-tab" type="button" data-game-source="other" role="tab" aria-selected="false">More Sites</button>
-              <button class="catalog-source-tab" type="button" data-game-source="local" role="tab" aria-selected="false">Local</button>
+              <button class="catalog-source-tab" type="button" data-game-source="io" role="tab" aria-selected="false">IO</button>
+              <button class="catalog-source-tab" type="button" data-game-source="arcade" role="tab" aria-selected="false">Arcade</button>
+              <button class="catalog-source-tab" type="button" data-game-source="classic" role="tab" aria-selected="false">Classics</button>
+              <button class="catalog-source-tab" type="button" data-game-source="sports" role="tab" aria-selected="false">Sports</button>
+              <button class="catalog-source-tab" type="button" data-game-source="sandbox" role="tab" aria-selected="false">Sandbox</button>
             </div>
             <div class="icon-grid" id="launcherGameGrid"></div>
           </section>
@@ -1497,6 +1494,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=owner-controls-v3"></script>
+    <script src="./script.js?v=catalog-revamp-v1"></script>
   </body>
 </html>
