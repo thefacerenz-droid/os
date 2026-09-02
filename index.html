@@ -11,7 +11,7 @@
     <title>vel.os</title>
     <link rel="icon" type="image/svg+xml" href="./assets/images/favicon.svg" />
     <link rel="shortcut icon" href="./assets/images/favicon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=mega-games-v1" />
+    <link rel="stylesheet" href="./styles.css?v=nova-ui-v2" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -62,12 +62,6 @@
             <label for="welcomeNameInput">Username</label>
             <input id="welcomeNameInput" type="text" maxlength="24" autocomplete="nickname" placeholder="Pick a clean name" aria-label="Vel.os username" />
             <button class="ghost-button is-solid" type="submit">Next</button>
-          </form>
-          <form class="welcome-form" id="welcomePinForm" hidden>
-            <label for="welcomePinInput">Enter PIN</label>
-            <input id="welcomePinInput" type="password" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="PIN" aria-label="Startup PIN" />
-            <button class="ghost-button is-solid" type="submit">Enter vel.os</button>
-            <p class="tiny-note">Screen sharing and Remote Deck sounds still ask for visible permission on each device.</p>
           </form>
           <p class="welcome-status" id="welcomeStatus" aria-live="polite"></p>
         </div>
@@ -443,7 +437,6 @@
               <p class="drawer-copy" id="webDescription">Live site loaded inside vel.os.</p>
             </div>
             <div class="window-actions">
-              <button class="close-button is-disabled" type="button" disabled>Inside Only</button>
               <button class="close-button" id="webReloadButton" type="button">Reload</button>
               <button class="close-button" id="webMirrorButton" type="button" hidden>Try Mirror</button>
               <button class="close-button" id="webFullscreenButton" type="button">Fullscreen</button>
@@ -452,11 +445,29 @@
           </header>
 
           <div class="web-toolbar">
+            <div class="web-tab-strip" id="webBrowserTabs" role="tablist" aria-label="Browser tabs"></div>
+            <div class="web-browser-chrome">
+              <div class="web-nav-cluster" aria-label="Browser navigation">
+                <button class="ghost-button" id="webBackButton" type="button">Back</button>
+                <button class="ghost-button" id="webForwardButton" type="button">Forward</button>
+                <button class="ghost-button" id="webHomeButton" type="button">Home</button>
+              </div>
             <form class="url-form" id="webUrlForm">
               <input class="url-input" id="webUrlInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search or enter a URL" value="https://rocketgoal.io/" aria-label="Search or enter a website URL" />
               <button class="ghost-button is-solid" type="submit">Go</button>
             </form>
-            <p class="tiny-note web-note" id="webNote">Search, paste a URL, or paste a supported video link.</p>
+              <div class="web-mode-cluster">
+                <button class="ghost-button" id="webProxyToggle" type="button" aria-pressed="false">Direct</button>
+                <button class="ghost-button" id="webNewTabButton" type="button">New Tab</button>
+              </div>
+            </div>
+            <div class="web-quick-row">
+              <button type="button" data-web-quick-url="https://www.google.com/">Google</button>
+              <button type="button" data-web-quick-url="https://www.bing.com/">Bing</button>
+              <button type="button" data-web-quick-url="https://example.com/">Example</button>
+              <span class="web-browser-status" id="webBrowserStatus">Direct mode ready.</span>
+            </div>
+            <p class="tiny-note web-note" id="webNote">Search, paste a URL, or switch to Proxy when a page blocks normal iframe loading.</p>
           </div>
 
           <div class="web-shell">
@@ -465,7 +476,7 @@
               <p id="webWarningText">This site may refuse to load inside a normal browser frame.</p>
             </div>
             <div class="web-frame-wrap">
-              <iframe id="webFrame" class="web-frame" title="Website view" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; picture-in-picture; web-share" allowfullscreen src="about:blank"></iframe>
+              <iframe id="webFrame" class="web-frame" title="Website view" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-forms allow-modals allow-presentation allow-scripts allow-downloads" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; picture-in-picture; web-share" allowfullscreen src="about:blank"></iframe>
               <div class="web-frame-helper" id="webFrameHelper" hidden>
                 <strong>iPad source helper</strong>
                 <p>Switch mirrors or open a local game that runs inside vel.os.</p>
@@ -1346,8 +1357,8 @@
                 </button>
                 <button class="theme-pack-card" type="button" data-theme-pack="revamp">
                   <span class="theme-pack-preview theme-pack-revamp"></span>
-                  <strong>Revamp Shell</strong>
-                  <span>Browser-console panels, neon edges, sharper dock.</span>
+                  <strong>Nova Shell</strong>
+                  <span>Editorial glass, punchier cards, cleaner dock.</span>
                   <em>Owned</em>
                 </button>
                 <button class="theme-pack-card" type="button" data-theme-pack="frost">
@@ -1495,6 +1506,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=mega-games-v1"></script>
+    <script src="./script.js?v=nova-ui-v2"></script>
   </body>
 </html>

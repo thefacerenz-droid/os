@@ -10120,3 +10120,1664 @@ body[data-zoom="ipad"] .desktop-shortcut-badge {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Nova UI refresh */
+:root {
+  --bg: #050608;
+  --panel: rgba(14, 16, 18, 0.88);
+  --panel-strong: rgba(8, 9, 12, 0.96);
+  --surface: rgba(255, 255, 255, 0.08);
+  --surface-soft: rgba(255, 255, 255, 0.055);
+  --line: rgba(255, 255, 255, 0.14);
+  --line-strong: rgba(255, 255, 255, 0.28);
+  --text: #f7f4ec;
+  --muted: #b9b6ac;
+  --accent: #93ffd7;
+  --accent-strong: #46e8b2;
+  --accent-warm: #ffcf70;
+  --accent-rose: #ff7f9a;
+  --accent-blue: #86b7ff;
+  --shadow: 0 26px 80px rgba(0, 0, 0, 0.58);
+  --radius-xl: 8px;
+  --radius-lg: 8px;
+  --radius-md: 8px;
+  --radius-sm: 8px;
+}
+
+body[data-theme-pack="revamp"] {
+  --panel: rgba(14, 16, 18, 0.88);
+  --panel-strong: rgba(8, 9, 12, 0.96);
+  --surface: rgba(255, 255, 255, 0.08);
+  --surface-soft: rgba(255, 255, 255, 0.055);
+  --line: rgba(255, 255, 255, 0.14);
+  --line-strong: rgba(255, 255, 255, 0.28);
+  --text: #f7f4ec;
+  --muted: #b9b6ac;
+  --shadow: 0 26px 80px rgba(0, 0, 0, 0.58);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: "Segoe UI Variable", "Inter", "Aptos", system-ui, sans-serif;
+}
+
+body {
+  font-size: 15px;
+  background: var(--bg);
+}
+
+body * {
+  letter-spacing: 0 !important;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(147, 255, 215, 0.72);
+  outline-offset: 2px;
+}
+
+.desktop-shell {
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 34%),
+    #050608;
+}
+
+.desktop-wallpaper {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.28)),
+    var(--wallpaper-image) center center / cover no-repeat;
+  filter: contrast(1.12) saturate(0.88) brightness(0.76);
+  transform: scale(1.012);
+}
+
+body[data-theme-pack="revamp"] .desktop-wallpaper {
+  filter: contrast(1.18) saturate(0.84) brightness(0.7);
+}
+
+body.is-music-playing .desktop-wallpaper {
+  filter: contrast(1.16) saturate(1.04) brightness(0.84);
+  transform: scale(1.025);
+}
+
+.wallpaper-shade,
+body[data-theme-pack="revamp"] .wallpaper-shade {
+  background:
+    linear-gradient(110deg, rgba(3, 4, 8, 0.28) 0%, rgba(3, 4, 8, 0.05) 36%, rgba(255, 127, 154, 0.08) 63%, rgba(4, 7, 11, 0.34) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.56) 78%, rgba(0, 0, 0, 0.84) 100%);
+}
+
+.wallpaper-grain {
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 96%);
+}
+
+.hero-clock {
+  inset: 1.5rem auto auto 1.65rem;
+  gap: 0.42rem;
+  max-width: 430px;
+  padding-left: 1rem;
+  border-left: 4px solid var(--accent-warm);
+  text-shadow: 0 14px 34px rgba(0, 0, 0, 0.62);
+}
+
+body[data-theme-pack="revamp"] .hero-clock {
+  text-shadow: 0 14px 34px rgba(0, 0, 0, 0.62);
+}
+
+.clock-day,
+.clock-date,
+.now-playing-label,
+.micro-label,
+.section-label,
+.score-pill span,
+.meta-card span,
+.word-label,
+.icon-meta,
+.progress-row span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.clock-day {
+  color: #fff7da;
+  font-size: 0.9rem;
+}
+
+.clock-time,
+body[data-theme-pack="revamp"] .clock-time {
+  font-size: 5.35rem;
+  line-height: 0.92;
+  color: #fffdf7;
+  text-shadow: 0 18px 44px rgba(0, 0, 0, 0.64);
+}
+
+.clock-date {
+  color: rgba(247, 244, 236, 0.84);
+  font-size: 0.95rem;
+}
+
+.now-playing-chip {
+  gap: 0.7rem;
+  max-width: min(410px, calc(100vw - 3rem));
+  margin-top: 0.75rem;
+  padding: 0.64rem 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 207, 112, 0.18), transparent 30%),
+    rgba(8, 9, 12, 0.54);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.now-playing-chip strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-status,
+body[data-theme-pack="revamp"] .desktop-status {
+  top: 1rem;
+  right: 1rem;
+  gap: 0.38rem;
+  padding: 0.34rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.045)),
+    rgba(8, 9, 12, 0.68);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(22px) saturate(1.18);
+}
+
+.desktop-status span,
+.desktop-status strong,
+.status-pill-button {
+  min-height: 32px;
+  padding: 0.4rem 0.62rem;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+body[data-theme-pack="revamp"] .desktop-status strong,
+.desktop-status strong {
+  background: rgba(147, 255, 215, 0.16);
+  color: #dfffee;
+}
+
+body[data-theme-pack="revamp"] .status-pill-button,
+.status-pill-button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #f7f4ec;
+  color: #14100b;
+}
+
+.desktop-shortcuts {
+  left: 1.65rem;
+  top: 15.8rem;
+  grid-template-columns: repeat(5, minmax(86px, 104px));
+  gap: 0.72rem;
+  max-width: min(560px, calc(100vw - 3.3rem));
+}
+
+.desktop-shortcut,
+body[data-theme-pack="revamp"] .desktop-shortcut {
+  --tile-a: var(--accent);
+  --tile-b: rgba(147, 255, 215, 0.18);
+  min-height: 104px;
+  padding: 0.7rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+    rgba(8, 9, 12, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 14px 34px rgba(0, 0, 0, 0.28);
+  text-shadow: none;
+}
+
+.desktop-shortcut:nth-child(3n + 2) {
+  --tile-a: var(--accent-rose);
+  --tile-b: rgba(255, 127, 154, 0.16);
+}
+
+.desktop-shortcut:nth-child(3n + 3) {
+  --tile-a: var(--accent-warm);
+  --tile-b: rgba(255, 207, 112, 0.16);
+}
+
+.desktop-shortcut:nth-child(4n) {
+  --tile-a: var(--accent-blue);
+  --tile-b: rgba(134, 183, 255, 0.16);
+}
+
+.desktop-shortcut:hover,
+.desktop-shortcut:focus-visible,
+body[data-theme-pack="revamp"] .desktop-shortcut:hover,
+body[data-theme-pack="revamp"] .desktop-shortcut:focus-visible {
+  border-color: color-mix(in srgb, var(--tile-a) 48%, #ffffff 12%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.055)),
+    var(--tile-b),
+    rgba(8, 9, 12, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 20px 44px rgba(0, 0, 0, 0.36);
+}
+
+.desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .app-badge,
+body[data-icon-pack="revamp"] .taskbar-icon,
+body[data-icon-pack="revamp"] .taskbar-icon-text {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--tile-a, var(--accent)) 36%, transparent), transparent 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+    rgba(5, 6, 8, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 14px 28px rgba(0, 0, 0, 0.34);
+  color: #fffdf7;
+  font-size: 0.9rem;
+}
+
+body[data-icon-pack="revamp"] .youtube-badge,
+.youtube-badge {
+  background:
+    linear-gradient(135deg, #fff6f7 0 44%, #ff3d5f 45% 74%, #4b0714 75%);
+  color: #120508;
+}
+
+.desktop-shortcut strong {
+  max-width: 92px;
+  color: #fffdf7;
+  font-size: 0.8rem;
+  font-weight: 780;
+  line-height: 1.16;
+}
+
+.drawer {
+  align-items: center;
+  justify-items: center;
+  padding: 1.25rem 1.25rem calc(78px + env(safe-area-inset-bottom));
+}
+
+.drawer-scrim,
+body[data-theme-pack="revamp"] .drawer-scrim {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.72)),
+    rgba(4, 5, 7, 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.drawer[aria-hidden="true"] .drawer-panel {
+  transform: translate(var(--drag-x, 0px), calc(var(--drag-y, 0px) + 22px)) scale(0.982);
+}
+
+.drawer-panel,
+body[data-theme-pack="revamp"] .drawer-panel {
+  width: min(1160px, calc(100vw - 2.5rem));
+  max-height: calc(100dvh - 6.3rem);
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(28, 30, 34, 0.93), rgba(9, 10, 13, 0.96)),
+    rgba(8, 9, 12, 0.9);
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(1.2);
+}
+
+body[data-theme-pack="revamp"] .drawer-panel::before {
+  display: none;
+}
+
+.drawer-head,
+.game-toolbar,
+body[data-theme-pack="revamp"] .drawer-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0 0 1rem;
+  padding: 0 0 0.95rem;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 0;
+  background: transparent;
+}
+
+.drawer-head h2 {
+  margin: 0;
+  color: #fffdf7;
+  font-size: 1.7rem;
+  line-height: 1.04;
+}
+
+.drawer-copy,
+.game-tip,
+.settings-card-copy,
+.tiny-note,
+.license-note,
+.icon-meta {
+  color: var(--muted);
+  line-height: 1.48;
+}
+
+body[data-theme-pack="revamp"] .micro-label,
+body[data-theme-pack="revamp"] .section-label,
+.micro-label,
+.section-label {
+  color: var(--accent-warm);
+  text-shadow: none;
+}
+
+.close-button,
+.ghost-button,
+.transport-button,
+.switch-chip,
+.brand-pill,
+.load-more,
+.media-card-action,
+.catalog-filter-button,
+.app-store-tab,
+.catalog-source-tab,
+.taskbar-media-button,
+.web-link-button,
+.youtube-toolbar button,
+.youtube-chip-row button,
+.youtube-sidebar button,
+.youtube-video-fullscreen,
+.vel-chat-mini-button,
+.vel-chat-user-pill,
+.remote-sound-prompt button,
+.dev-user-controls button,
+.dev-user-controls select,
+.dev-user-controls input,
+.dev-ban-row button,
+.dev-whitelist-row button,
+.dev-whitelist-row em,
+.calculator-keys button,
+.track-add-button,
+.spotify-result-actions button,
+.sound-pad {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.035));
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.close-button:hover,
+.ghost-button:hover,
+.transport-button:hover,
+.switch-chip:hover,
+.brand-pill:hover,
+.load-more:hover,
+.media-card-action:hover,
+.catalog-filter-button:hover,
+.app-store-tab:hover,
+.catalog-source-tab:hover,
+.taskbar-media-button:hover,
+.web-link-button:hover,
+.youtube-toolbar button:hover,
+.youtube-chip-row button:hover,
+.youtube-sidebar button:hover,
+.calculator-keys button:hover,
+.track-add-button:hover,
+.spotify-result-actions button:hover,
+.sound-pad:hover {
+  border-color: rgba(255, 207, 112, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 207, 112, 0.2), rgba(255, 255, 255, 0.05));
+  transform: translateY(-1px);
+}
+
+.ghost-button.is-solid,
+.transport-main,
+.switch-chip.is-active,
+.brand-primary,
+.app-store-tab.is-active,
+.catalog-source-tab.is-active,
+.catalog-filter-button.is-active,
+.store-action-primary,
+body[data-theme-pack="revamp"] .ghost-button.is-solid,
+body[data-theme-pack="revamp"] .app-store-tab.is-active,
+body[data-theme-pack="revamp"] .catalog-source-tab.is-active,
+body[data-theme-pack="revamp"] .catalog-filter-button.is-active,
+body[data-theme-pack="revamp"] .store-action-primary {
+  border-color: rgba(147, 255, 215, 0.42);
+  background:
+    linear-gradient(180deg, rgba(147, 255, 215, 0.98), rgba(79, 228, 178, 0.92));
+  color: #07100c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 14px 30px rgba(70, 232, 178, 0.18);
+}
+
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+select,
+textarea,
+.mini-search-input,
+.chat-settings-form input,
+.custom-theme-actions input[type="text"],
+.calculator-form input,
+.dev-auth-form input,
+.dev-announcement-form input,
+.ai-form textarea,
+.media-search input {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(247, 244, 236, 0.46);
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="password"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus,
+.mini-search-input:focus,
+.calculator-form input:focus,
+.dev-auth-form input:focus,
+.dev-announcement-form input:focus {
+  border-color: rgba(147, 255, 215, 0.56);
+  box-shadow: 0 0 0 3px rgba(147, 255, 215, 0.12);
+}
+
+.launcher-section {
+  padding: 0;
+}
+
+.catalog-head {
+  align-items: end;
+  gap: 0.8rem;
+}
+
+.catalog-count,
+.theme-credit-badge {
+  border: 1px solid rgba(255, 207, 112, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 207, 112, 0.12);
+  color: #fff4cf;
+}
+
+.app-store-tabs,
+.catalog-source-tabs {
+  gap: 0.45rem;
+}
+
+.catalog-tools {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+}
+
+#launcherGameGrid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  max-height: min(45dvh, 470px);
+  padding-right: 0.25rem;
+}
+
+.app-icon,
+.app-store-card,
+body[data-theme-pack="revamp"] .app-icon,
+body[data-theme-pack="revamp"] .app-store-card {
+  min-height: 144px;
+  padding: 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.22);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.app-icon:hover,
+.app-icon:focus-visible,
+.app-store-card:hover,
+.app-store-card:focus-visible,
+body[data-theme-pack="revamp"] .app-icon:hover,
+body[data-theme-pack="revamp"] .app-icon:focus-visible {
+  border-color: rgba(147, 255, 215, 0.36);
+  background:
+    linear-gradient(180deg, rgba(147, 255, 215, 0.14), rgba(255, 255, 255, 0.045)),
+    rgba(0, 0, 0, 0.28);
+  transform: translateY(-2px);
+}
+
+.app-card-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.app-card-actions button,
+.store-action-primary,
+.store-action-secondary {
+  min-width: 0;
+  padding-inline: 0.54rem;
+  white-space: nowrap;
+}
+
+.icon-title,
+.app-store-card strong,
+.track-button strong,
+.wallpaper-option strong,
+.font-option strong,
+.theme-pack-card strong {
+  color: #fffdf7;
+  font-weight: 820;
+}
+
+.icon-meta,
+.store-meta,
+.track-button span,
+.wallpaper-option span,
+.font-option span,
+.theme-pack-card span {
+  color: var(--muted);
+}
+
+.music-layout {
+  height: auto;
+  min-height: 520px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.52fr);
+  align-items: stretch;
+}
+
+.music-player-card,
+.side-card,
+.settings-card,
+.meta-card,
+.score-pill,
+.game-tip,
+.calculator-card,
+.soundboard-control-card,
+.remote-deck-side,
+.remote-deck-main,
+.lobby-card,
+.dev-admin-card,
+.watch-card,
+.wallpaper-option,
+.font-option,
+.theme-pack-card,
+.spotify-result-card,
+.ai-message,
+.media-hero,
+.media-stats article,
+.media-player,
+.media-status,
+.media-card,
+.youtube-player-card,
+.youtube-results-panel,
+.youtube-sidebar,
+.velhub-hero,
+.velhub-player,
+.velhub-card,
+.velhub-modern-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.music-player-card {
+  align-content: center;
+  min-height: 500px;
+  padding: 1.25rem;
+}
+
+.music-player-card::before {
+  inset: -12%;
+  filter: blur(28px) saturate(1.15) brightness(0.58);
+  opacity: 0.46;
+}
+
+.album-art img {
+  width: 210px;
+  border-radius: 8px;
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.track-copy h3 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.08;
+}
+
+.progress-wrap {
+  width: min(100%, 560px);
+  justify-self: center;
+}
+
+#velofyProgress,
+#soundboardVolume,
+#remoteDeckVolume {
+  accent-color: var(--accent-strong);
+}
+
+.transport-row {
+  gap: 0.55rem;
+}
+
+.transport-button {
+  min-width: 86px;
+}
+
+.music-side {
+  grid-template-rows: minmax(0, 1fr) minmax(210px, 0.82fr);
+}
+
+.playlist-list,
+.spotify-result-list {
+  gap: 0.48rem;
+}
+
+.track-button,
+.wallpaper-option,
+.font-option,
+.theme-pack-card {
+  border-radius: 8px;
+}
+
+.track-button.is-active {
+  border-color: rgba(255, 207, 112, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 207, 112, 0.16), rgba(255, 255, 255, 0.05)),
+    rgba(0, 0, 0, 0.28);
+}
+
+.track-add-button.is-added {
+  background: var(--accent-warm);
+  color: #140f05;
+}
+
+.settings-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.settings-card {
+  padding: 1rem;
+}
+
+.wallpaper-picker {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.wallpaper-option img {
+  border-radius: 8px;
+}
+
+.wallpaper-option.is-active,
+.font-option.is-active,
+.theme-pack-card.is-active {
+  border-color: rgba(147, 255, 215, 0.48);
+  background:
+    linear-gradient(180deg, rgba(147, 255, 215, 0.14), rgba(255, 255, 255, 0.045)),
+    rgba(0, 0, 0, 0.28);
+}
+
+.theme-store-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.theme-pack-preview {
+  border-radius: 8px;
+}
+
+.theme-pack-revamp {
+  background:
+    linear-gradient(135deg, #93ffd7 0 34%, #ffcf70 35% 62%, #ff7f9a 63% 100%);
+}
+
+.calculator-result,
+.media-hero h3 {
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.calculator-keys {
+  gap: 0.5rem;
+}
+
+.calculator-keys button {
+  border-radius: 8px;
+}
+
+.soundboard-layout,
+.remote-deck-layout,
+.lobbies-layout,
+.dev-layout,
+.calculator-layout {
+  gap: 0.85rem;
+}
+
+.soundboard-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+
+.sound-pad {
+  min-height: 92px;
+  padding: 0.72rem;
+  text-align: left;
+}
+
+.remote-device-card,
+.dev-user-row,
+.dev-ban-row,
+.dev-whitelist-row,
+.lobby-thread,
+.lobby-prompt,
+.secret-vault-card {
+  border-radius: 8px;
+}
+
+.web-shell,
+.youtube-shell,
+.velhub-shell {
+  gap: 0.8rem;
+}
+
+.web-frame,
+.youtube-frame-wrap,
+.velhub-frame-wrap {
+  border-radius: 8px;
+  background: #020304;
+}
+
+.youtube-panel {
+  width: min(1220px, calc(100vw - 2.5rem));
+}
+
+.youtube-shell {
+  grid-template-columns: minmax(190px, 0.28fr) minmax(0, 1fr);
+}
+
+.youtube-sidebar {
+  gap: 0.45rem;
+}
+
+.youtube-player-card {
+  overflow: hidden;
+}
+
+.youtube-results-grid,
+.velhub-grid,
+.velhub-modern-grid {
+  gap: 0.75rem;
+}
+
+.velhub-hero h3,
+.velhub-modern-head h3 {
+  font-size: 1.8rem;
+  line-height: 1.08;
+}
+
+.lyrics-widget {
+  top: 5.9rem;
+  right: 1rem;
+  width: min(360px, calc(100vw - 2rem));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(28, 30, 34, 0.92), rgba(9, 10, 13, 0.96)),
+    rgba(8, 9, 12, 0.88);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
+}
+
+.lyrics-widget-head {
+  border-radius: 8px 8px 0 0;
+}
+
+.lyrics-widget-button,
+.lyrics-show-button {
+  border-radius: 8px;
+}
+
+.lyrics-show-button {
+  top: 4.9rem;
+  right: 1rem;
+  border-color: rgba(255, 207, 112, 0.22);
+  background: rgba(8, 9, 12, 0.72);
+}
+
+.vel-chat {
+  left: 1rem;
+  bottom: calc(74px + env(safe-area-inset-bottom));
+}
+
+.vel-chat-bubble,
+.vel-chat-panel {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(8, 9, 12, 0.72);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+.vel-chat-panel {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vel-chat-form,
+.vel-chat-login {
+  gap: 0.45rem;
+}
+
+.vel-chat-form input {
+  border-radius: 8px;
+}
+
+.global-announcement,
+.screen-share-request,
+.screen-viewer,
+.screen-share-indicator,
+.remote-sound-prompt,
+.home-edit-toolbar {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(28, 30, 34, 0.94), rgba(9, 10, 13, 0.96)),
+    rgba(8, 9, 12, 0.9);
+}
+
+.welcome-gate,
+.terms-gate,
+.owner-lock-overlay {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.86)),
+    rgba(5, 6, 8, 0.58);
+  backdrop-filter: blur(10px);
+}
+
+.welcome-card,
+.terms-card,
+.owner-lock-card {
+  width: min(680px, calc(100vw - 2rem));
+  padding: 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(28, 30, 34, 0.94), rgba(9, 10, 13, 0.97));
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.56);
+}
+
+.welcome-card h2,
+.terms-card h2,
+.owner-lock-card h2 {
+  font-size: 2.85rem;
+  line-height: 1.02;
+  text-shadow: none;
+}
+
+.terms-card ul {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0;
+  list-style: none;
+}
+
+.terms-card li,
+.terms-check {
+  border-radius: 8px;
+}
+
+.welcome-form {
+  width: min(100%, 440px);
+  margin-inline: auto;
+}
+
+.taskbar {
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1fr) minmax(280px, 0.85fr);
+  min-height: 64px;
+  padding: 0.42rem 0.75rem max(0.42rem, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(29, 32, 36, 0.78), rgba(8, 9, 12, 0.94));
+  box-shadow:
+    0 -22px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(1.24);
+}
+
+body[data-taskbar-style="revamp"] .taskbar {
+  min-height: 64px;
+  padding: 0.42rem 0.75rem max(0.42rem, env(safe-area-inset-bottom));
+  border-top-color: rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(29, 32, 36, 0.78), rgba(8, 9, 12, 0.94));
+  box-shadow:
+    0 -22px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.taskbar-left,
+.taskbar-center,
+.taskbar-right {
+  gap: 0.42rem;
+}
+
+.taskbar-center,
+body[data-taskbar-style="revamp"] .taskbar-center,
+body[data-taskbar-style="revamp"] .taskbar-now-playing {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.start-button,
+.taskbar-app,
+.taskbar-search,
+body[data-taskbar-style="revamp"] .start-button,
+body[data-taskbar-style="revamp"] .taskbar-app,
+body[data-taskbar-style="revamp"] .taskbar-search {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035));
+  color: var(--text);
+}
+
+.start-button,
+body[data-taskbar-style="revamp"] .start-button {
+  background:
+    linear-gradient(180deg, rgba(255, 207, 112, 0.24), rgba(255, 255, 255, 0.045));
+}
+
+.taskbar-search {
+  width: min(260px, 30vw);
+}
+
+.taskbar-icon,
+.taskbar-icon-text {
+  width: 30px;
+  height: 30px;
+  font-size: 0.72rem;
+}
+
+.taskbar-now-playing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: 310px;
+  padding: 0.36rem 0.45rem;
+}
+
+.taskbar-now-playing span {
+  display: none;
+}
+
+.taskbar-now-playing strong {
+  min-width: 0;
+  max-width: 130px;
+  overflow: hidden;
+  color: #fffdf7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskbar-media-controls {
+  gap: 0.28rem;
+}
+
+.taskbar-media-button {
+  min-height: 30px;
+  padding: 0.32rem 0.44rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.taskbar-clock {
+  min-width: 74px;
+  text-align: right;
+}
+
+.taskbar-clock strong {
+  font-size: 0.94rem;
+}
+
+body[data-taskbar-position="left"] .taskbar,
+body[data-taskbar-position="right"] .taskbar {
+  width: 78px;
+  border-radius: 8px;
+}
+
+body[data-taskbar-position="left"] .taskbar {
+  left: 0.75rem;
+}
+
+body[data-taskbar-position="right"] .taskbar {
+  right: 0.75rem;
+}
+
+body[data-taskbar-position="left"] .drawer,
+body[data-taskbar-position="right"] .drawer {
+  padding-bottom: 1.25rem;
+}
+
+@media (max-width: 980px) {
+  .desktop-shortcuts {
+    grid-template-columns: repeat(4, minmax(82px, 1fr));
+    max-width: min(440px, calc(100vw - 2rem));
+  }
+
+  .music-layout,
+  .settings-layout,
+  .youtube-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .music-layout {
+    min-height: 0;
+  }
+
+  .music-side {
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 14px;
+  }
+
+  .hero-clock {
+    inset: 0.95rem auto auto 0.95rem;
+    max-width: calc(100vw - 1.9rem);
+    padding-left: 0.72rem;
+  }
+
+  .clock-time,
+  body[data-theme-pack="revamp"] .clock-time {
+    font-size: 3.15rem;
+  }
+
+  .desktop-status {
+    top: 0.75rem;
+    right: 0.75rem;
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .desktop-status span {
+    display: none;
+  }
+
+  .desktop-shortcuts {
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
+    bottom: calc(5.3rem + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: none;
+    max-height: 44dvh;
+    overflow: auto;
+    padding-right: 0.1rem;
+  }
+
+  .desktop-shortcut {
+    min-height: 88px;
+    padding: 0.55rem 0.42rem;
+  }
+
+  .desktop-shortcut-badge,
+  body[data-icon-pack="revamp"] .desktop-shortcut-badge {
+    width: 44px;
+    height: 44px;
+  }
+
+  .drawer {
+    padding: 0.55rem 0.55rem calc(4.85rem + env(safe-area-inset-bottom));
+    align-items: end;
+  }
+
+  .drawer-panel,
+  .youtube-panel,
+  .velhub-panel,
+  body[data-theme-pack="revamp"] .drawer-panel {
+    width: calc(100vw - 1.1rem);
+    max-height: calc(100dvh - 5.55rem);
+    padding: 0.72rem;
+  }
+
+  .drawer-head {
+    grid-template-columns: 1fr;
+    gap: 0.62rem;
+  }
+
+  .drawer-head h2 {
+    font-size: 1.42rem;
+  }
+
+  #launcherGameGrid,
+  .soundboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-icon,
+  .app-store-card {
+    min-height: 132px;
+  }
+
+  .catalog-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .music-player-card {
+    min-height: 420px;
+  }
+
+  .album-art img {
+    width: 172px;
+  }
+
+  .settings-layout,
+  .wallpaper-picker,
+  .theme-store-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-card,
+  .terms-card,
+  .owner-lock-card {
+    padding: 1rem;
+  }
+
+  .welcome-card h2,
+  .terms-card h2,
+  .owner-lock-card h2 {
+    font-size: 2rem;
+  }
+
+  .lyrics-widget {
+    top: 5.4rem;
+    left: 0.55rem;
+    right: 0.55rem;
+    width: auto;
+    max-height: min(45dvh, 360px);
+  }
+
+  .lyrics-show-button {
+    top: 4.35rem;
+    right: 0.55rem;
+  }
+
+  .vel-chat {
+    left: 0.55rem;
+    right: 0.55rem;
+    bottom: calc(4.8rem + env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  .vel-chat-panel {
+    height: min(var(--chat-height, 520px), calc(100dvh - 6rem));
+  }
+
+  .taskbar,
+  body[data-taskbar-style="revamp"] .taskbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 64px;
+    gap: 0.36rem;
+    padding-inline: 0.44rem;
+  }
+
+  .taskbar-search {
+    width: 44px;
+    padding-inline: 0;
+  }
+
+  .taskbar-search strong,
+  .start-button span:last-child,
+  .taskbar-label,
+  .taskbar-now-playing {
+    display: none;
+  }
+
+  .taskbar-center {
+    justify-self: stretch;
+    width: auto;
+  }
+
+  .taskbar-clock {
+    min-width: 58px;
+  }
+}
+
+/* Full-screen app windows and custom browser chrome */
+.drawer {
+  z-index: 90;
+  align-items: stretch;
+  justify-items: stretch;
+  padding: 0;
+}
+
+.drawer-scrim {
+  display: none;
+}
+
+.drawer-panel,
+.youtube-panel,
+.velhub-panel,
+body[data-theme-pack="revamp"] .drawer-panel {
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: clamp(0.75rem, 1.3vw, 1.05rem);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.drawer[aria-hidden="true"] .drawer-panel {
+  transform: translate(var(--drag-x, 0px), calc(var(--drag-y, 0px) + 18px)) scale(0.99);
+}
+
+.drawer[aria-hidden="false"] .drawer-panel {
+  transform: translate(var(--drag-x, 0px), var(--drag-y, 0px)) scale(1);
+}
+
+.drawer-head,
+.game-toolbar,
+body[data-theme-pack="revamp"] .drawer-head {
+  min-height: 64px;
+  margin-bottom: 0.85rem;
+}
+
+.drawer-head h2 {
+  font-size: 1.52rem;
+}
+
+.web-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.web-toolbar {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 0.75rem;
+}
+
+.web-tab-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+  scrollbar-width: none;
+}
+
+.web-tab-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.web-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.46rem;
+  min-width: min(210px, 62vw);
+  max-width: 260px;
+  min-height: 38px;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  text-align: left;
+}
+
+.web-tab.is-active {
+  border-color: rgba(147, 255, 215, 0.46);
+  background:
+    linear-gradient(180deg, rgba(147, 255, 215, 0.14), rgba(255, 255, 255, 0.05)),
+    rgba(0, 0, 0, 0.32);
+}
+
+.web-tab span {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-tab small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.web-tab b {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: transparent;
+  font-size: 0;
+}
+
+.web-tab b::before,
+.web-tab b::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 11px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(247, 244, 236, 0.86);
+}
+
+.web-tab b::before {
+  transform: rotate(45deg);
+}
+
+.web-tab b::after {
+  transform: rotate(-45deg);
+}
+
+.web-browser-chrome {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.web-nav-cluster,
+.web-mode-cluster,
+.web-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.web-nav-cluster .ghost-button,
+.web-mode-cluster .ghost-button {
+  min-height: 42px;
+  padding-inline: 0.68rem;
+  white-space: nowrap;
+}
+
+.web-nav-cluster .ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  transform: none;
+}
+
+.web-mode-cluster .is-active {
+  border-color: rgba(255, 207, 112, 0.44);
+  background:
+    linear-gradient(180deg, rgba(255, 207, 112, 0.24), rgba(255, 255, 255, 0.05));
+  color: #fff8dd;
+}
+
+.url-form {
+  width: 100%;
+}
+
+.url-input {
+  min-height: 42px;
+  border-radius: 8px;
+}
+
+.web-quick-row {
+  flex-wrap: wrap;
+}
+
+.web-quick-row button {
+  min-height: 30px;
+  padding: 0.34rem 0.52rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 820;
+}
+
+.web-browser-status {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.web-browser-status[data-tone="warn"] {
+  color: #ffe0a3;
+}
+
+.web-shell {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  margin-top: 0;
+}
+
+.web-frame-wrap {
+  min-height: 0;
+  height: 100%;
+}
+
+.web-frame {
+  height: 100%;
+  min-height: 0;
+  border-radius: 8px;
+}
+
+.app-card-actions {
+  gap: 0.42rem;
+}
+
+.store-action,
+.store-action-primary,
+.store-action-secondary {
+  min-height: 32px;
+  padding: 0.32rem 0.42rem;
+  overflow: hidden;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+}
+
+.taskbar,
+body[data-taskbar-style="revamp"] .taskbar {
+  min-height: 62px;
+  height: 62px;
+}
+
+body[data-icon-pack="revamp"] .taskbar .taskbar-icon,
+body[data-icon-pack="revamp"] .taskbar .taskbar-icon-text {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+}
+
+.taskbar-app {
+  padding: 0.32rem 0.48rem;
+}
+
+.taskbar-center {
+  min-height: 46px;
+}
+
+.taskbar-now-playing {
+  max-width: 280px;
+}
+
+@media (max-width: 900px) {
+  .web-browser-chrome {
+    grid-template-columns: 1fr;
+  }
+
+  .web-nav-cluster,
+  .web-mode-cluster {
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+  }
+
+  .web-browser-status {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .drawer-panel,
+  .youtube-panel,
+  .velhub-panel,
+  body[data-theme-pack="revamp"] .drawer-panel {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    padding: 0.62rem;
+  }
+
+  .drawer-head,
+  .game-toolbar {
+    min-height: auto;
+  }
+
+  .web-tab {
+    min-width: 176px;
+  }
+
+  .web-nav-cluster .ghost-button,
+  .web-mode-cluster .ghost-button {
+    min-height: 38px;
+    padding-inline: 0.56rem;
+  }
+}
+
+.web-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.web-panel .drawer-head {
+  min-height: 48px;
+  margin-bottom: 0.48rem;
+  padding-bottom: 0.5rem;
+}
+
+.web-panel .drawer-head h2 {
+  font-size: 1.28rem;
+}
+
+.web-panel .drawer-copy {
+  display: none;
+}
+
+.web-panel .window-actions .close-button {
+  min-height: 36px;
+}
+
+.web-panel .web-toolbar {
+  gap: 0.38rem;
+  margin-bottom: 0.52rem;
+}
+
+.web-panel .web-tab,
+.web-panel .url-input,
+.web-panel .url-form .ghost-button,
+.web-panel .web-nav-cluster .ghost-button,
+.web-panel .web-mode-cluster .ghost-button {
+  min-height: 36px;
+}
+
+.web-panel .web-quick-row button {
+  min-height: 28px;
+  padding-block: 0.28rem;
+}
+
+.web-panel .web-note {
+  display: none;
+}
+
+.web-shell {
+  flex: 1 1 auto;
+  display: block;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.web-warning {
+  position: absolute;
+  inset: 0.6rem 0.6rem auto;
+  z-index: 2;
+}
+
+.web-frame-wrap {
+  min-height: 0;
+  height: 100%;
+}
+
+.web-frame {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}

@@ -403,9 +403,9 @@ const webApps = {
     title: "Web Browser",
     tag: "URL Launcher",
     description: "Search the web or open a URL inside the vel.os web window.",
-    url: "about:blank",
+    url: "https://www.bing.com/",
     embedBlocked: false,
-    note: "Type a search like 'space games' or a full URL."
+    note: "Type a search, open a full URL, or switch Proxy on for frame-blocked pages."
   },
 
   googlesnake: {
@@ -2136,7 +2136,7 @@ const themePacks = {
     boot: "classic"
   },
   revamp: {
-    title: "Revamp Shell",
+    title: "Nova Shell",
     cost: 0,
     wallpaper: "vel",
     taskbar: "revamp",
@@ -2600,8 +2600,6 @@ const welcomeGate = document.getElementById("welcomeGate");
 const welcomeGateTitle = document.getElementById("welcomeGateTitle");
 const welcomeNameForm = document.getElementById("welcomeNameForm");
 const welcomeNameInput = document.getElementById("welcomeNameInput");
-const welcomePinForm = document.getElementById("welcomePinForm");
-const welcomePinInput = document.getElementById("welcomePinInput");
 const welcomeStatus = document.getElementById("welcomeStatus");
 const termsGate = document.getElementById("termsGate");
 const termsAcceptButton = document.getElementById("termsAcceptButton");
@@ -2672,6 +2670,13 @@ const webTitle = document.getElementById("webTitle");
 const webDescription = document.getElementById("webDescription");
 const webUrlForm = document.getElementById("webUrlForm");
 const webUrlInput = document.getElementById("webUrlInput");
+const webBrowserTabs = document.getElementById("webBrowserTabs");
+const webBackButton = document.getElementById("webBackButton");
+const webForwardButton = document.getElementById("webForwardButton");
+const webHomeButton = document.getElementById("webHomeButton");
+const webProxyToggle = document.getElementById("webProxyToggle");
+const webNewTabButton = document.getElementById("webNewTabButton");
+const webBrowserStatus = document.getElementById("webBrowserStatus");
 const webNote = document.getElementById("webNote");
 const webWarning = document.getElementById("webWarning");
 const webWarningText = document.getElementById("webWarningText");
@@ -2809,8 +2814,6 @@ const velChatResizeHandle = document.getElementById("velChatResizeHandle");
 const velChatHide = document.getElementById("velChatHide");
 const velChatClearLog = document.getElementById("velChatClearLog");
 const velChatBottomButton = document.getElementById("velChatBottomButton");
-const velChatPinForm = document.getElementById("velChatPinForm");
-const velChatPinInput = document.getElementById("velChatPinInput");
 const velChatLoginForm = document.getElementById("velChatLoginForm");
 const velChatName = document.getElementById("velChatName");
 const velChatUserBar = document.getElementById("velChatUserBar");
@@ -2942,6 +2945,19 @@ if (storage.get("vel-revamp-theme-v1", "0") !== "1") {
 let currentTaskbarPosition = storage.get("vel-taskbar-position", "bottom");
 let currentWebUrl = "https://bloxd.io/";
 let currentWebMirrorIndex = 0;
+const WEB_BROWSER_HOME_URL = "https://www.bing.com/";
+const WEB_BROWSER_TABS_KEY = "vel-browser-tabs-v1";
+const WEB_BROWSER_ACTIVE_TAB_KEY = "vel-browser-active-tab";
+const WEB_BROWSER_PROXY_KEY = "vel-browser-proxy-mode";
+const WEB_BROWSER_STAY_INSIDE_KEY = "vel-browser-stay-inside-v1";
+let webBrowserProxyMode = storage.get(WEB_BROWSER_PROXY_KEY, "proxy") === "direct" ? "direct" : "proxy";
+if (storage.get(WEB_BROWSER_STAY_INSIDE_KEY, "0") !== "1") {
+  webBrowserProxyMode = "proxy";
+  storage.set(WEB_BROWSER_PROXY_KEY, webBrowserProxyMode);
+  storage.set(WEB_BROWSER_STAY_INSIDE_KEY, "1");
+}
+let webBrowserTabState = normalizeWebBrowserTabs(readStoredJson(WEB_BROWSER_TABS_KEY, []));
+let activeWebBrowserTabId = storage.get(WEB_BROWSER_ACTIVE_TAB_KEY, "");
 let feedVideoObserver = null;
 let youtubePlayer = null;
 let youtubeApiReadyPromise = null;
@@ -2969,6 +2985,7 @@ const VEL_CHAT_USER_KEY = "vel-chat-user";
 const VEL_CHAT_COLLAPSED_KEY = "vel-chat-collapsed";
 const VEL_CHAT_LAST_SEEN_KEY = "vel-chat-last-seen-id";
 const VEL_CHAT_PIN_SESSION_KEY = "vel-chat-pin-ok";
+const OPEN_SITE_SESSION_TOKEN = "open";
 const VEL_CHAT_SIZE_KEY = "vel-chat-size";
 const VEL_CHAT_POLL_MS = 3000;
 const VEL_CHAT_TYPING_POLL_MS = 1300;
@@ -3104,8 +3121,8 @@ let velChatLastTypingSentAt = 0;
 let velChatIsTyping = false;
 let velChatCollapsed = storage.get(VEL_CHAT_COLLAPSED_KEY, "1") === "1";
 let velChatLastSeenId = storage.get(VEL_CHAT_LAST_SEEN_KEY, "");
-let velChatUnlocked = false;
-let velChatPin = "";
+let velChatUnlocked = true;
+let velChatPin = OPEN_SITE_SESSION_TOKEN;
 let velChatAttachment = null;
 let velLiveSource = null;
 let velLiveReconnectTimer = null;
@@ -3206,6 +3223,7 @@ let velCredits = Number.parseInt(storage.get("vel-theme-credits", "80"), 10) || 
 let unlockedThemePacks = readStoredJson("vel-theme-unlocks", ["noir", "revamp"]);
 unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", "revamp", ...unlockedThemePacks])] : ["noir", "revamp"];
 let installedApps = readStoredJson("vel-installed-apps", [
+  "web:browser",
   "panel:youtube",
   "panel:velhub",
   "panel:lobbies",
@@ -3217,7 +3235,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
+  : ["web:browser", "panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
 installedApps = installedApps.filter((item) => item !== "panel:ai");
 installedApps = installedApps.filter((item) => item !== "panel:remoteDeck" || isRemoteDeckWhitelistedDevice());
 storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
@@ -3255,6 +3273,11 @@ if (isRemoteDeckWhitelistedDevice() && storage.get("vel-installed-apps-v8", "0")
   installedApps = ["panel:remoteDeck", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v8", "1");
+}
+if (storage.get("vel-installed-apps-v9", "0") !== "1" && !installedApps.includes("web:browser")) {
+  installedApps = ["web:browser", ...installedApps].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
+  storage.set("vel-installed-apps-v9", "1");
 }
 let recentApps = readStoredJson("vel-recent-apps", []);
 recentApps = Array.isArray(recentApps) ? recentApps.filter((item) => !(item?.type === "panel" && item?.id === "ai")) : [];
@@ -3415,6 +3438,15 @@ function saveInstalledApps() {
 
 const DESKTOP_SHORTCUT_ORDER_KEY = "vel-desktop-shortcut-order";
 const DESKTOP_SHORTCUT_POSITIONS_KEY = "vel-desktop-shortcut-positions";
+
+if (storage.get("vel-desktop-browser-shortcut-v1", "0") !== "1") {
+  const savedDesktopOrder = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
+  const nextDesktopOrder = Array.isArray(savedDesktopOrder)
+    ? ["panel:launcher", "web:browser", ...savedDesktopOrder.filter((ref) => ref !== "panel:launcher" && ref !== "web:browser")]
+    : ["panel:launcher", "web:browser"];
+  storage.set(DESKTOP_SHORTCUT_ORDER_KEY, JSON.stringify(nextDesktopOrder.slice(0, 40)));
+  storage.set("vel-desktop-browser-shortcut-v1", "1");
+}
 
 function getDesktopShortcutPositions() {
   const positions = readStoredJson(DESKTOP_SHORTCUT_POSITIONS_KEY, {});
@@ -3596,7 +3628,7 @@ function renderStoreCard({ ref, meta, title, subtitle, openLabel = "Open" }) {
   const installed = isAppInstalled(ref);
   const installButton = installed
     ? `<button class="store-action" type="button" data-remove-ref="${escapeHtml(ref)}">Remove</button>`
-    : `<button class="store-action store-action-primary" type="button" data-install-ref="${escapeHtml(ref)}">Download</button>`;
+    : `<button class="store-action store-action-primary" type="button" data-install-ref="${escapeHtml(ref)}">Get</button>`;
   const openButton = `<button class="store-action${installed ? " store-action-primary" : ""}" type="button" data-app-open-ref="${escapeHtml(ref)}">${escapeHtml(openLabel)}</button>`;
   return `
     <article class="app-icon app-store-card${installed ? " is-installed" : ""}">
@@ -4063,9 +4095,9 @@ function getSessionChatPin() {
   try {
     window.sessionStorage.removeItem(VEL_CHAT_PIN_SESSION_KEY);
   } catch (error) {
-    return velChatPin || "";
+    return OPEN_SITE_SESSION_TOKEN;
   }
-  return velChatPin || "";
+  return OPEN_SITE_SESSION_TOKEN;
 }
 
 function clearLegacyStoredChatPin() {
@@ -4077,16 +4109,12 @@ function clearLegacyStoredChatPin() {
 }
 
 function setSessionChatPin(value) {
-  velChatPin = String(value || "").trim();
+  velChatPin = String(value || "").trim() ? OPEN_SITE_SESSION_TOKEN : "";
   clearLegacyStoredChatPin();
 }
 
 function getVelChatHeaders(extra = {}) {
-  const pin = velChatPin || getSessionChatPin();
-  return {
-    ...extra,
-    ...(pin ? { "x-vel-chat-pin": pin } : {})
-  };
+  return { ...extra };
 }
 
 function stopVelLiveUpdates() {
@@ -4160,7 +4188,6 @@ function startVelLiveUpdates() {
   stopVelLiveUpdates();
   const user = normalizeVelChatUser(velChatUser);
   const params = new URLSearchParams({
-    pin: velChatPin,
     deviceId: velDeviceId,
     userId: user?.id || "",
     username: user?.username || "Guest",
@@ -4189,8 +4216,6 @@ function startVelLiveUpdates() {
 function setVelChatLocked(isLocked, message = "") {
   velChatUnlocked = !isLocked;
   velChat?.classList.toggle("is-locked", isLocked);
-  if (velChatPinForm) velChatPinForm.hidden = true;
-  if (!isLocked && velChatPinInput) velChatPinInput.value = "";
   if (isLocked) {
     velChatTypingUsers = [];
     renderVelChatTyping();
@@ -4206,18 +4231,17 @@ function setVelChatLocked(isLocked, message = "") {
   if (velChatForm) velChatForm.hidden = isLocked;
   if (velChatAttachmentName) velChatAttachmentName.hidden = isLocked || !velChatAttachment;
   if (message) setVelChatStatus(message, isLocked ? "warn" : "live");
-  if (isLocked && !message) setVelChatStatus("Finish startup login to unlock chat.", "warn");
+  if (isLocked && !message) setVelChatStatus("Chat is unavailable while access is blocked.", "warn");
   renderVelChatAuth();
 }
 
-function clearVelChatPin(message = "PIN required to view chat.") {
+function clearVelChatPin(message = "Chat access needs to reconnect.") {
   setSessionChatPin("");
-  if (velChatPinInput) velChatPinInput.value = "";
   setVelChatLocked(true, message);
   window.clearTimeout(velChatPollTimer);
   const bootDone = !bootScreen || bootScreen.classList.contains("is-hidden");
   if (bootDone && !document.body.classList.contains("is-booting") && welcomeGate?.hidden) {
-    showWelcomeGate(velChatUser ? "pin" : "name");
+    showWelcomeGate("name");
   }
 }
 
@@ -4447,7 +4471,7 @@ function renderVelChatAuth() {
     velChatInput.disabled = !velChatUnlocked || !velChatUser || velChatLoading;
     velChatInput.placeholder = velChatUser
       ? "Message everyone on vel.os..."
-      : velChatUnlocked ? "Login in Settings to chat..." : "Enter PIN first...";
+      : velChatUnlocked ? "Login in Settings to chat..." : "Chat unavailable...";
   }
   velChatAttachButton?.toggleAttribute("disabled", !velChatUnlocked || !velChatUser || velChatLoading);
   velChatForm?.querySelector("button[type='submit']")?.toggleAttribute("disabled", !velChatUnlocked || !velChatUser || velChatLoading);
@@ -4645,7 +4669,7 @@ async function fetchVelChatMessages(showLoading = false) {
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      clearVelChatPin(data.message || "Chat access needs to reconnect.");
       return;
     }
     if (!response.ok) {
@@ -4698,7 +4722,7 @@ async function fetchVelChatTyping() {
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      clearVelChatPin(data.message || "Chat access needs to reconnect.");
       return;
     }
     if (response.ok) {
@@ -4773,7 +4797,7 @@ async function sendVelChatMessage(text) {
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      clearVelChatPin(data.message || "Chat access needs to reconnect.");
       return;
     }
     if (!response.ok) {
@@ -4817,7 +4841,7 @@ async function deleteVelChatMessages(payload = {}, successMessage = "Chat update
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      clearVelChatPin(data.message || "Chat access needs to reconnect.");
       return;
     }
     if (!response.ok) {
@@ -4843,7 +4867,7 @@ function deleteVelChatMessage(messageId = "") {
 
 function clearVelChatLog() {
   if (!velChatUnlocked) {
-    setVelChatStatus("Enter the startup PIN before clearing chat.", "warn");
+    setVelChatStatus("Chat is unavailable while site access is blocked.", "warn");
     return;
   }
   const shouldClear = window.confirm("Delete the entire Global Chat log for everyone?");
@@ -4868,25 +4892,6 @@ function initVelChat() {
     fetchVelChatMessages(true);
     fetchVelChatTyping();
   }
-}
-
-async function unlockVelChat(pinValue) {
-  const nextPin = String(pinValue || "").trim();
-  if (!nextPin) {
-    setVelChatStatus("Enter the chat PIN.", "warn");
-    return false;
-  }
-  setSessionChatPin(nextPin);
-  setVelChatLocked(false, "Unlocking chat...");
-  await fetchVelChatMessages(true);
-  if (velChatUnlocked) {
-    setVelChatStatus("Chat unlocked.", "live");
-    reportDevPresence();
-    fetchVelChatTyping();
-    velChatInput?.focus({ preventScroll: true });
-    return true;
-  }
-  return false;
 }
 
 function sanitizeCalculatorExpression(value = "") {
@@ -5590,7 +5595,7 @@ function renderRemoteDeckTargets() {
     remoteDeckTargets.innerHTML = `
       <article class="remote-device-card is-empty">
         <strong>No one online</strong>
-        <span>Open vel.os on another device, enter the PIN, then refresh.</span>
+        <span>Open vel.os on another device, choose a username, then refresh.</span>
       </article>
     `;
     return;
@@ -5655,7 +5660,7 @@ function renderRemoteDeck() {
 async function fetchRemoteDeckTargets() {
   if (!isRemoteDeckWhitelistedDevice()) return;
   if (!velChatPin) {
-    setRemoteDeckStatus("Enter the startup PIN first so Remote Deck can see online users.", "warn");
+    setRemoteDeckStatus("Remote Deck is unavailable while site access is blocked.", "warn");
     return;
   }
   if (remoteDeckTargetsLoading) return;
@@ -5841,7 +5846,7 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
     return;
   }
   if (!velChatPin) {
-    setRemoteDeckStatus("Enter the startup PIN first so Remote Deck can send across devices.", "warn");
+    setRemoteDeckStatus("Remote Deck is unavailable while site access is blocked.", "warn");
     return;
   }
   const selected = getRemoteDeckSelectedTargets();
@@ -6353,7 +6358,6 @@ function showDeviceBan(data = {}) {
   if (welcomeGate) welcomeGate.hidden = false;
   document.body.classList.add("is-onboarding", "is-access-blocked");
   if (welcomeNameForm) welcomeNameForm.hidden = true;
-  if (welcomePinForm) welcomePinForm.hidden = true;
   typeWelcomeText("Access blocked.");
   const until = data.until ? ` Time left: ${formatDevBanUntil(data.until)}.` : " Permanent ban.";
   setWelcomeStatus(`${data.message || "This device cannot access vel.os."}${until}`, "error");
@@ -6384,8 +6388,15 @@ function clearDeviceBanScreen() {
   const wasOwnerLock = ownerLockMode === "site";
   hideOwnerLockOverlay({ force: true, clearAccess: true });
   if (!wasBlocked || wasOwnerLock) return;
-  setWelcomeStatus("Access restored. Enter the PIN again.", "live");
-  showWelcomeGate("pin");
+  setSessionChatPin(OPEN_SITE_SESSION_TOKEN);
+  setVelChatLocked(false, "Access restored.");
+  if (velChatUser) {
+    completeWelcomeGate();
+    fetchVelChatMessages(true);
+  } else {
+    setWelcomeStatus("Access restored. Pick a username to continue.", "live");
+    showWelcomeGate("name");
+  }
 }
 
 function handleDevAccessData(data = {}) {
@@ -6429,9 +6440,12 @@ function handleDevAccessData(data = {}) {
     return false;
   }
   if (data.status === "kicked") {
-    clearVelChatPin(data.message || "Admin kicked this device back to the PIN screen.");
+    saveVelChatUser(null);
+    setSessionChatPin(OPEN_SITE_SESSION_TOKEN);
+    setVelChatLocked(false, data.message || "Admin signed this device out.");
     closeAllPanels();
-    showWelcomeGate("pin");
+    showWelcomeGate("name");
+    setWelcomeStatus(data.message || "Admin signed this device out. Pick a username to return.", "warn");
     return false;
   }
   if (data.status === "ok") {
@@ -6559,7 +6573,6 @@ function sendDevPresenceLeave() {
   if (!velChatPin || !normalizeVelChatUser(velChatUser)) return;
   const payload = {
     action: "leave",
-    pin: velChatPin,
     ...getDevIdentityPayload()
   };
   const body = JSON.stringify(payload);
@@ -6595,7 +6608,7 @@ async function screenApi(payload = {}, options = {}) {
     headers: getScreenHeaders(Boolean(options.admin)),
     body: JSON.stringify({
       ...payload,
-      ...(options.admin ? { adminDeviceId: velDeviceId } : { pin: velChatPin })
+      ...(options.admin ? { adminDeviceId: velDeviceId } : {})
     })
   });
   const data = await response.json().catch(() => ({}));
@@ -7074,7 +7087,7 @@ function renderLobbyState() {
 async function loadLobbyState(options = {}) {
   if (!lobbyPills || lobbyState.loading || !velChatPin) {
     renderLobbyState();
-    if (!velChatPin) setLobbyStatus("Enter the startup PIN to sync Notebook.", "warn");
+    if (!velChatPin) setLobbyStatus("Notebook is unavailable while site access is blocked.", "warn");
     return;
   }
   lobbyState.loading = true;
@@ -7092,7 +7105,7 @@ async function loadLobbyState(options = {}) {
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      clearVelChatPin(data.message || "Notebook access needs to reconnect.");
       return;
     }
     if (!response.ok) throw new Error(data.message || "Notebook could not load.");
@@ -7114,8 +7127,7 @@ async function loadLobbyState(options = {}) {
 
 async function postLobbyAction(payload = {}, message = "Lobby saved.", options = {}) {
   if (!velChatPin) {
-    setLobbyStatus("Enter the startup PIN to use Notebook.", "warn");
-    showWelcomeGate(velChatUser ? "pin" : "name");
+    setLobbyStatus("Notebook is unavailable while site access is blocked.", "warn");
     return null;
   }
   if (!options.silent) setLobbyStatus("Updating Notebook...");
@@ -7132,7 +7144,7 @@ async function postLobbyAction(payload = {}, message = "Lobby saved.", options =
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      clearVelChatPin(data.message || "Wrong PIN. Try again.");
+      clearVelChatPin(data.message || "Notebook access needs to reconnect.");
       return null;
     }
     if (!response.ok) throw new Error(data.message || "Notebook could not save.");
@@ -9102,7 +9114,7 @@ function handleYouTubeAddress(value) {
     return;
   }
 
-  window.open(normalizeUrl(trimmed), "_blank", "noopener,noreferrer");
+  openCustomWebUrl(normalizeUrl(trimmed));
 }
 
 function setYouTubeFullscreen(active) {
@@ -10733,7 +10745,7 @@ async function acceptTermsGate() {
 }
 
 function needsWelcomeGate() {
-  return Boolean(welcomeGate) && (!normalizeVelChatUser(velChatUser) || !velChatPin);
+  return Boolean(welcomeGate) && !normalizeVelChatUser(velChatUser);
 }
 
 function completeWelcomeGate() {
@@ -10749,21 +10761,14 @@ function showWelcomeGate(step = "") {
   if (!welcomeGate) return;
   velChatUser = normalizeVelChatUser(velChatUser);
   const hasUser = Boolean(velChatUser);
-  welcomeGateStep = step || (hasUser ? "pin" : "name");
+  welcomeGateStep = "name";
   welcomeGate.hidden = false;
   document.body.classList.add("is-onboarding");
   setWelcomeStatus("");
-  if (welcomeNameForm) welcomeNameForm.hidden = welcomeGateStep !== "name";
-  if (welcomePinForm) welcomePinForm.hidden = welcomeGateStep !== "pin";
-  if (welcomeGateStep === "name") {
-    typeWelcomeText("Welcome user, what should we call you?");
-    if (welcomeNameInput) welcomeNameInput.value = hasUser ? velChatUser.username : "";
-    window.setTimeout(() => welcomeNameInput?.focus({ preventScroll: true }), 420);
-    return;
-  }
-  typeWelcomeText(hasUser ? velChatUser.username : "Enter PIN to unlock vel.os.");
-  if (welcomePinInput) welcomePinInput.value = "";
-  window.setTimeout(() => welcomePinInput?.focus({ preventScroll: true }), 420);
+  if (welcomeNameForm) welcomeNameForm.hidden = false;
+  typeWelcomeText("Welcome user, what should we call you?");
+  if (welcomeNameInput) welcomeNameInput.value = hasUser ? velChatUser.username : "";
+  window.setTimeout(() => welcomeNameInput?.focus({ preventScroll: true }), 420);
 }
 
 function maybeShowWelcomeGate() {
@@ -10784,31 +10789,12 @@ async function submitWelcomeName() {
   }
   const existing = normalizeVelChatUser(velChatUser);
   saveVelChatUser(existing ? { ...existing, username } : createVelChatUser(username));
+  setSessionChatPin(OPEN_SITE_SESSION_TOKEN);
+  setVelChatLocked(false, "Site-wide chat connected.");
   renderVelChatAuth();
-  if (velChatPin) {
-    completeWelcomeGate();
-    return;
-  }
-  showWelcomeGate("pin");
-}
-
-async function submitWelcomePin() {
-  const pin = String(welcomePinInput?.value || "").trim();
-  if (!pin) {
-    setWelcomeStatus("Enter the PIN to continue.", "error");
-    welcomePinInput?.focus({ preventScroll: true });
-    return;
-  }
-  setWelcomeStatus("Checking PIN...");
-  welcomePinForm?.querySelector("button")?.toggleAttribute("disabled", true);
-  const unlocked = await unlockVelChat(pin);
-  welcomePinForm?.querySelector("button")?.toggleAttribute("disabled", false);
-  if (!unlocked) {
-    if (welcomePinInput) welcomePinInput.value = "";
-    setWelcomeStatus("Wrong PIN. Try again.", "error");
-    welcomePinInput?.focus({ preventScroll: true });
-    return;
-  }
+  fetchVelChatMessages(true);
+  fetchVelChatTyping();
+  reportDevPresence();
   const allowed = await checkDevAccess({ once: true });
   if (!allowed) return;
   setWelcomeStatus(`Welcome, ${velChatUser?.username || "user"}.`);
@@ -11999,16 +11985,251 @@ function getAppSources(app) {
   return [app.url, ...(app.mirrors || [])].filter(Boolean);
 }
 
-function setWebWindow(app, url, mirrorIndex = 0) {
+function normalizeWebBrowserTabs(items = []) {
+  const tabs = Array.isArray(items) ? items : [];
+  return tabs
+    .map((tab) => {
+      const url = normalizeUrl(tab?.url || WEB_BROWSER_HOME_URL);
+      const history = Array.isArray(tab?.history)
+        ? tab.history.map((item) => normalizeUrl(item || WEB_BROWSER_HOME_URL)).filter(Boolean)
+        : [url];
+      const uniqueHistory = history.length ? history : [url];
+      const historyIndex = Math.min(
+        Math.max(Number.parseInt(tab?.historyIndex, 10) || uniqueHistory.length - 1, 0),
+        uniqueHistory.length - 1
+      );
+      return {
+        id: String(tab?.id || createWebBrowserTabId()),
+        title: String(tab?.title || getWebBrowserTitle(url)).slice(0, 48),
+        url,
+        history: uniqueHistory.slice(-24),
+        historyIndex
+      };
+    })
+    .filter((tab) => tab.id && tab.url)
+    .slice(0, 10);
+}
+
+function createWebBrowserTabId() {
+  return `webtab-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function getWebBrowserTitle(url = "", fallback = "") {
+  if (fallback) return fallback;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("bing.com") && parsed.searchParams.get("q")) return "Search";
+    return parsed.hostname.replace(/^www\./, "") || "Browser";
+  } catch (error) {
+    return "Browser";
+  }
+}
+
+function canProxyWebUrl(url = "") {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (error) {
+    return false;
+  }
+}
+
+function getProxyWebUrl(url = "") {
+  return `/api/proxy?url=${encodeURIComponent(url)}`;
+}
+
+function isBuiltInBrowserProxyActive(app = {}) {
+  return activeWeb === "browser" && webBrowserProxyMode === "proxy" && app.mode !== "videoEmbed";
+}
+
+function getActiveWebBrowserTab() {
+  let tab = webBrowserTabState.find((item) => item.id === activeWebBrowserTabId);
+  if (tab) return tab;
+  tab = webBrowserTabState[0];
+  if (!tab) {
+    tab = createWebBrowserTab(WEB_BROWSER_HOME_URL, { activate: true, render: false });
+  }
+  activeWebBrowserTabId = tab.id;
+  return tab;
+}
+
+function createWebBrowserTab(url = WEB_BROWSER_HOME_URL, options = {}) {
+  const normalizedUrl = normalizeUrl(url || WEB_BROWSER_HOME_URL);
+  const tab = {
+    id: createWebBrowserTabId(),
+    title: getWebBrowserTitle(normalizedUrl, options.title || ""),
+    url: normalizedUrl,
+    history: [normalizedUrl],
+    historyIndex: 0
+  };
+  webBrowserTabState = [...webBrowserTabState, tab].slice(-10);
+  if (options.activate !== false) activeWebBrowserTabId = tab.id;
+  persistWebBrowserTabs();
+  if (options.render !== false) {
+    renderWebBrowserTabs();
+    syncWebBrowserControls();
+  }
+  return tab;
+}
+
+function persistWebBrowserTabs() {
+  storage.set(WEB_BROWSER_TABS_KEY, JSON.stringify(webBrowserTabState.slice(-10)));
+  storage.set(WEB_BROWSER_ACTIVE_TAB_KEY, activeWebBrowserTabId || "");
+}
+
+function renderWebBrowserTabs() {
+  if (!webBrowserTabs) return;
+  const activeTab = getActiveWebBrowserTab();
+  webBrowserTabs.innerHTML = webBrowserTabState.map((tab) => {
+    const isActive = tab.id === activeTab.id;
+    return `
+      <button class="web-tab${isActive ? " is-active" : ""}" type="button" role="tab" aria-selected="${isActive ? "true" : "false"}" data-web-tab-id="${escapeHtml(tab.id)}">
+        <span>${escapeHtml(tab.title || getWebBrowserTitle(tab.url))}</span>
+        <small>${webBrowserProxyMode === "proxy" ? "Proxy" : "Direct"}</small>
+        <b data-close-web-tab="${escapeHtml(tab.id)}" aria-label="Close tab">Close</b>
+      </button>
+    `;
+  }).join("");
+}
+
+function setWebBrowserStatus(message = "", tone = "") {
+  if (!webBrowserStatus) return;
+  webBrowserStatus.textContent = message || (webBrowserProxyMode === "proxy" ? "Proxy mode ready." : "Direct mode ready.");
+  webBrowserStatus.dataset.tone = tone;
+}
+
+function syncWebBrowserControls() {
+  const tab = getActiveWebBrowserTab();
+  const canGoBack = tab.historyIndex > 0;
+  const canGoForward = tab.historyIndex < tab.history.length - 1;
+  if (webBackButton) webBackButton.disabled = !canGoBack;
+  if (webForwardButton) webForwardButton.disabled = !canGoForward;
+  if (webProxyToggle) {
+    webProxyToggle.textContent = webBrowserProxyMode === "proxy" ? "Proxy On" : "Direct";
+    webProxyToggle.classList.toggle("is-active", webBrowserProxyMode === "proxy");
+    webProxyToggle.setAttribute("aria-pressed", String(webBrowserProxyMode === "proxy"));
+  }
+  renderWebBrowserTabs();
+}
+
+function syncActiveWebBrowserTab(app, url, options = {}) {
+  if (!canProxyWebUrl(url)) {
+    syncWebBrowserControls();
+    return;
+  }
+  const shouldRecord = options.recordHistory !== false;
+  const tab = getActiveWebBrowserTab();
+  const normalizedUrl = normalizeUrl(url);
+  tab.title = getWebBrowserTitle(normalizedUrl, app?.title || "");
+  if (shouldRecord && tab.url !== normalizedUrl) {
+    tab.history = tab.history.slice(0, tab.historyIndex + 1);
+    tab.history.push(normalizedUrl);
+    tab.history = tab.history.slice(-24);
+    tab.historyIndex = tab.history.length - 1;
+  } else if (!tab.history.length) {
+    tab.history = [normalizedUrl];
+    tab.historyIndex = 0;
+  }
+  tab.url = normalizedUrl;
+  persistWebBrowserTabs();
+  syncWebBrowserControls();
+}
+
+function getBrowserShellApp(url = currentWebUrl) {
+  const isSearch = String(url).includes("bing.com/search") || String(url).includes("google.com/search");
+  return {
+    title: isSearch ? "Search" : "Web Browser",
+    tag: webBrowserProxyMode === "proxy" ? "Proxy Browser" : "Browser",
+    description: isSearch ? "Search results opened inside vel.os." : "Custom browser tab opened inside vel.os.",
+    embedBlocked: false,
+    mirrors: [],
+    note: webBrowserProxyMode === "proxy"
+      ? "Proxy mode fetches pages through the vel.os server. Some scripts, logins, and protected pages may still fail."
+      : "Direct mode loads the site in a normal browser frame. Use Proxy when a page blocks embedding."
+  };
+}
+
+function loadWebFrameUrl(url, app = {}) {
+  if (!webFrame) return;
+  if (app.mode === "videoEmbed" && url === "about:blank") {
+    webFrame.removeAttribute("src");
+    webFrame.srcdoc = makeVideoPromptFrame(app);
+    setWebBrowserStatus("Waiting for a video link.");
+    return;
+  }
+  if (!canProxyWebUrl(url)) {
+    webFrame.removeAttribute("srcdoc");
+    webFrame.src = url || "about:blank";
+    setWebBrowserStatus("Blank tab ready.");
+    return;
+  }
+  const useProxy = isBuiltInBrowserProxyActive(app);
+  webFrame.removeAttribute("srcdoc");
+  webFrame.src = useProxy ? getProxyWebUrl(url) : url;
+  setWebBrowserStatus(useProxy ? "Loading through proxy..." : "Loading direct...");
+}
+
+function openWebBrowserTab(tabId = "") {
+  const tab = webBrowserTabState.find((item) => item.id === tabId);
+  if (!tab) return;
+  activeWebBrowserTabId = tab.id;
+  persistWebBrowserTabs();
+  activeWeb = "browser";
+  setWebWindow(getBrowserShellApp(tab.url), tab.url, 0, { recordHistory: false });
+  openPanel("web");
+}
+
+function closeWebBrowserTab(tabId = "") {
+  const closingActive = activeWebBrowserTabId === tabId;
+  webBrowserTabState = webBrowserTabState.filter((tab) => tab.id !== tabId);
+  if (!webBrowserTabState.length) {
+    createWebBrowserTab(WEB_BROWSER_HOME_URL, { activate: true, render: false });
+  }
+  if (closingActive) {
+    activeWebBrowserTabId = webBrowserTabState.at(-1)?.id || "";
+    const tab = getActiveWebBrowserTab();
+    activeWeb = "browser";
+    setWebWindow(getBrowserShellApp(tab.url), tab.url, 0, { recordHistory: false });
+  }
+  persistWebBrowserTabs();
+  syncWebBrowserControls();
+}
+
+function navigateWebHistory(direction = 0) {
+  const tab = getActiveWebBrowserTab();
+  const nextIndex = tab.historyIndex + direction;
+  if (nextIndex < 0 || nextIndex >= tab.history.length) return;
+  tab.historyIndex = nextIndex;
+  tab.url = tab.history[nextIndex];
+  activeWeb = "browser";
+  persistWebBrowserTabs();
+  setWebWindow(getBrowserShellApp(tab.url), tab.url, 0, { recordHistory: false });
+}
+
+function setWebProxyMode(mode = "direct") {
+  webBrowserProxyMode = mode === "proxy" ? "proxy" : "direct";
+  storage.set(WEB_BROWSER_PROXY_KEY, webBrowserProxyMode);
+  syncWebBrowserControls();
+  if (isDrawerOpen("web")) {
+    const app = webApps[activeWeb] || getBrowserShellApp(currentWebUrl);
+    setWebWindow(app, currentWebUrl, currentWebMirrorIndex, { recordHistory: false });
+  }
+}
+
+function setWebWindow(app, url, mirrorIndex = 0, options = {}) {
   currentWebUrl = url;
   currentWebMirrorIndex = mirrorIndex;
   webTag.textContent = app.tag;
   webTitle.textContent = app.title;
   webDescription.textContent = app.description;
   webUrlInput.value = url === "about:blank" ? "" : url;
+  syncActiveWebBrowserTab(app, url, options);
   const sources = getAppSources(app);
   const sourceLabel = sources.length > 1 ? ` Source ${mirrorIndex + 1}/${sources.length}.` : "";
-  webNote.textContent = `${app.note}${sourceLabel}`;
+  const modeLabel = canProxyWebUrl(url)
+    ? (isBuiltInBrowserProxyActive(app) ? " Proxy mode is on." : " Direct mode is on.")
+    : "";
+  webNote.textContent = `${app.note}${sourceLabel}${modeLabel}`;
   if (mediaTools) {
     mediaTools.hidden = app.mode !== "videoEmbed";
   }
@@ -12016,7 +12237,7 @@ function setWebWindow(app, url, mirrorIndex = 0) {
     mediaEmbedInput.value = "";
     mediaEmbedInput.placeholder = `Paste a ${app.title} video link or ID`;
   }
-  const knownBlocked = app.embedBlocked && mirrorIndex === 0;
+  const knownBlocked = app.embedBlocked && mirrorIndex === 0 && !isBuiltInBrowserProxyActive(app);
   webWarning.hidden = !knownBlocked;
   webWarningText.textContent = knownBlocked
     ? app.note
@@ -12039,9 +12260,9 @@ function setWebWindow(app, url, mirrorIndex = 0) {
   } else if (knownBlocked) {
     webFrame.removeAttribute("src");
     webFrame.srcdoc = makeBlockedFrame(app, url);
+    setWebBrowserStatus("Direct frame blocked. Try Proxy or a mirror.", "warn");
   } else {
-    webFrame.removeAttribute("srcdoc");
-    webFrame.src = url;
+    loadWebFrameUrl(url, app);
   }
 }
 
@@ -12115,12 +12336,42 @@ function openCustomWebUrl(value) {
         : "Custom URL opened inside vel.os.",
       embedBlocked: false,
       mirrors: [],
-      note: "This is a normal browser frame. If a site blocks embedding or your network blocks it, vel.os cannot override that."
+      note: webBrowserProxyMode === "proxy"
+        ? "Proxy mode fetches the page through vel.os. Some scripts, logins, and protected pages may still fail."
+        : "Direct mode loads a normal browser frame. Switch to Proxy if a site blocks embedding."
     },
     url,
     0
   );
   openPanel("web");
+}
+
+function syncLoadedWebBrowserUrl(value = "") {
+  if (activeWeb !== "browser" || !canProxyWebUrl(value)) return;
+  const url = normalizeUrl(value);
+  const app = getBrowserShellApp(url);
+  currentWebUrl = url;
+  if (webUrlInput) webUrlInput.value = url;
+  if (webTag) webTag.textContent = app.tag;
+  if (webTitle) webTitle.textContent = app.title;
+  if (webDescription) webDescription.textContent = app.description;
+  syncActiveWebBrowserTab(app, url);
+}
+
+function openExternalLinkInsideSite(event) {
+  const link = event.target?.closest?.("a[href]");
+  if (!link || link.hasAttribute("download")) return;
+  const rawHref = link.getAttribute("href") || "";
+  if (/^(#|mailto:|tel:|sms:|javascript:|data:|blob:)/i.test(rawHref)) return;
+  let url;
+  try {
+    url = new URL(rawHref, window.location.href);
+  } catch (error) {
+    return;
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.origin === window.location.origin) return;
+  event.preventDefault();
+  openCustomWebUrl(url.href);
 }
 
 openLauncherButton?.addEventListener("click", () => {
@@ -12315,16 +12566,6 @@ welcomeNameForm?.addEventListener("submit", (event) => {
 
 termsAcceptButton?.addEventListener("click", () => {
   acceptTermsGate();
-});
-
-welcomePinForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  submitWelcomePin();
-});
-
-velChatPinForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  unlockVelChat(velChatPinInput?.value || "");
 });
 
 velChatUserPill?.addEventListener("click", () => {
@@ -12695,7 +12936,7 @@ devOnlineList?.addEventListener("click", (event) => {
   const kickButton = event.target.closest("[data-dev-kick]");
   if (kickButton) {
     const username = kickButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
-    if (window.confirm(`Kick ${username} back to the PIN screen?`)) {
+    if (window.confirm(`Sign ${username} out and return them to the username screen?`)) {
       sendDevControl("kick", {
         targetUserId: kickButton.dataset.devKick || "",
         targetDeviceId: kickButton.dataset.devDevice || ""
@@ -12979,7 +13220,7 @@ youtubeFrameWrap?.addEventListener("click", (event) => {
   }
   const openButton = event.target.closest("[data-youtube-open-current]");
   if (openButton) {
-    window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
+    openCustomWebUrl(getYouTubeWatchUrl());
     return;
   }
 
@@ -13012,7 +13253,7 @@ youtubeSaveAllButton?.addEventListener("click", () => {
 });
 
 youtubeOpenTabButton?.addEventListener("click", () => {
-  window.open(getYouTubeWatchUrl(), "_blank", "noopener,noreferrer");
+  openCustomWebUrl(getYouTubeWatchUrl());
 });
 
 youtubeFullscreenButton?.addEventListener("click", () => {
@@ -13168,6 +13409,87 @@ webUrlForm.addEventListener("submit", (event) => {
   openCustomWebUrl(webUrlInput.value);
 });
 
+webBrowserTabs?.addEventListener("click", (event) => {
+  const closeButton = event.target.closest("[data-close-web-tab]");
+  if (closeButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeWebBrowserTab(closeButton.dataset.closeWebTab);
+    return;
+  }
+
+  const tabButton = event.target.closest("button[data-web-tab-id]");
+  if (!tabButton) return;
+  openWebBrowserTab(tabButton.dataset.webTabId);
+});
+
+webBackButton?.addEventListener("click", () => {
+  navigateWebHistory(-1);
+});
+
+webForwardButton?.addEventListener("click", () => {
+  navigateWebHistory(1);
+});
+
+webHomeButton?.addEventListener("click", () => {
+  activeWeb = "browser";
+  setWebWindow(getBrowserShellApp(WEB_BROWSER_HOME_URL), WEB_BROWSER_HOME_URL);
+  openPanel("web");
+});
+
+webNewTabButton?.addEventListener("click", () => {
+  const tab = createWebBrowserTab(WEB_BROWSER_HOME_URL, { activate: true, title: "New Tab" });
+  activeWeb = "browser";
+  setWebWindow(getBrowserShellApp(tab.url), tab.url, 0, { recordHistory: false });
+  openPanel("web");
+});
+
+webProxyToggle?.addEventListener("click", () => {
+  setWebProxyMode(webBrowserProxyMode === "proxy" ? "direct" : "proxy");
+});
+
+window.addEventListener("message", (event) => {
+  if (event.source !== webFrame?.contentWindow) return;
+  const type = String(event.data?.type || "");
+  const url = String(event.data?.url || "");
+  if (!canProxyWebUrl(url)) return;
+  if (type === "vel-os-browser-navigate") {
+    openCustomWebUrl(url);
+    return;
+  }
+  if (type === "vel-os-browser-loaded") {
+    syncLoadedWebBrowserUrl(url);
+    setWebBrowserStatus("Page loaded inside vel.os.");
+  }
+});
+
+webFrame?.addEventListener("load", () => {
+  if (!currentWebUrl || currentWebUrl === "about:blank") return;
+  setWebBrowserStatus(isBuiltInBrowserProxyActive(webApps[activeWeb] || getBrowserShellApp(currentWebUrl))
+    ? "Page loaded inside vel.os."
+    : "Direct page loaded.");
+});
+
+document.addEventListener("click", openExternalLinkInsideSite);
+
+document.querySelectorAll("[data-web-quick-url]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const url = button.dataset.webQuickUrl || WEB_BROWSER_HOME_URL;
+    if (url.endsWith("q=")) {
+      webUrlInput?.focus({ preventScroll: true });
+      webUrlInput.value = "";
+      webUrlInput.placeholder = `Search with ${button.textContent.trim()}`;
+      setWebBrowserStatus(`Type a ${button.textContent.trim()} search and press Go.`);
+      return;
+    }
+    activeWeb = "browser";
+    setWebWindow(getBrowserShellApp(url), url);
+    openPanel("web");
+  });
+});
+
+syncWebBrowserControls();
+
 mediaEmbedForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   const app = webApps[activeWeb];
@@ -13289,7 +13611,7 @@ velHubClosePlayerButton?.addEventListener("click", () => {
 
 velHubOpenTabButton?.addEventListener("click", () => {
   if (velHubState.currentMovie?.sourceUrl) {
-    window.open(velHubState.currentMovie.sourceUrl, "_blank", "noopener,noreferrer");
+    openCustomWebUrl(velHubState.currentMovie.sourceUrl);
   }
 });
 
@@ -13451,11 +13773,12 @@ webReloadButton?.addEventListener("click", () => {
     webFrame.srcdoc = makeVideoPromptFrame(app);
     return;
   }
-  if (app?.embedBlocked && currentWebMirrorIndex === 0) {
+  if (app?.embedBlocked && currentWebMirrorIndex === 0 && !isBuiltInBrowserProxyActive(app)) {
     webFrame.srcdoc = makeBlockedFrame(app, currentWebUrl);
+    setWebBrowserStatus("Direct frame blocked. Try Proxy or a mirror.", "warn");
     return;
   }
-  webFrame.src = currentWebUrl;
+  loadWebFrameUrl(currentWebUrl, app || getBrowserShellApp(currentWebUrl));
 });
 
 webMirrorButton?.addEventListener("click", () => {
@@ -14637,7 +14960,7 @@ const flappy = (() => {
     storage.set(localLeaderboardKey, JSON.stringify(leaderboard));
     renderLeaderboard(false, false);
     if (!velChatPin) {
-      if (statusElement) statusElement.textContent = `Run ended at ${score}. Login with the site PIN to post global scores.`;
+      if (statusElement) statusElement.textContent = `Run ended at ${score}. Site access is blocked, so the score was not posted.`;
       return;
     }
     try {
