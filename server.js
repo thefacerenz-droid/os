@@ -596,6 +596,71 @@ function handleTikTokLogout(req, res) {
   sendJson(res, 200, { ok: true });
 }
 
+function isTikTokHostname(hostname = "") {
+  const normalized = String(hostname).toLowerCase().replace(/\.$/, "");
+  return normalized === "tiktok.com" || normalized.endsWith(".tiktok.com");
+}
+
+function getTikTokVideoId(value = "") {
+  return String(value).match(/\/video\/(\d{8,})/)?.[1] || "";
+}
+
+async function handleTikTokResolve(req, res, url) {
+  const rawUrl = String(url.searchParams.get("url") || "").trim();
+  let currentUrl;
+
+  try {
+    currentUrl = new URL(rawUrl);
+  } catch (error) {
+    return sendJson(res, 400, { error: "invalid_url", message: "Paste a valid TikTok share link." });
+  }
+
+  if (currentUrl.protocol !== "https:" || !isTikTokHostname(currentUrl.hostname)) {
+    return sendJson(res, 400, { error: "invalid_host", message: "Only HTTPS TikTok links are supported." });
+  }
+
+  const directId = getTikTokVideoId(currentUrl.pathname);
+  if (directId) return sendJson(res, 200, { id: directId, url: currentUrl.href });
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    for (let redirectCount = 0; redirectCount < 5; redirectCount += 1) {
+      const response = await fetch(currentUrl, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36"
+        }
+      });
+      response.body?.cancel().catch(() => {});
+
+      const location = response.headers.get("location");
+      if (!location || response.status < 300 || response.status >= 400) break;
+
+      const nextUrl = new URL(location, currentUrl);
+      if (nextUrl.protocol !== "https:" || !isTikTokHostname(nextUrl.hostname)) {
+        return sendJson(res, 400, { error: "invalid_redirect", message: "TikTok returned an unsupported link." });
+      }
+
+      currentUrl = nextUrl;
+      const id = getTikTokVideoId(currentUrl.pathname);
+      if (id) return sendJson(res, 200, { id, url: currentUrl.href });
+    }
+
+    return sendJson(res, 422, { error: "missing_video", message: "That TikTok link does not point to a public video." });
+  } catch (error) {
+    const message = error.name === "AbortError"
+      ? "TikTok took too long to resolve that link."
+      : "TikTok could not resolve that share link.";
+    return sendJson(res, 502, { error: "resolve_failed", message });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function handleTikTokAuthStart(req, res) {
   if (!tiktokConfigured()) {
     return sendJson(res, 503, {
@@ -1046,6 +1111,7 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/tiktok/status") return handleTikTokStatus(req, res);
     if (req.method === "POST" && url.pathname === "/api/tiktok/logout") return handleTikTokLogout(req, res);
+    if (req.method === "GET" && url.pathname === "/api/tiktok/resolve") return await handleTikTokResolve(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/start") return await handleTikTokAuthStart(req, res);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/callback") return await handleTikTokCallback(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/tiktok/profile") return await handleTikTokProfile(req, res);

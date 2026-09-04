@@ -11941,46 +11941,43 @@ function renderTikTokFeed() {
     !query || [video.title, video.video_description, video.share_url]
       .some((field) => String(field || "").toLowerCase().includes(query))
   );
-  const filteredDemoVideos = getFilteredTikToks();
-  const demoVideos = (filteredDemoVideos.length ? filteredDemoVideos : mediaTikTokCatalog).slice(0, 18);
-  const useConnectedFeed = mediaState.tiktokConnected && connectedVideos.length > 0;
+  const hasConnectedFeed = mediaState.tiktokConnected && connectedVideos.length > 0;
   const loginControl = mediaState.tiktokConnected
     ? `<button class="ghost-button tiktok-login-button" type="button" data-tiktok-disconnect title="Disconnect TikTok">${escapeHtml(profileName)}</button>`
     : mediaState.tiktokConfigured
       ? '<button class="ghost-button is-solid tiktok-login-button" type="button" data-tiktok-connect>Sign in with TikTok</button>'
       : '<button class="ghost-button tiktok-login-button" type="button" disabled title="Add TikTok Login Kit credentials to the server">Sign in with TikTok</button>';
 
-  const slides = useConnectedFeed
-    ? connectedVideos.map((video, index) => `
-        <article class="tiktok-feed-card tiktok-official-card">
-          <div class="tiktok-phone">
-            <iframe
-              title="${escapeHtml(video.title || video.video_description || "TikTok video")}"
-              src="${escapeHtml(buildVideoEmbedUrl("tiktok", video.id).replace("autoplay=1", "autoplay=0"))}"
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              loading="${index < 2 ? "eager" : "lazy"}"
-              data-tiktok-feed-embed
-              allowfullscreen>
-            </iframe>
-          </div>
-        </article>
-      `).join("")
-    : demoVideos.map((item, index) => `
-        <article class="tiktok-feed-card tiktok-demo-card">
-          <div class="tiktok-phone">
-            ${renderFeedVideo(item, index)}
-            <div class="feed-overlay">
-              <strong>${escapeHtml(item.creator)}</strong>
-              <span>${escapeHtml(item.title)}</span>
-              <small>${renderFeedTags(item.tags)}</small>
-              <small class="feed-credit">${escapeHtml(veltokClipPool[index % veltokClipPool.length].source)}</small>
+  const content = hasConnectedFeed
+    ? `<section class="tiktok-feed" aria-label="Connected TikTok videos">
+        ${connectedVideos.map((video, index) => `
+          <article class="tiktok-feed-card tiktok-official-card">
+            <div class="tiktok-phone">
+              <iframe
+                title="${escapeHtml(video.title || video.video_description || "TikTok video")}" 
+                src="${escapeHtml(buildVideoEmbedUrl("tiktok", video.id).replace("autoplay=1", "autoplay=0"))}"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                loading="${index < 2 ? "eager" : "lazy"}"
+                data-tiktok-feed-embed
+                allowfullscreen>
+              </iframe>
             </div>
-          </div>
-        </article>
-      `).join("");
+          </article>
+        `).join("")}
+      </section>`
+    : `<section class="tiktok-official-empty" aria-label="Open a TikTok post">
+        <img src="./assets/images/apps/tiktok.svg" alt="" />
+        <p class="section-label">Official TikTok player</p>
+        <h3>Watch a TikTok post</h3>
+        <p>Paste a public TikTok video link in the field above.</p>
+        <div class="tiktok-empty-actions">
+          <button class="ghost-button is-solid" type="button" data-tiktok-focus>Paste link</button>
+          <a class="ghost-button" href="https://www.tiktok.com/" target="_blank" rel="noopener">Open TikTok</a>
+        </div>
+      </section>`;
 
-  const feedLabel = useConnectedFeed ? "Your videos" : "Guest feed";
+  const feedLabel = hasConnectedFeed ? "Your public videos" : "Real posts only";
   const errorLabel = mediaState.tiktokError
     ? `<span class="tiktok-feed-notice">${escapeHtml(mediaState.tiktokError)}</span>`
     : "";
@@ -11998,9 +11995,7 @@ function renderTikTokFeed() {
           ${loginControl}
         </div>
       </header>
-      <section class="tiktok-feed" aria-label="Swipeable TikTok feed">
-        ${slides}
-      </section>
+      ${content}
     </section>
   `;
 }
@@ -12283,7 +12278,7 @@ function renderMediaHub() {
   });
 }
 
-function handleMediaSearch(value) {
+async function handleMediaSearch(value) {
   const query = value.trim();
   const youtubeId = extractYouTubeId(query);
   const tiktokId = extractTikTokId(query);
@@ -12301,6 +12296,29 @@ function handleMediaSearch(value) {
       embed_link: buildVideoEmbedUrl("tiktok", tiktokId),
       share_url: query
     });
+    return;
+  }
+
+  if (/^https:\/\/([a-z0-9-]+\.)*tiktok\.com\//i.test(query)
+      && (mediaState.provider === "tiktok" || mediaState.provider === "all")) {
+    mediaLoading.hidden = false;
+    mediaResultsCopy.textContent = "Resolving TikTok link...";
+    try {
+      const response = await fetch(`/api/tiktok/resolve?url=${encodeURIComponent(query)}`);
+      const result = await response.json();
+      if (!response.ok || !result.id) throw new Error(result.message || "TikTok could not open that link.");
+      openTikTokPlayer({
+        id: result.id,
+        title: "TikTok post",
+        embed_link: buildVideoEmbedUrl("tiktok", result.id),
+        share_url: result.url || query
+      });
+    } catch (error) {
+      mediaState.tiktokError = error.message || "TikTok could not open that link.";
+      renderMediaHub();
+    } finally {
+      mediaLoading.hidden = true;
+    }
     return;
   }
 
