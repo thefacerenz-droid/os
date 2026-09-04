@@ -2583,3 +2583,159 @@ body.is-clever-entry {
     margin-top: 24px;
   }
 }
+
+/* True app fullscreen and distraction-free embedded games. */
+html:fullscreen,
+html:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  background: var(--signal-bg);
+}
+
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-panel {
+  display: block;
+  padding: var(--signal-switcher-height) 0 0;
+  overflow: hidden;
+}
+
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-panel > .drawer-head,
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-panel > .web-toolbar {
+  display: none;
+}
+
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-shell,
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-frame-wrap,
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-shell {
+  position: relative;
+  display: block;
+  height: calc(100dvh - var(--signal-switcher-height));
+}
+
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-frame {
+  border: 0;
+  border-radius: 0;
+}
+
+body[data-active-panel="web"]:not([data-active-web="browser"]) .web-warning:not([hidden]) {
+  position: absolute;
+  inset: 12px 12px auto;
+  z-index: 4;
+  border-radius: 8px;
+}
+
+body[data-active-panel="game"] .game-panel {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--signal-switcher-height) + 8px) 12px 12px;
+  overflow: hidden;
+}
+
+body[data-active-panel="game"] .game-panel > .drawer-head,
+body[data-active-panel="game"] .game-panel > .play-meta {
+  display: none;
+}
+
+body[data-active-panel="game"] .game-panel > .quick-switchers {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 1px 0 5px;
+  overflow-x: auto;
+}
+
+body[data-active-panel="game"] .game-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px;
+  overflow: auto;
+  border: 0;
+  background: transparent;
+}
+
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: calc(var(--signal-switcher-height) + 10px) 12px 12px;
+  overflow: hidden;
+}
+
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .media-head,
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .media-tabs,
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .media-status,
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .media-grid,
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .load-more-wrap {
+  display: none;
+}
+
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .media-search {
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: min(820px, 100%);
+  margin: 0 auto;
+}
+
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) > .media-player {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(820px, 100%);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 4px 0 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) .media-player-head {
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) .media-player-frame {
+  justify-self: center;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  aspect-ratio: 9 / 16;
+  border-radius: 8px;
+}
+
+@media (max-width: 760px) {
+  body[data-active-panel="web"]:not([data-active-web="browser"]) .web-panel {
+    padding: var(--signal-switcher-height) 0 0;
+  }
+
+  body[data-active-panel="game"] .game-panel {
+    padding: calc(var(--signal-switcher-height) + 6px) 6px 6px;
+  }
+
+  body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) {
+    padding: calc(var(--signal-switcher-height) + 7px) 7px 7px;
+  }
+
+  body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) .media-player-head {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) .media-player-head h3 {
+    font-size: 1rem;
+  }
+
+  body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) .media-player-head .ghost-button {
+    min-height: 38px;
+    padding: 0 10px;
+  }
+}

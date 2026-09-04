@@ -2128,6 +2128,11 @@ const utilityApps = {
 };
 
 const MEDIA_YOUTUBE_PAGE_SIZE = 12;
+const TIKTOK_STARTER_VIDEO = {
+  id: "6718335390845095173",
+  title: "Featured TikTok",
+  share_url: "https://www.tiktok.com/@scout2015/video/6718335390845095173"
+};
 
 const wallpaperOptions = {
   vel: {
@@ -3747,6 +3752,7 @@ function renderRecentApps() {
 function syncTaskbarState() {
   document.body.classList.toggle("has-open-app", Boolean(activePanel));
   document.body.dataset.activePanel = activePanel || "desktop";
+  document.body.dataset.activeWeb = activePanel === "web" ? activeWeb : "";
   let activeAppTitle = utilityApps[activePanel]?.title || "App";
   if (activePanel === "launcher") activeAppTitle = "App Store";
   if (activePanel === "web") activeAppTitle = webApps[activeWeb]?.title || "Web Browser";
@@ -3907,6 +3913,32 @@ function suspendPanelPlayback(name) {
 
 }
 
+function requestSiteFullscreen() {
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fullscreenElement) return;
+  const root = document.documentElement;
+  const request = root?.requestFullscreen || root?.webkitRequestFullscreen || root?.msRequestFullscreen;
+  if (!request) return;
+  try {
+    const result = request.call(root);
+    result?.catch?.(() => {});
+  } catch (error) {
+    // The CSS app shell still fills the viewport when native fullscreen is unavailable.
+  }
+}
+
+function exitSiteFullscreen() {
+  const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!fullscreenElement) return;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  try {
+    const result = exit?.call(document);
+    result?.catch?.(() => {});
+  } catch (error) {
+    return;
+  }
+}
+
 function openPanel(name) {
   if (name === "remoteDeck" && !isRemoteDeckWhitelistedDevice()) {
     openPanel("dev");
@@ -3917,6 +3949,7 @@ function openPanel(name) {
     showDevAppLocked(name);
     return false;
   }
+  requestSiteFullscreen();
   if (activePanel === "chat" && name !== "chat") {
     setVelChatCollapsed(true);
   }
@@ -3953,6 +3986,10 @@ function openPanel(name) {
 
   if (name === "media" || name === "chat") {
     recordRecentApp({ type: "panel", id: name });
+  }
+
+  if (name === "media" && mediaState.provider === "tiktok" && mediaPlayer?.hidden) {
+    openTikTokPlayer(TIKTOK_STARTER_VIDEO);
   }
 
   if (name === "velhub") {
@@ -4020,10 +4057,12 @@ function closeAllPanels() {
   activePanel = "";
   pauseAllFeedMedia();
   syncTaskbarState();
+  exitSiteFullscreen();
   reportDevPresence();
 }
 
 function closePanel(name) {
+  const wasActive = activePanel === name;
   if (name === "chat") {
     setVelChatCollapsed(true);
   }
@@ -4033,6 +4072,7 @@ function closePanel(name) {
     activePanel = "";
   }
   syncTaskbarState();
+  if (wasActive) exitSiteFullscreen();
   reportDevPresence();
 }
 
@@ -11478,7 +11518,7 @@ function buildVideoEmbedUrl(provider, value) {
 
   if (provider === "tiktok") {
     const id = extractTikTokId(value);
-    return id ? `https://www.tiktok.com/player/v1/${id}?controls=1&music_info=1&description=1` : "";
+    return id ? `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&controls=1&music_info=1&description=1` : "";
   }
 
   return "";
@@ -11959,14 +11999,16 @@ function openTikTokPlayer(video) {
   mediaPlayer.hidden = false;
   mediaPlayerProvider.textContent = "TikTok";
   mediaPlayerTitle.textContent = video.title || video.video_description || "TikTok video";
-  mediaPlayerMeta.textContent = "TikTok video";
+  mediaPlayerMeta.textContent = "Loading TikTok player...";
 
   if (video.embed_link) {
     mediaPlayerFrame.innerHTML = `
       <iframe
         title="${escapeHtml(video.title || "TikTok video")}"
         src="${escapeHtml(video.embed_link)}"
-        allow="encrypted-media; fullscreen; picture-in-picture; web-share"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        loading="eager"
         allowfullscreen>
       </iframe>
     `;
@@ -11975,7 +12017,9 @@ function openTikTokPlayer(video) {
       <iframe
         title="${escapeHtml(video.title || "TikTok video")}"
         src="${escapeHtml(buildVideoEmbedUrl("tiktok", video.id))}"
-        allow="encrypted-media; fullscreen; picture-in-picture; web-share"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        loading="eager"
         allowfullscreen>
       </iframe>
     `;
@@ -11994,6 +12038,23 @@ function openTikTokPlayer(video) {
 
   mediaPlayer.scrollIntoView({ behavior: "smooth", block: "nearest" });
   mediaPlayerClose?.focus({ preventScroll: true });
+}
+
+function handleTikTokPlayerMessage(event) {
+  const frame = mediaPlayerFrame?.querySelector("iframe");
+  if (!frame || event.source !== frame.contentWindow || event.origin !== "https://www.tiktok.com") return;
+  const message = event.data;
+  if (!message || message["x-tiktok-player"] !== true) return;
+
+  if (message.type === "onPlayerReady") {
+    mediaPlayerMeta.textContent = "Ready to play";
+    frame.contentWindow?.postMessage({ type: "play", value: null, "x-tiktok-player": true }, event.origin);
+    return;
+  }
+
+  if (message.type === "onPlayerError" || message.type === "onError") {
+    mediaPlayerMeta.textContent = "This post could not play. Paste another TikTok link above.";
+  }
 }
 
 function getFeedAudio(video) {
@@ -13622,6 +13683,8 @@ launcherGameGrid?.addEventListener("click", (event) => {
       openYouTubeApp();
     } else if (panelButton.dataset.openPanel === "velhub") {
       openVelHubApp();
+    } else if (panelButton.dataset.openPanel === "media") {
+      openMediaProvider("tiktok");
     } else {
       openPanel(panelButton.dataset.openPanel);
     }
@@ -13647,6 +13710,10 @@ recentAppsTray?.addEventListener("click", (event) => {
   }
   if (type === "panel" && id === "velhub") {
     openVelHubApp();
+    return;
+  }
+  if (type === "panel" && id === "media") {
+    openMediaProvider("tiktok");
     return;
   }
   if (type === "panel" && utilityApps[id]?.panel) openPanel(utilityApps[id].panel);
@@ -13765,6 +13832,8 @@ mediaSearchForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   handleMediaSearch(mediaSearchInput.value);
 });
+
+window.addEventListener("message", handleTikTokPlayerMessage);
 
 mediaSearchInput?.addEventListener("input", () => {
   window.clearTimeout(mediaSearchDebounceTimer);
