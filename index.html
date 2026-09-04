@@ -12,7 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/images/clever-c.svg" />
     <link rel="shortcut icon" href="./assets/images/clever-c.svg" />
     <link rel="stylesheet" href="./styles.css?v=core-v3" />
-    <link rel="stylesheet" href="./ui-remake.css?v=tiktok-official-v10" />
+    <link rel="stylesheet" href="./ui-remake.css?v=messages-v11" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -292,6 +292,87 @@
               </button>
             </div>
           </section>
+        </div>
+      </section>
+
+      <section class="drawer messages-drawer" id="messagesDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close Messages" data-close-panel="messages"></button>
+        <div class="drawer-panel messages-panel">
+          <header class="messages-appbar">
+            <div class="messages-brand">
+              <img src="./assets/images/apps/stranger-chat-cover.png" alt="" />
+              <div><strong>Messages</strong><span id="messagesConnectionLabel">Connecting</span></div>
+            </div>
+            <div class="messages-appbar-actions">
+              <button class="ghost-button" id="messagesNewGroup" type="button">New group</button>
+              <button class="ghost-button" type="button" data-close-panel="messages">Close</button>
+            </div>
+          </header>
+
+          <div class="messages-workspace">
+            <aside class="messages-conversations" aria-label="Conversations">
+              <div class="messages-self" id="messagesSelf"></div>
+              <label class="messages-search">
+                <span>Search</span>
+                <input id="messagesSearch" type="search" autocomplete="off" placeholder="Find a conversation" />
+              </label>
+              <div class="messages-conversation-list" id="messagesConversationList"></div>
+            </aside>
+
+            <main class="messages-thread">
+              <header class="messages-thread-head">
+                <button class="messages-mobile-back" id="messagesMobileBack" type="button" aria-label="Show conversations">Back</button>
+                <div class="messages-thread-title">
+                  <strong id="messagesThreadName">Everyone</strong>
+                  <span id="messagesThreadMeta">Global room</span>
+                </div>
+                <div class="messages-thread-actions">
+                  <button class="messages-icon-button" id="messagesAudioCall" type="button" title="Start audio call" aria-label="Start audio call">Call</button>
+                  <button class="messages-icon-button is-primary" id="messagesVideoCall" type="button" title="Start video call" aria-label="Start video call">Video</button>
+                </div>
+              </header>
+
+              <section class="messages-call" id="messagesCall" hidden>
+                <div class="messages-call-head">
+                  <div><strong id="messagesCallTitle">Call</strong><span id="messagesCallStatus">Connecting</span></div>
+                  <button class="ghost-button" id="messagesJoinCall" type="button" hidden>Join call</button>
+                </div>
+                <div class="messages-video-grid" id="messagesVideoGrid"></div>
+                <div class="messages-call-controls" id="messagesCallControls" hidden>
+                  <button type="button" id="messagesMuteSelf" aria-pressed="false">Mute</button>
+                  <button type="button" id="messagesCameraToggle" aria-pressed="false">Camera off</button>
+                  <button class="is-danger" type="button" id="messagesLeaveCall">Leave</button>
+                </div>
+              </section>
+
+              <div class="messages-history" id="messagesHistory" role="log" aria-live="polite"></div>
+              <div class="messages-typing" id="messagesTyping" hidden></div>
+              <form class="messages-compose" id="messagesCompose">
+                <input id="messagesInput" type="text" maxlength="1000" autocomplete="off" placeholder="Message Everyone" aria-label="Message" />
+                <button type="submit">Send</button>
+              </form>
+              <p class="messages-status" id="messagesStatus"></p>
+            </main>
+
+            <aside class="messages-online" aria-label="Online people">
+              <header><strong>Online</strong><span id="messagesOnlineCount">0</span></header>
+              <div id="messagesOnlineList"></div>
+            </aside>
+          </div>
+
+          <div class="messages-create-overlay" id="messagesCreateOverlay" hidden>
+            <form class="messages-create-dialog" id="messagesCreateForm">
+              <header><div><span>New conversation</span><strong id="messagesCreateTitle">Create a group</strong></div><button type="button" id="messagesCreateClose" aria-label="Close">Close</button></header>
+              <div class="messages-create-modes" role="tablist" aria-label="Conversation type">
+                <button class="is-active" type="button" data-messages-create-mode="group" role="tab">Group</button>
+                <button type="button" data-messages-create-mode="direct" role="tab">Direct</button>
+              </div>
+              <label id="messagesGroupNameLabel">Group name<input id="messagesGroupName" type="text" maxlength="38" placeholder="Group name" /></label>
+              <fieldset><legend>People</legend><div class="messages-member-list" id="messagesMemberList"></div></fieldset>
+              <p id="messagesCreateStatus"></p>
+              <button class="messages-create-submit" type="submit">Create conversation</button>
+            </form>
+          </div>
         </div>
       </section>
 
@@ -1608,6 +1689,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=tiktok-official-v10"></script>
+    <script src="./script.js?v=messages-v11"></script>
   </body>
 </html>

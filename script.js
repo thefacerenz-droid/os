@@ -2062,6 +2062,13 @@ const utilityApps = {
     action: "panel",
     panel: "chat"
   },
+  messages: {
+    title: "Messages",
+    label: "Chat",
+    badgeSrc: "./assets/images/apps/stranger-chat-cover.png",
+    action: "panel",
+    panel: "messages"
+  },
   velhub: {
     title: "Vel Hub",
     label: "Movies",
@@ -2586,6 +2593,7 @@ const mediaPlutoCatalog = [
 
 const drawers = {
   launcher: document.getElementById("launcherDrawer"),
+  messages: document.getElementById("messagesDrawer"),
   media: document.getElementById("mediaDrawer"),
   youtube: document.getElementById("youtubeDrawer"),
   velhub: document.getElementById("velHubDrawer"),
@@ -2850,6 +2858,41 @@ const velChatAttachmentInput = document.getElementById("velChatAttachmentInput")
 const velChatAttachmentName = document.getElementById("velChatAttachmentName");
 const velChatStatus = document.getElementById("velChatStatus");
 const velChatUnread = document.getElementById("velChatUnread");
+const messagesDrawer = document.getElementById("messagesDrawer");
+const messagesConnectionLabel = document.getElementById("messagesConnectionLabel");
+const messagesNewGroup = document.getElementById("messagesNewGroup");
+const messagesSelf = document.getElementById("messagesSelf");
+const messagesSearch = document.getElementById("messagesSearch");
+const messagesConversationList = document.getElementById("messagesConversationList");
+const messagesMobileBack = document.getElementById("messagesMobileBack");
+const messagesThreadName = document.getElementById("messagesThreadName");
+const messagesThreadMeta = document.getElementById("messagesThreadMeta");
+const messagesAudioCall = document.getElementById("messagesAudioCall");
+const messagesVideoCall = document.getElementById("messagesVideoCall");
+const messagesCall = document.getElementById("messagesCall");
+const messagesCallTitle = document.getElementById("messagesCallTitle");
+const messagesCallStatus = document.getElementById("messagesCallStatus");
+const messagesJoinCall = document.getElementById("messagesJoinCall");
+const messagesVideoGrid = document.getElementById("messagesVideoGrid");
+const messagesCallControls = document.getElementById("messagesCallControls");
+const messagesMuteSelf = document.getElementById("messagesMuteSelf");
+const messagesCameraToggle = document.getElementById("messagesCameraToggle");
+const messagesLeaveCall = document.getElementById("messagesLeaveCall");
+const messagesHistory = document.getElementById("messagesHistory");
+const messagesCompose = document.getElementById("messagesCompose");
+const messagesInput = document.getElementById("messagesInput");
+const messagesStatus = document.getElementById("messagesStatus");
+const messagesOnlineCount = document.getElementById("messagesOnlineCount");
+const messagesOnlineList = document.getElementById("messagesOnlineList");
+const messagesCreateOverlay = document.getElementById("messagesCreateOverlay");
+const messagesCreateForm = document.getElementById("messagesCreateForm");
+const messagesCreateClose = document.getElementById("messagesCreateClose");
+const messagesCreateTitle = document.getElementById("messagesCreateTitle");
+const messagesCreateModeButtons = [...document.querySelectorAll("[data-messages-create-mode]")];
+const messagesGroupNameLabel = document.getElementById("messagesGroupNameLabel");
+const messagesGroupName = document.getElementById("messagesGroupName");
+const messagesMemberList = document.getElementById("messagesMemberList");
+const messagesCreateStatus = document.getElementById("messagesCreateStatus");
 const calculatorForm = document.getElementById("calculatorForm");
 const calculatorExpression = document.getElementById("calculatorExpression");
 const calculatorResult = document.getElementById("calculatorResult");
@@ -3492,6 +3535,17 @@ if (storage.get("vel-app-wall-order-v1", "0") !== "1") {
   storage.set("vel-app-wall-order-v1", "1");
 }
 
+if (storage.get("vel-messages-app-v1", "0") !== "1") {
+  installedApps = ["panel:messages", ...installedApps.filter((ref) => ref !== "panel:chat" && ref !== "panel:messages")].slice(0, 40);
+  saveInstalledApps();
+  const savedDesktopOrder = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
+  const previousOrder = Array.isArray(savedDesktopOrder) ? savedDesktopOrder : [];
+  const nextDesktopOrder = previousOrder.map((ref) => ref === "panel:chat" ? "panel:messages" : ref);
+  if (!nextDesktopOrder.includes("panel:messages")) nextDesktopOrder.splice(3, 0, "panel:messages");
+  storage.set(DESKTOP_SHORTCUT_ORDER_KEY, JSON.stringify([...new Set(nextDesktopOrder)].slice(0, 40)));
+  storage.set("vel-messages-app-v1", "1");
+}
+
 function getDesktopShortcutPositions() {
   const positions = readStoredJson(DESKTOP_SHORTCUT_POSITIONS_KEY, {});
   return positions && typeof positions === "object" && !Array.isArray(positions) ? positions : {};
@@ -3775,7 +3829,7 @@ function syncTaskbarState() {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
   }
 
-  if (activePanel === "media" || activePanel === "chat") {
+  if (["media", "chat", "messages"].includes(activePanel)) {
     recentAppsTray?.querySelector(`[data-recent-type="panel"][data-recent-id="${activePanel}"]`)?.classList.add("is-active");
   }
 
@@ -3868,6 +3922,12 @@ function suspendPanelPlayback(name) {
 
   if (name === "media") {
     stopMediaPanelPlayback();
+    return;
+  }
+
+  if (name === "messages") {
+    window.clearTimeout(messengerState.pollTimer);
+    leaveMessengerCall();
     return;
   }
 
@@ -3974,8 +4034,13 @@ function openPanel(name) {
     recordRecentApp({ type: "panel", id: "youtube" });
   }
 
-  if (name === "media" || name === "chat") {
+  if (["media", "chat", "messages"].includes(name)) {
     recordRecentApp({ type: "panel", id: name });
+  }
+
+  if (name === "messages") {
+    setVelChatCollapsed(true);
+    openMessagesApp();
   }
 
   if (name === "velhub") {
@@ -5023,6 +5088,558 @@ function initVelChat() {
     fetchVelChatMessages(true);
     fetchVelChatTyping();
   }
+}
+
+const messengerState = {
+  users: [],
+  conversations: [],
+  messages: [],
+  selectedId: storage.get("vel-messages-conversation", "global"),
+  call: null,
+  joinedCall: false,
+  localStream: null,
+  peers: new Map(),
+  seenSignals: new Set(),
+  polling: false,
+  pollTimer: null,
+  createMode: "group",
+  mobileThreadOpen: false,
+  persistent: false
+};
+
+function messengerIdentity(extra = {}) {
+  const user = normalizeVelChatUser(velChatUser);
+  return {
+    userId: user?.id || "",
+    username: user?.username || "",
+    deviceId: velDeviceId,
+    conversationId: messengerState.selectedId || "global",
+    ...extra
+  };
+}
+
+async function messengerRequest(action = "snapshot", extra = {}) {
+  const response = await fetch("/api/messenger", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(messengerIdentity({ action, ...extra }))
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || "Messages could not connect.");
+  return data;
+}
+
+function setMessengerStatus(message = "", tone = "") {
+  if (messagesStatus) {
+    messagesStatus.textContent = message;
+    messagesStatus.dataset.tone = tone;
+  }
+  if (messagesConnectionLabel) {
+    messagesConnectionLabel.textContent = message || "Connected";
+    messagesConnectionLabel.dataset.tone = tone;
+  }
+}
+
+function messengerInitials(name = "") {
+  const parts = cleanVelChatName(name).split(/\s+/).filter(Boolean);
+  return (parts.slice(0, 2).map((part) => part[0]).join("") || "?").toUpperCase();
+}
+
+function formatMessengerTime(value) {
+  const date = new Date(Number(value) || Date.now());
+  const sameDay = date.toDateString() === new Date().toDateString();
+  return new Intl.DateTimeFormat(undefined, sameDay
+    ? { hour: "numeric", minute: "2-digit" }
+    : { month: "short", day: "numeric" }
+  ).format(date);
+}
+
+function selectedMessengerConversation() {
+  return messengerState.conversations.find((item) => item.id === messengerState.selectedId)
+    || messengerState.conversations[0]
+    || { id: "global", type: "global", name: "Everyone", members: [] };
+}
+
+function applyMessengerSnapshot(data = {}) {
+  messengerState.users = Array.isArray(data.users) ? data.users : [];
+  messengerState.conversations = Array.isArray(data.conversations) ? data.conversations : [];
+  messengerState.messages = Array.isArray(data.messages) ? data.messages : [];
+  messengerState.selectedId = data.selectedConversationId || messengerState.selectedId || "global";
+  messengerState.call = data.call || null;
+  messengerState.persistent = Boolean(data.persistent);
+  storage.set("vel-messages-conversation", messengerState.selectedId);
+  processMessengerSignals(Array.isArray(data.signals) ? data.signals : []);
+  renderMessagesApp();
+  if (messengerState.joinedCall) syncMessengerPeers();
+}
+
+function renderMessagesSelf() {
+  if (!messagesSelf) return;
+  const user = normalizeVelChatUser(velChatUser);
+  messagesSelf.innerHTML = user ? `
+    <span class="messages-avatar is-self">${escapeHtml(messengerInitials(user.username))}</span>
+    <div><strong>${escapeHtml(user.username)}</strong><span><i></i> Online now</span></div>
+  ` : `
+    <span class="messages-avatar">?</span>
+    <div><strong>Choose a name</strong><button type="button" data-messages-login>Open settings</button></div>
+  `;
+}
+
+function renderMessagesConversations() {
+  if (!messagesConversationList) return;
+  const query = String(messagesSearch?.value || "").trim().toLowerCase();
+  const items = messengerState.conversations.filter((conversation) =>
+    !query || `${conversation.name} ${conversation.lastMessage?.text || ""}`.toLowerCase().includes(query)
+  );
+  messagesConversationList.innerHTML = items.length ? items.map((conversation) => {
+    const selected = conversation.id === messengerState.selectedId;
+    const preview = conversation.lastMessage
+      ? `${conversation.lastMessage.username}: ${conversation.lastMessage.text}`
+      : conversation.type === "global" ? "Everyone on vel.os" : "No messages yet";
+    return `
+      <button class="messages-conversation ${selected ? "is-active" : ""}" type="button" data-messages-conversation="${escapeHtml(conversation.id)}">
+        <span class="messages-avatar ${conversation.type === "group" || conversation.type === "global" ? "is-group" : ""}">${escapeHtml(messengerInitials(conversation.name))}</span>
+        <span class="messages-conversation-copy"><strong>${escapeHtml(conversation.name)}</strong><small>${escapeHtml(preview)}</small></span>
+        <span class="messages-conversation-tail">
+          ${conversation.lastMessage ? `<time>${escapeHtml(formatMessengerTime(conversation.lastMessage.createdAt))}</time>` : ""}
+          ${conversation.callCount ? `<b>${escapeHtml(conversation.callCount)} live</b>` : ""}
+        </span>
+      </button>
+    `;
+  }).join("") : '<p class="messages-empty-small">No conversations found.</p>';
+}
+
+function renderMessagesOnline() {
+  if (!messagesOnlineList || !messagesOnlineCount) return;
+  const ownId = normalizeVelChatUser(velChatUser)?.id;
+  const people = messengerState.users.filter((user) => user.id !== ownId);
+  messagesOnlineCount.textContent = String(messengerState.users.length);
+  messagesOnlineList.innerHTML = people.length ? people.map((user) => `
+    <button class="messages-online-person" type="button" data-messages-direct="${escapeHtml(user.id)}">
+      <span class="messages-avatar">${escapeHtml(messengerInitials(user.username))}<i></i></span>
+      <span><strong>${escapeHtml(user.username)}</strong><small>Available</small></span>
+      <b>Message</b>
+    </button>
+  `).join("") : '<p class="messages-empty-small">Nobody else is online yet.</p>';
+}
+
+function renderMessagesHistory() {
+  if (!messagesHistory) return;
+  const ownId = normalizeVelChatUser(velChatUser)?.id;
+  if (!messengerState.messages.length) {
+    messagesHistory.innerHTML = '<div class="messages-empty-thread"><strong>No messages yet</strong><span>Start the conversation.</span></div>';
+    return;
+  }
+  const wasNearBottom = messagesHistory.scrollHeight - messagesHistory.scrollTop - messagesHistory.clientHeight < 120;
+  messagesHistory.innerHTML = messengerState.messages.map((message, index) => {
+    const own = message.userId === ownId;
+    const previous = messengerState.messages[index - 1];
+    const grouped = previous?.userId === message.userId && Number(message.createdAt) - Number(previous.createdAt) < 180000;
+    return `
+      <article class="messages-message ${own ? "is-own" : ""} ${grouped ? "is-grouped" : ""}">
+        ${!own && !grouped ? `<span class="messages-avatar">${escapeHtml(messengerInitials(message.username))}</span>` : '<span class="messages-avatar-spacer"></span>'}
+        <div>
+          ${!grouped ? `<header><strong>${own ? "You" : escapeHtml(message.username)}</strong><time>${escapeHtml(formatMessengerTime(message.createdAt))}</time></header>` : ""}
+          <p>${renderChatTextWithLinks(message.text || "")}</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+  if (wasNearBottom || !messagesHistory.dataset.rendered) messagesHistory.scrollTop = messagesHistory.scrollHeight;
+  messagesHistory.dataset.rendered = "1";
+}
+
+function ensureMessengerVideoTile(userId, username, local = false) {
+  if (!messagesVideoGrid) return null;
+  let tile = messagesVideoGrid.querySelector(`[data-call-user="${CSS.escape(userId)}"]`);
+  if (!tile) {
+    tile = document.createElement("article");
+    tile.className = `messages-video-tile${local ? " is-local" : ""}`;
+    tile.dataset.callUser = userId;
+    tile.innerHTML = `
+      <video autoplay playsinline ${local ? "muted" : ""}></video>
+      <span class="messages-video-avatar">${escapeHtml(messengerInitials(username))}</span>
+      <footer><strong>${escapeHtml(local ? `${username} (you)` : username)}</strong>${local ? "" : '<button type="button" data-mute-remote>Mute</button>'}</footer>
+    `;
+    messagesVideoGrid.append(tile);
+  }
+  return tile;
+}
+
+function renderMessengerCall() {
+  if (!messagesCall || !messagesVideoGrid) return;
+  const participants = Object.values(messengerState.call?.participants || {});
+  const show = messengerState.joinedCall || participants.length > 0;
+  messagesCall.hidden = !show;
+  if (!show) {
+    messagesVideoGrid.innerHTML = "";
+    return;
+  }
+  const conversation = selectedMessengerConversation();
+  messagesCallTitle.textContent = `${conversation.name} call`;
+  messagesCallStatus.textContent = messengerState.joinedCall
+    ? `${Math.max(1, participants.length)} connected`
+    : `${participants.length} ${participants.length === 1 ? "person" : "people"} in call`;
+  messagesJoinCall.hidden = messengerState.joinedCall;
+  messagesCallControls.hidden = !messengerState.joinedCall;
+
+  const activeIds = new Set(participants.map((participant) => participant.userId));
+  if (messengerState.joinedCall) {
+    const self = normalizeVelChatUser(velChatUser);
+    if (self) activeIds.add(self.id);
+  }
+  [...messagesVideoGrid.querySelectorAll("[data-call-user]")].forEach((tile) => {
+    if (!activeIds.has(tile.dataset.callUser)) tile.remove();
+  });
+  participants.forEach((participant) => {
+    const local = participant.userId === normalizeVelChatUser(velChatUser)?.id;
+    const tile = ensureMessengerVideoTile(participant.userId, participant.username, local);
+    const stream = local ? messengerState.localStream : messengerState.peers.get(participant.userId)?.stream;
+    const video = tile?.querySelector("video");
+    if (video && stream && video.srcObject !== stream) video.srcObject = stream;
+    tile?.classList.toggle("has-video", Boolean(stream?.getVideoTracks().some((track) => track.enabled)));
+  });
+}
+
+function renderMessagesApp() {
+  renderMessagesSelf();
+  renderMessagesConversations();
+  renderMessagesOnline();
+  renderMessagesHistory();
+  renderMessengerCall();
+  const conversation = selectedMessengerConversation();
+  if (messagesThreadName) messagesThreadName.textContent = conversation.name || "Everyone";
+  if (messagesThreadMeta) {
+    const count = conversation.type === "global"
+      ? messengerState.users.length
+      : (conversation.members || []).filter((id) => messengerState.users.some((user) => user.id === id)).length;
+    messagesThreadMeta.textContent = conversation.type === "global"
+      ? `${count} online globally`
+      : conversation.type === "group" ? `${conversation.members?.length || 0} members, ${count} online` : count ? "Online" : "Offline";
+  }
+  if (messagesInput) {
+    messagesInput.disabled = !normalizeVelChatUser(velChatUser);
+    messagesInput.placeholder = `Message ${conversation.name || "Everyone"}`;
+  }
+  messagesDrawer?.classList.toggle("is-mobile-thread", messengerState.mobileThreadOpen);
+}
+
+function scheduleMessengerPoll(delay = 1800) {
+  window.clearTimeout(messengerState.pollTimer);
+  if (!isDrawerOpen("messages")) return;
+  messengerState.pollTimer = window.setTimeout(fetchMessengerSnapshot, delay);
+}
+
+async function fetchMessengerSnapshot(options = {}) {
+  if (!isDrawerOpen("messages") || messengerState.polling) return;
+  const user = normalizeVelChatUser(velChatUser);
+  if (!user) {
+    renderMessagesApp();
+    setMessengerStatus("Choose a name to connect", "warn");
+    return;
+  }
+  messengerState.polling = true;
+  try {
+    const data = await messengerRequest("snapshot");
+    applyMessengerSnapshot(data);
+    setMessengerStatus(data.persistent ? "Live" : "Temporary local room", data.persistent ? "live" : "warn");
+  } catch (error) {
+    setMessengerStatus(error.message || "Messages offline", "error");
+  } finally {
+    messengerState.polling = false;
+    scheduleMessengerPoll(messengerState.joinedCall ? 900 : 1800);
+  }
+}
+
+async function selectMessengerConversation(conversationId) {
+  if (!conversationId || conversationId === messengerState.selectedId) {
+    messengerState.mobileThreadOpen = true;
+    renderMessagesApp();
+    return;
+  }
+  if (messengerState.joinedCall) await leaveMessengerCall();
+  messengerState.selectedId = conversationId;
+  messengerState.mobileThreadOpen = true;
+  messagesHistory?.removeAttribute("data-rendered");
+  renderMessagesApp();
+  fetchMessengerSnapshot({ immediate: true });
+}
+
+async function createMessengerConversation(type, memberIds, name = "") {
+  try {
+    const data = await messengerRequest("create", { type, memberIds, name });
+    applyMessengerSnapshot(data);
+    messengerState.mobileThreadOpen = true;
+    closeMessengerCreator();
+    setMessengerStatus("Conversation created", "live");
+  } catch (error) {
+    if (messagesCreateStatus) messagesCreateStatus.textContent = error.message || "Could not create conversation.";
+  }
+}
+
+async function sendMessengerMessage(text) {
+  const value = String(text || "").trim();
+  if (!value) return;
+  messagesInput.disabled = true;
+  try {
+    const data = await messengerRequest("message", { text: value });
+    messagesInput.value = "";
+    applyMessengerSnapshot(data);
+    setMessengerStatus("Sent", "live");
+  } catch (error) {
+    setMessengerStatus(error.message || "Message failed", "error");
+  } finally {
+    messagesInput.disabled = false;
+    messagesInput.focus({ preventScroll: true });
+  }
+}
+
+function renderMessengerMemberChoices() {
+  if (!messagesMemberList) return;
+  const selfId = normalizeVelChatUser(velChatUser)?.id;
+  const people = messengerState.users.filter((user) => user.id !== selfId);
+  messagesMemberList.innerHTML = people.length ? people.map((user) => `
+    <label><input type="${messengerState.createMode === "direct" ? "radio" : "checkbox"}" name="messenger-member" value="${escapeHtml(user.id)}" /><span class="messages-avatar">${escapeHtml(messengerInitials(user.username))}</span><strong>${escapeHtml(user.username)}</strong><small>Online</small></label>
+  `).join("") : '<p class="messages-empty-small">Nobody else is online.</p>';
+}
+
+function setMessengerCreateMode(mode) {
+  messengerState.createMode = mode === "direct" ? "direct" : "group";
+  messagesCreateModeButtons.forEach((button) => {
+    const active = button.dataset.messagesCreateMode === messengerState.createMode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  messagesCreateTitle.textContent = messengerState.createMode === "direct" ? "Start a private chat" : "Create a group";
+  messagesGroupNameLabel.hidden = messengerState.createMode === "direct";
+  renderMessengerMemberChoices();
+}
+
+function openMessengerCreator(mode = "group", selectedUserId = "") {
+  if (!normalizeVelChatUser(velChatUser)) {
+    openChatSettings();
+    return;
+  }
+  messagesCreateOverlay.hidden = false;
+  if (messagesCreateStatus) messagesCreateStatus.textContent = "";
+  if (messagesGroupName) messagesGroupName.value = "";
+  setMessengerCreateMode(mode);
+  if (selectedUserId) {
+    const input = messagesMemberList?.querySelector(`input[value="${CSS.escape(selectedUserId)}"]`);
+    if (input) input.checked = true;
+  }
+}
+
+function closeMessengerCreator() {
+  if (messagesCreateOverlay) messagesCreateOverlay.hidden = true;
+}
+
+async function sendMessengerSignal(toUserId, signal) {
+  try {
+    const data = await messengerRequest("signal", { toUserId, signal });
+    messengerState.call = data.call || messengerState.call;
+  } catch (error) {
+    return;
+  }
+}
+
+function closeMessengerPeer(userId) {
+  const record = messengerState.peers.get(userId);
+  record?.peer?.close();
+  messengerState.peers.delete(userId);
+}
+
+function ensureMessengerPeer(userId) {
+  if (messengerState.peers.has(userId)) return messengerState.peers.get(userId);
+  const remoteUser = messengerState.users.find((user) => user.id === userId);
+  const peer = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+  const record = { peer, stream: null, offered: false, pendingCandidates: [] };
+  messengerState.peers.set(userId, record);
+  messengerState.localStream?.getTracks().forEach((track) => peer.addTrack(track, messengerState.localStream));
+  peer.onicecandidate = (event) => {
+    if (event.candidate) sendMessengerSignal(userId, { type: "candidate", candidate: event.candidate.toJSON() });
+  };
+  peer.ontrack = (event) => {
+    record.stream = event.streams[0] || new MediaStream([event.track]);
+    const tile = ensureMessengerVideoTile(userId, remoteUser?.username || "Participant", false);
+    const video = tile?.querySelector("video");
+    if (video) video.srcObject = record.stream;
+    tile?.classList.toggle("has-video", Boolean(record.stream.getVideoTracks().length));
+  };
+  peer.onconnectionstatechange = () => {
+    if (["failed", "closed"].includes(peer.connectionState)) closeMessengerPeer(userId);
+  };
+  return record;
+}
+
+async function makeMessengerOffer(userId) {
+  const record = ensureMessengerPeer(userId);
+  if (record.offered || record.peer.signalingState !== "stable") return;
+  record.offered = true;
+  const offer = await record.peer.createOffer();
+  await record.peer.setLocalDescription(offer);
+  await sendMessengerSignal(userId, { type: "description", description: record.peer.localDescription });
+}
+
+async function processMessengerSignals(signals) {
+  if (!messengerState.joinedCall) return;
+  const ownId = normalizeVelChatUser(velChatUser)?.id;
+  for (const item of signals) {
+    if (!item?.id || messengerState.seenSignals.has(item.id) || item.toUserId !== ownId) continue;
+    messengerState.seenSignals.add(item.id);
+    if (item.callId !== messengerState.call?.id) continue;
+    try {
+      const record = ensureMessengerPeer(item.fromUserId);
+      if (item.signal?.type === "description") {
+        const description = item.signal.description;
+        await record.peer.setRemoteDescription(description);
+        for (const candidate of record.pendingCandidates.splice(0)) await record.peer.addIceCandidate(candidate);
+        if (description.type === "offer") {
+          const answer = await record.peer.createAnswer();
+          await record.peer.setLocalDescription(answer);
+          await sendMessengerSignal(item.fromUserId, { type: "description", description: record.peer.localDescription });
+        }
+      } else if (item.signal?.type === "candidate" && item.signal.candidate) {
+        if (record.peer.remoteDescription) await record.peer.addIceCandidate(item.signal.candidate);
+        else record.pendingCandidates.push(item.signal.candidate);
+      }
+    } catch (error) {
+      closeMessengerPeer(item.fromUserId);
+    }
+  }
+  if (messengerState.seenSignals.size > 1000) messengerState.seenSignals.clear();
+}
+
+async function syncMessengerPeers() {
+  if (!messengerState.joinedCall || !messengerState.call) return;
+  const ownId = normalizeVelChatUser(velChatUser)?.id;
+  const remoteIds = Object.keys(messengerState.call.participants || {}).filter((id) => id !== ownId);
+  [...messengerState.peers.keys()].forEach((id) => {
+    if (!remoteIds.includes(id)) closeMessengerPeer(id);
+  });
+  for (const userId of remoteIds) {
+    ensureMessengerPeer(userId);
+    if (ownId.localeCompare(userId) < 0) await makeMessengerOffer(userId);
+  }
+  renderMessengerCall();
+}
+
+async function joinMessengerCall(video = true) {
+  if (messengerState.joinedCall) return;
+  if (!navigator.mediaDevices?.getUserMedia || !("RTCPeerConnection" in window)) {
+    setMessengerStatus("Calling is unavailable in this browser", "error");
+    return;
+  }
+  try {
+    setMessengerStatus("Requesting camera and microphone", "");
+    messengerState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: Boolean(video) });
+    messengerState.joinedCall = true;
+    messengerState.seenSignals.clear();
+    const data = await messengerRequest("call-join");
+    applyMessengerSnapshot(data);
+    await syncMessengerPeers();
+    setMessengerStatus("In call", "live");
+  } catch (error) {
+    messengerState.localStream?.getTracks().forEach((track) => track.stop());
+    messengerState.localStream = null;
+    messengerState.joinedCall = false;
+    setMessengerStatus(error.name === "NotAllowedError" ? "Camera or microphone permission was not allowed" : error.message || "Call could not start", "error");
+  }
+}
+
+async function leaveMessengerCall(options = {}) {
+  if (!messengerState.joinedCall && !messengerState.localStream) return;
+  messengerState.localStream?.getTracks().forEach((track) => track.stop());
+  messengerState.localStream = null;
+  messengerState.joinedCall = false;
+  [...messengerState.peers.keys()].forEach(closeMessengerPeer);
+  messagesVideoGrid.innerHTML = "";
+  if (!options.silent) {
+    try {
+      const data = await messengerRequest("call-leave");
+      applyMessengerSnapshot(data);
+    } catch (error) {
+      messengerState.call = null;
+    }
+  }
+  renderMessengerCall();
+  setMessengerStatus("Call ended", "");
+}
+
+function toggleMessengerSelfMute() {
+  const tracks = messengerState.localStream?.getAudioTracks() || [];
+  if (!tracks.length) return;
+  const muted = tracks.some((track) => track.enabled);
+  tracks.forEach((track) => { track.enabled = !muted; });
+  messagesMuteSelf.setAttribute("aria-pressed", String(muted));
+  messagesMuteSelf.textContent = muted ? "Unmute" : "Mute";
+}
+
+function toggleMessengerCamera() {
+  const tracks = messengerState.localStream?.getVideoTracks() || [];
+  if (!tracks.length) return;
+  const disabled = tracks.some((track) => track.enabled);
+  tracks.forEach((track) => { track.enabled = !disabled; });
+  messagesCameraToggle.setAttribute("aria-pressed", String(disabled));
+  messagesCameraToggle.textContent = disabled ? "Camera on" : "Camera off";
+  renderMessengerCall();
+}
+
+function openMessagesApp() {
+  renderMessagesApp();
+  fetchMessengerSnapshot({ immediate: true });
+}
+
+function initMessages() {
+  renderMessagesApp();
+  messagesConversationList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-messages-conversation]");
+    if (button) selectMessengerConversation(button.dataset.messagesConversation);
+  });
+  messagesOnlineList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-messages-direct]");
+    if (button) openMessengerCreator("direct", button.dataset.messagesDirect);
+  });
+  messagesSelf?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-messages-login]")) openChatSettings();
+  });
+  messagesSearch?.addEventListener("input", renderMessagesConversations);
+  messagesCompose?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    sendMessengerMessage(messagesInput?.value || "");
+  });
+  messagesNewGroup?.addEventListener("click", () => openMessengerCreator("group"));
+  messagesCreateClose?.addEventListener("click", closeMessengerCreator);
+  messagesCreateOverlay?.addEventListener("click", (event) => {
+    if (event.target === messagesCreateOverlay) closeMessengerCreator();
+  });
+  messagesCreateModeButtons.forEach((button) => button.addEventListener("click", () => setMessengerCreateMode(button.dataset.messagesCreateMode)));
+  messagesCreateForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const memberIds = [...messagesMemberList.querySelectorAll("input:checked")].map((input) => input.value);
+    createMessengerConversation(messengerState.createMode, memberIds, messagesGroupName?.value || "");
+  });
+  messagesAudioCall?.addEventListener("click", () => joinMessengerCall(false));
+  messagesVideoCall?.addEventListener("click", () => joinMessengerCall(true));
+  messagesJoinCall?.addEventListener("click", () => joinMessengerCall(true));
+  messagesLeaveCall?.addEventListener("click", () => leaveMessengerCall());
+  messagesMuteSelf?.addEventListener("click", toggleMessengerSelfMute);
+  messagesCameraToggle?.addEventListener("click", toggleMessengerCamera);
+  messagesMobileBack?.addEventListener("click", () => {
+    messengerState.mobileThreadOpen = false;
+    renderMessagesApp();
+  });
+  messagesVideoGrid?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-mute-remote]");
+    if (!button) return;
+    const video = button.closest(".messages-video-tile")?.querySelector("video");
+    if (!video) return;
+    video.muted = !video.muted;
+    button.textContent = video.muted ? "Unmute" : "Mute";
+    button.setAttribute("aria-pressed", String(video.muted));
+  });
 }
 
 function sanitizeCalculatorExpression(value = "") {
@@ -6145,6 +6762,7 @@ function getDevActivityLabel() {
   }
   if (activePanel === "media") return "Watching TikTok";
   if (activePanel === "chat") return "Using Stranger Chat";
+  if (activePanel === "messages") return messengerState.joinedCall ? "In a Messages call" : "Using Messages";
   if (activePanel === "music") {
     const localTrack = playlist[currentTrackIndex];
     if (localTrack?.title) return `Velofy: ${localTrack.title}`;
@@ -6243,7 +6861,7 @@ function getDevAppLockOptions(activeApp = "") {
   const options = [
     ["youtube", "YouTube"],
     ["media", "TikTok"],
-    ["chat", "Stranger Chat"],
+    ["messages", "Messages"],
     ["music", "Velofy"],
     ["game", "Local Games"],
     ["web", "Web"],
@@ -10330,8 +10948,8 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "chat", "lobbies", "soundboard", "remoteDeck", "dev", "calculator", "settings", "network"],
-      media: ["youtube", "media", "chat", "music", "velhub", "soundboard", "browser"],
+      tools: ["browser", "messages", "lobbies", "soundboard", "remoteDeck", "dev", "calculator", "settings", "network"],
+      media: ["youtube", "media", "messages", "music", "velhub", "soundboard", "browser"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -16890,6 +17508,7 @@ renderRecentApps();
 initVelChatResize();
 initSoundboardGestureUnlock();
 initVelChat();
+initMessages();
 updateYouTubeGlobalImportUi();
 renderLobbyState();
 clearLobbyCanvas();
@@ -16948,6 +17567,7 @@ window.addEventListener("pagehide", () => {
   sendDevPresenceLeave();
   stopVelLiveUpdates();
   stopScreenShare({ silent: true });
+  leaveMessengerCall({ silent: true });
 });
 
 window.addEventListener("beforeunload", () => {

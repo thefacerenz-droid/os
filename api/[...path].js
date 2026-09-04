@@ -2,6 +2,7 @@ const handleLobbies = require("../lib/api/lobbies.js");
 const handleSoundboard = require("../lib/api/soundboard.js");
 const handleChatMessages = require("../lib/api/chat/messages.js");
 const handleDevPresence = require("../lib/api/dev/presence.js");
+const handleMessenger = require("../lib/api/messenger.js");
 const handleDevScreen = require("../lib/api/dev/screen.js");
 const handleFlappyLeaderboard = require("../lib/api/games/flappy.js");
 const handleYoutubeGlobal = require("../lib/api/youtube/global.js");
@@ -29,6 +30,7 @@ module.exports = async function handler(req, res) {
   if (apiPath === "youtube/search") return handleYoutubeSearch(req, res);
   if (apiPath === "youtube/global") return handleYoutubeGlobal(req, res);
   if (apiPath === "dev/presence") return handleDevPresence(req, res);
+  if (apiPath === "messenger") return handleMessenger(req, res);
   if (apiPath === "dev/screen") return handleDevScreen(req, res);
   if (apiPath === "chat/messages") return handleChatMessages(req, res);
   if (apiPath === "lobbies") return handleLobbies(req, res);

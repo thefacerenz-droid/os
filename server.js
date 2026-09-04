@@ -25,6 +25,7 @@ const handleSoundboard = require("./lib/api/soundboard.js");
 const handleDevPresence = require("./lib/api/dev/presence.js");
 const handleDevScreen = require("./lib/api/dev/screen.js");
 const handleChatTyping = require("./lib/chatTyping.js");
+const handleMessenger = require("./lib/api/messenger.js");
 const handleFlappyLeaderboard = require("./lib/api/games/flappy.js");
 const handleLive = require("./lib/live.js");
 const sessions = new Map();
@@ -1100,6 +1101,7 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/chat/messages" && url.searchParams.get("__typing") === "1") return await handleChatTyping(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
     if (url.pathname === "/api/chat/typing") return await handleChatTyping(req, res);
+    if (url.pathname === "/api/messenger") return await handleMessenger(req, res);
     if (url.pathname === "/api/lobbies") return await handleLobbies(req, res);
     if (url.pathname === "/api/soundboard") return await handleSoundboard(req, res);
     if (url.pathname === "/api/dev/presence") return await handleDevPresence(req, res);

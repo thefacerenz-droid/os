@@ -7,6 +7,8 @@ const handleDevScreen = require("../lib/api/dev/screen.js");
 const handleFlappyLeaderboard = require("../lib/api/games/flappy.js");
 const handleYoutubeGlobal = require("../lib/api/youtube/global.js");
 const handleYoutubeSearch = require("../lib/api/youtube/search.js");
+const handleTikTok = require("../lib/api/tiktok.js");
+const handleMessenger = require("../lib/api/messenger.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -38,6 +40,8 @@ module.exports = async function handler(req, res) {
 
   if (apiPath === "youtube/search") return handleYoutubeSearch(req, res);
   if (apiPath === "youtube/global") return handleYoutubeGlobal(req, res);
+  if (apiPath.startsWith("tiktok/")) return handleTikTok(req, res, apiPath.slice("tiktok/".length));
+  if (apiPath === "messenger") return handleMessenger(req, res);
   if (apiPath === "chat/messages") return handleChatMessages(req, res);
   if (apiPath === "chat/typing") return handleChatTyping(req, res);
   if (apiPath === "dev/presence") return handleDevPresence(req, res);
