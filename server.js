@@ -581,6 +581,21 @@ function tiktokConfigured() {
   return Boolean(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET && process.env.TIKTOK_REDIRECT_URI);
 }
 
+function handleTikTokStatus(req, res) {
+  const session = getSession(req, res);
+  sendJson(res, 200, {
+    configured: tiktokConfigured(),
+    connected: Boolean(session.tiktok)
+  });
+}
+
+function handleTikTokLogout(req, res) {
+  const session = getSession(req, res);
+  delete session.tiktok;
+  delete session.tiktokState;
+  sendJson(res, 200, { ok: true });
+}
+
 async function handleTikTokAuthStart(req, res) {
   if (!tiktokConfigured()) {
     return sendJson(res, 503, {
@@ -609,6 +624,7 @@ async function handleTikTokCallback(req, res, url) {
     res.end("<h1>TikTok auth failed</h1><p>Missing or invalid OAuth state.</p>");
     return;
   }
+  delete session.tiktokState;
 
   const body = new URLSearchParams({
     client_key: process.env.TIKTOK_CLIENT_KEY,
@@ -625,7 +641,7 @@ async function handleTikTokCallback(req, res, url) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.error) {
     res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(`<h1>TikTok auth failed</h1><p>${data.error_description || data.message || "Token exchange failed."}</p>`);
+    res.end(`<h1>TikTok auth failed</h1><p>${escapeHtmlServer(data.error_description || data.message || "Token exchange failed.")}</p>`);
     return;
   }
 
@@ -1028,6 +1044,8 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);
     if (url.pathname === "/api/youtube/global") return await handleYoutubeGlobal(req, res, url);
+    if (req.method === "GET" && url.pathname === "/api/tiktok/status") return handleTikTokStatus(req, res);
+    if (req.method === "POST" && url.pathname === "/api/tiktok/logout") return handleTikTokLogout(req, res);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/start") return await handleTikTokAuthStart(req, res);
     if (req.method === "GET" && url.pathname === "/api/tiktok/auth/callback") return await handleTikTokCallback(req, res, url);
     if (req.method === "GET" && url.pathname === "/api/tiktok/profile") return await handleTikTokProfile(req, res);

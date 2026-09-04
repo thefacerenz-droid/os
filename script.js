@@ -2413,54 +2413,19 @@ const mediaShortsCatalog = [
 
 const veltokClipPool = [
   {
-    src: "https://upload.wikimedia.org/wikipedia/commons/c/ca/Heelflip_Skate.webm",
-    thumbnail: "linear-gradient(135deg, #050505, #4b4b4b)",
-    source: "Wikimedia Commons: Heelflip Skate"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/f/f5/Scootering_video.webm",
-    thumbnail: "linear-gradient(135deg, #111, #35424f)",
-    source: "Wikimedia Commons: Scootering video"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/8/8f/Boxing_in_Mitchells_Plain.webm",
-    thumbnail: "linear-gradient(135deg, #0b0b0b, #777)",
-    source: "Wikimedia Commons: Boxing in Mitchells Plain"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/5/5a/B-boy_performing_airchair_spin_in_slow_motion.webm",
-    thumbnail: "linear-gradient(135deg, #050505, #2f4f68)",
-    source: "Wikimedia Commons: B-boy airchair"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/f/fe/Hula_hoop_fire_dance_video_Turkey_2015.webm",
-    thumbnail: "linear-gradient(135deg, #101010, #7b6652)",
-    source: "Wikimedia Commons: Hula hoop fire dance"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/4/48/Kick-up.webm",
-    thumbnail: "linear-gradient(135deg, #050505, #6b6b6b)",
-    source: "Wikimedia Commons: Kick-up"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/2/21/Most_unique_munna.webm",
-    thumbnail: "linear-gradient(135deg, #151515, #40515f)",
-    source: "Wikimedia Commons: Most unique munna"
-  },
-  {
-    src: "https://upload.wikimedia.org/wikipedia/commons/1/17/2000_Powermove.webm",
-    thumbnail: "linear-gradient(135deg, #080808, #535353)",
-    source: "Wikimedia Commons: 2000 Powermove"
-  },
-  {
-    src: "https://media.w3.org/2010/05/sintel/trailer.mp4",
-    thumbnail: "linear-gradient(135deg, #080808, #8f8f8f)",
-    source: "W3C Media: Sintel trailer"
-  },
-  {
-    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    src: "./assets/videos/veltik/flower.mp4",
     thumbnail: "linear-gradient(135deg, #050505, #46556b)",
-    source: "MDN sample video"
+    source: "MDN sample video (CC0)"
+  },
+  {
+    src: "./assets/videos/veltik/scootering.webm",
+    thumbnail: "linear-gradient(135deg, #111, #35424f)",
+    source: "Friendly family via Wikimedia Commons (CC BY 3.0)"
+  },
+  {
+    src: "./assets/videos/veltik/boxing.webm",
+    thumbnail: "linear-gradient(135deg, #0b0b0b, #777)",
+    source: "Bernard303 via Wikimedia Commons (CC BY-SA 4.0)"
   }
 ];
 
@@ -2526,10 +2491,32 @@ const veltokFeedSeed = Array.from({ length: 80 }, (_, index) => {
   };
 });
 
-const mediaTikTokCatalog = veltokFeedSeed.map((item, index) => {
+const veltikGuestPromptSets = [
+  {
+    titles: ["A quiet loop for the feed", "Color break between the chaos", "One calm scroll", "Soft focus reset", "Small moment, perfect loop", "The feed needed this"],
+    creators: ["@softscroll", "@looproom", "@quietframe"],
+    tags: ["loop", "color", "calm", "foryou"]
+  },
+  {
+    titles: ["Park line on repeat", "Smooth roll through the park", "This line kept going", "Concrete run looked effortless", "Clean landing, cleaner exit", "Replay the last trick"],
+    creators: ["@parkline", "@wheelmode", "@scootcore"],
+    tags: ["scooter", "park", "action", "foryou"]
+  },
+  {
+    titles: ["Training rhythm locked in", "Footwork stayed sharp", "Timing beats speed", "Clean combinations today", "Practice round on repeat", "Every move had purpose"],
+    creators: ["@glovework", "@fightcamp", "@trainingdaily"],
+    tags: ["boxing", "training", "sports", "foryou"]
+  }
+];
+
+const mediaTikTokCatalog = Array.from({ length: 36 }, (_, index) => {
   const clip = veltokClipPool[index % veltokClipPool.length];
+  const set = veltikGuestPromptSets[index % veltikGuestPromptSets.length];
+  const variant = Math.floor(index / veltikGuestPromptSets.length) % set.titles.length;
   return {
-    ...item,
+    title: set.titles[variant],
+    creator: set.creators[index % set.creators.length],
+    tags: set.tags,
     src: clip.src,
     thumbnail: clip.thumbnail
   };
@@ -2991,6 +2978,7 @@ if (storage.get(WEB_BROWSER_STAY_INSIDE_KEY, "0") !== "1") {
 let webBrowserTabState = normalizeWebBrowserTabs(readStoredJson(WEB_BROWSER_TABS_KEY, []));
 let activeWebBrowserTabId = storage.get(WEB_BROWSER_ACTIVE_TAB_KEY, "");
 let feedVideoObserver = null;
+let tiktokEmbedObserver = null;
 let youtubePlayer = null;
 let youtubeApiReadyPromise = null;
 let youtubeAppPlayerHintTimer = null;
@@ -3351,6 +3339,8 @@ let mediaState = {
   tiktokProfile: null,
   tiktokVideos: [],
   tiktokError: "",
+  tiktokConfigured: false,
+  tiktokConnected: false,
   tiktokAuthRequired: true,
   tiktokLinkOnly: false,
   loading: false
@@ -3986,10 +3976,6 @@ function openPanel(name) {
 
   if (name === "media" || name === "chat") {
     recordRecentApp({ type: "panel", id: name });
-  }
-
-  if (name === "media" && mediaState.provider === "tiktok" && mediaPlayer?.hidden) {
-    openTikTokPlayer(TIKTOK_STARTER_VIDEO);
   }
 
   if (name === "velhub") {
@@ -11794,6 +11780,27 @@ async function loadTikTokData() {
   renderMediaHub();
 
   try {
+    const statusResponse = await fetch("/api/tiktok/status");
+    const status = await statusResponse.json();
+    if (!statusResponse.ok) throw new Error(status.message || "TikTok login status could not load.");
+
+    mediaState.tiktokConfigured = Boolean(status.configured);
+    mediaState.tiktokConnected = Boolean(status.connected);
+
+    if (!mediaState.tiktokConfigured) {
+      mediaState.tiktokLinkOnly = true;
+      mediaState.tiktokProfile = null;
+      mediaState.tiktokVideos = [];
+      return;
+    }
+
+    if (!mediaState.tiktokConnected) {
+      mediaState.tiktokAuthRequired = true;
+      mediaState.tiktokProfile = null;
+      mediaState.tiktokVideos = [];
+      return;
+    }
+
     const [profileResponse, videosResponse] = await Promise.all([
       fetch("/api/tiktok/profile"),
       fetch("/api/tiktok/videos")
@@ -11802,6 +11809,7 @@ async function loadTikTokData() {
     const videos = await videosResponse.json();
 
     if (profileResponse.status === 401 || videosResponse.status === 401) {
+      mediaState.tiktokConnected = false;
       mediaState.tiktokAuthRequired = true;
       mediaState.tiktokProfile = null;
       mediaState.tiktokVideos = [];
@@ -11926,7 +11934,75 @@ function renderTikTokCards() {
 }
 
 function renderTikTokFeed() {
-  return renderTikTokCards();
+  const profile = mediaState.tiktokProfile;
+  const profileName = profile?.display_name || profile?.username || "Connected";
+  const query = extractTikTokId(mediaState.query) ? "" : getMediaQuery();
+  const connectedVideos = mediaState.tiktokVideos.filter((video) =>
+    !query || [video.title, video.video_description, video.share_url]
+      .some((field) => String(field || "").toLowerCase().includes(query))
+  );
+  const filteredDemoVideos = getFilteredTikToks();
+  const demoVideos = (filteredDemoVideos.length ? filteredDemoVideos : mediaTikTokCatalog).slice(0, 18);
+  const useConnectedFeed = mediaState.tiktokConnected && connectedVideos.length > 0;
+  const loginControl = mediaState.tiktokConnected
+    ? `<button class="ghost-button tiktok-login-button" type="button" data-tiktok-disconnect title="Disconnect TikTok">${escapeHtml(profileName)}</button>`
+    : mediaState.tiktokConfigured
+      ? '<button class="ghost-button is-solid tiktok-login-button" type="button" data-tiktok-connect>Sign in with TikTok</button>'
+      : '<button class="ghost-button tiktok-login-button" type="button" disabled title="Add TikTok Login Kit credentials to the server">Sign in with TikTok</button>';
+
+  const slides = useConnectedFeed
+    ? connectedVideos.map((video, index) => `
+        <article class="tiktok-feed-card tiktok-official-card">
+          <div class="tiktok-phone">
+            <iframe
+              title="${escapeHtml(video.title || video.video_description || "TikTok video")}"
+              src="${escapeHtml(buildVideoEmbedUrl("tiktok", video.id).replace("autoplay=1", "autoplay=0"))}"
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              loading="${index < 2 ? "eager" : "lazy"}"
+              data-tiktok-feed-embed
+              allowfullscreen>
+            </iframe>
+          </div>
+        </article>
+      `).join("")
+    : demoVideos.map((item, index) => `
+        <article class="tiktok-feed-card tiktok-demo-card">
+          <div class="tiktok-phone">
+            ${renderFeedVideo(item, index)}
+            <div class="feed-overlay">
+              <strong>${escapeHtml(item.creator)}</strong>
+              <span>${escapeHtml(item.title)}</span>
+              <small>${renderFeedTags(item.tags)}</small>
+              <small class="feed-credit">${escapeHtml(veltokClipPool[index % veltokClipPool.length].source)}</small>
+            </div>
+          </div>
+        </article>
+      `).join("");
+
+  const feedLabel = useConnectedFeed ? "Your videos" : "Guest feed";
+  const errorLabel = mediaState.tiktokError
+    ? `<span class="tiktok-feed-notice">${escapeHtml(mediaState.tiktokError)}</span>`
+    : "";
+
+  return `
+    <section class="tiktok-native-shell" aria-label="TikTok video feed">
+      <header class="tiktok-native-toolbar">
+        <div class="tiktok-native-title">
+          <img src="./assets/images/apps/tiktok.svg" alt="" />
+          <strong>For You</strong>
+          <span>${feedLabel}</span>
+        </div>
+        <div class="tiktok-native-account">
+          ${errorLabel}
+          ${loginControl}
+        </div>
+      </header>
+      <section class="tiktok-feed" aria-label="Swipeable TikTok feed">
+        ${slides}
+      </section>
+    </section>
+  `;
 }
 
 function renderTubiCards() {
@@ -12041,14 +12117,19 @@ function openTikTokPlayer(video) {
 }
 
 function handleTikTokPlayerMessage(event) {
-  const frame = mediaPlayerFrame?.querySelector("iframe");
+  const frames = [...document.querySelectorAll("#mediaPlayerFrame iframe, iframe[data-tiktok-feed-embed]")];
+  const frame = frames.find((candidate) => candidate.contentWindow === event.source);
   if (!frame || event.source !== frame.contentWindow || event.origin !== "https://www.tiktok.com") return;
   const message = event.data;
   if (!message || message["x-tiktok-player"] !== true) return;
 
   if (message.type === "onPlayerReady") {
-    mediaPlayerMeta.textContent = "Ready to play";
-    frame.contentWindow?.postMessage({ type: "play", value: null, "x-tiktok-player": true }, event.origin);
+    if (frame.closest("#mediaPlayerFrame")) {
+      mediaPlayerMeta.textContent = "Ready to play";
+    }
+    if (frame.closest("#mediaPlayerFrame") || frame.dataset.feedActive === "true") {
+      frame.contentWindow?.postMessage({ type: "play", value: null, "x-tiktok-player": true }, event.origin);
+    }
     return;
   }
 
@@ -12123,6 +12204,38 @@ function hydrateFeedVideos() {
   videos.forEach((video) => feedVideoObserver.observe(video));
 }
 
+function postTikTokFeedCommand(frame, type) {
+  frame.contentWindow?.postMessage({ type, value: null, "x-tiktok-player": true }, "https://www.tiktok.com");
+}
+
+function hydrateTikTokEmbeds() {
+  const frames = [...document.querySelectorAll("iframe[data-tiktok-feed-embed]")];
+  if (tiktokEmbedObserver) {
+    tiktokEmbedObserver.disconnect();
+    tiktokEmbedObserver = null;
+  }
+  if (!frames.length || !("IntersectionObserver" in window)) return;
+
+  tiktokEmbedObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const frame = entry.target;
+      const active = entry.isIntersecting && entry.intersectionRatio > 0.68;
+      frame.dataset.feedActive = String(active);
+      postTikTokFeedCommand(frame, active ? "play" : "pause");
+    });
+  }, { threshold: [0, 0.4, 0.68, 0.9] });
+
+  frames.forEach((frame) => tiktokEmbedObserver.observe(frame));
+}
+
+async function disconnectTikTok() {
+  await fetch("/api/tiktok/logout", { method: "POST" });
+  mediaState.tiktokConnected = false;
+  mediaState.tiktokProfile = null;
+  mediaState.tiktokVideos = [];
+  await loadTikTokData();
+}
+
 function renderMediaHub() {
   if (!mediaGrid) return;
 
@@ -12131,13 +12244,14 @@ function renderMediaHub() {
   });
 
   const provider = mediaState.provider;
+  document.body.dataset.mediaProvider = provider;
   const sections = [];
 
   if (provider === "all" || provider === "youtube") {
     sections.push(renderYouTubeCards());
   }
   if (provider === "all" || provider === "tiktok") {
-    sections.push(renderTikTokCards());
+    sections.push(provider === "tiktok" ? renderTikTokFeed() : renderTikTokCards());
   }
 
   const html = sections.filter(Boolean).join("");
@@ -12163,7 +12277,10 @@ function renderMediaHub() {
     !mediaState.youtubeNextPageToken ||
     mediaState.loading;
 
-  window.requestAnimationFrame(hydrateFeedVideos);
+  window.requestAnimationFrame(() => {
+    hydrateFeedVideos();
+    hydrateTikTokEmbeds();
+  });
 }
 
 function handleMediaSearch(value) {
@@ -12233,6 +12350,11 @@ function selectMediaCard(card) {
 
   if (card.dataset.tiktokConnect !== undefined) {
     window.location.href = "/api/tiktok/auth/start";
+    return;
+  }
+
+  if (card.dataset.tiktokDisconnect !== undefined) {
+    disconnectTikTok();
     return;
   }
 
@@ -13851,7 +13973,7 @@ mediaProviderButtons.forEach((button) => {
 
 mediaGrid?.addEventListener("click", (event) => {
   if (event.target.closest("a")) return;
-  const directMediaButton = event.target.closest("button[data-media-kind], button[data-tiktok-connect], button[data-media-retry]");
+  const directMediaButton = event.target.closest("button[data-media-kind], button[data-tiktok-connect], button[data-tiktok-disconnect], button[data-media-retry]");
   if (directMediaButton) {
     selectMediaCard(directMediaButton);
     return;
@@ -16768,6 +16890,12 @@ if (mediaSearchInput) {
   mediaSearchInput.value = mediaState.query;
 }
 renderMediaHub();
+const startupUrl = new URL(window.location.href);
+if (startupUrl.searchParams.get("media") === "tiktok") {
+  startupUrl.searchParams.delete("media");
+  window.history.replaceState({}, "", `${startupUrl.pathname}${startupUrl.search}${startupUrl.hash}`);
+  window.setTimeout(() => openMediaProvider("tiktok"), 0);
+}
 if (velHubSearchInput) {
   velHubSearchInput.value = velHubState.query;
 }

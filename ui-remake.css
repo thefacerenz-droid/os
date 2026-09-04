@@ -2804,3 +2804,181 @@ body[data-active-panel="youtube"] .youtube-results-panel {
     grid-template-rows: auto minmax(0, 1fr);
   }
 }
+
+/* TikTok runs as a vertical feed; the locally bundled guest clips keep it usable offline. */
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: calc(var(--signal-switcher-height) + 8px) 10px 10px;
+  overflow: hidden;
+  background: #08090a;
+}
+
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) > .media-head,
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) > .media-tabs,
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) > .media-status,
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) > .load-more-wrap {
+  display: none;
+}
+
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) > .media-search {
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) > .media-grid {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.tiktok-native-shell {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: 8px;
+  background: #050606;
+}
+
+.tiktok-native-toolbar {
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--signal-line-soft);
+  background: rgba(8, 9, 10, 0.96);
+}
+
+.tiktok-native-title,
+.tiktok-native-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.tiktok-native-title img {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+}
+
+.tiktok-native-title strong {
+  color: #fff;
+  font-size: 0.96rem;
+}
+
+.tiktok-native-title span,
+.tiktok-feed-notice {
+  overflow: hidden;
+  color: var(--signal-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tiktok-login-button {
+  min-height: 36px;
+  padding: 0 11px;
+  white-space: nowrap;
+}
+
+.tiktok-login-button:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+
+.tiktok-native-shell > .tiktok-feed {
+  display: grid;
+  grid-auto-rows: 100%;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: thin;
+}
+
+.tiktok-native-shell .tiktok-feed-card {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 0;
+  background: #050606;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.tiktok-native-shell .tiktok-phone {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: 9 / 16;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.tiktok-native-shell .feed-overlay {
+  right: 0;
+}
+
+.tiktok-native-shell .feed-credit {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.62rem;
+}
+
+@media (max-width: 760px) {
+  body[data-active-panel="media"][data-media-provider="tiktok"] .media-panel:not(:has(#mediaPlayer:not([hidden]))) {
+    gap: 6px;
+    padding: calc(var(--signal-switcher-height) + 6px) 6px 6px;
+  }
+
+  .tiktok-native-toolbar {
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  .tiktok-native-title span,
+  .tiktok-feed-notice {
+    display: none;
+  }
+
+  .tiktok-login-button {
+    min-height: 34px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tiktok-native-shell .tiktok-feed-card {
+    padding: 0;
+  }
+
+  .tiktok-native-shell .tiktok-phone {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
