@@ -2739,3 +2739,68 @@ body[data-active-panel="media"] .media-panel:has(#mediaPlayer:not([hidden])) .me
     padding: 0 10px;
   }
 }
+
+/* Keep every open app edge-to-edge even when an older compact zoom is saved. */
+body[data-active-panel]:not([data-active-panel=""]) .drawer-panel,
+body[data-active-panel="youtube"] .youtube-panel,
+body[data-active-panel="velhub"] .velhub-panel {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+}
+
+body[data-active-panel="youtube"] .youtube-panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 8px;
+  padding: calc(var(--signal-switcher-height) + 10px) 12px 12px;
+  overflow: hidden;
+}
+
+body[data-active-panel="youtube"] .youtube-panel > .youtube-head {
+  display: none;
+}
+
+body[data-active-panel="youtube"] .youtube-toolbar,
+body[data-active-panel="youtube"] .youtube-chip-row,
+body[data-active-panel="youtube"] .youtube-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+body[data-active-panel="youtube"] .youtube-toolbar {
+  position: static;
+}
+
+body[data-active-panel="youtube"] .youtube-chip-row {
+  padding-bottom: 0;
+}
+
+body[data-active-panel="youtube"] .youtube-shell,
+body[data-active-panel="youtube"] .youtube-sidebar,
+body[data-active-panel="youtube"] .youtube-results-panel,
+body[data-active-panel="youtube"] .youtube-results-grid {
+  min-height: 0;
+  max-height: none;
+}
+
+body[data-active-panel="youtube"] .youtube-shell,
+body[data-active-panel="youtube"] .youtube-sidebar,
+body[data-active-panel="youtube"] .youtube-results-panel {
+  height: 100%;
+}
+
+@media (max-width: 760px) {
+  body[data-active-panel="youtube"] .youtube-panel {
+    gap: 6px;
+    padding: calc(var(--signal-switcher-height) + 7px) 7px 7px;
+  }
+
+  body[data-active-panel="youtube"] .youtube-shell {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
