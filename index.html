@@ -6,53 +6,115 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta
       name="description"
-      content="vel.os is a custom desktop with games, music, settings, and a taskbar."
+      content="Clever is your personal gateway to apps and learning tools."
     />
-    <title>vel.os</title>
-    <link rel="icon" type="image/svg+xml" href="./assets/images/favicon.svg" />
-    <link rel="shortcut icon" href="./assets/images/favicon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=nova-ui-v2" />
+    <title>Clever</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/images/clever-c.svg" />
+    <link rel="shortcut icon" href="./assets/images/clever-c.svg" />
+    <link rel="stylesheet" href="./styles.css?v=core-v3" />
+    <link rel="stylesheet" href="./ui-remake.css?v=clever-entry-v5" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
   </head>
-  <body>
+  <body class="is-clever-entry">
+    <section class="clever-entry-gate" id="cleverEntryGate" aria-labelledby="cleverEntryTitle">
+      <header class="clever-entry-header">
+        <div class="clever-entry-brand" aria-label="Clever home">
+          <img src="./assets/images/clever-c.svg" alt="" />
+          <strong>Clever</strong>
+        </div>
+        <button class="clever-entry-header-login" type="button" data-clever-enter>
+          <span class="clever-entry-user-icon" aria-hidden="true"></span>
+          Log in
+        </button>
+      </header>
+
+      <div class="clever-entry-hero">
+        <div class="clever-entry-content">
+          <p class="clever-entry-kicker">Personal learning portal</p>
+          <h1 id="cleverEntryTitle">Clever</h1>
+          <h2>A smarter place to start.</h2>
+          <p class="clever-entry-copy">Open your apps and learning tools from one simple space.</p>
+          <button class="clever-entry-login" type="button" data-clever-enter>
+            <span>Log in</span>
+            <span class="clever-entry-login-arrow" aria-hidden="true">&#8594;</span>
+          </button>
+          <p class="clever-entry-note">This personal portal does not ask for school credentials.</p>
+        </div>
+      </div>
+    </section>
+
     <main class="desktop-shell">
       <section class="desktop-wallpaper" aria-hidden="true"></section>
       <div class="wallpaper-shade" aria-hidden="true"></div>
       <div class="wallpaper-grain" aria-hidden="true"></div>
 
-      <section class="hero-clock" aria-label="Desktop clock">
-        <p class="clock-day" id="clockDay">Tuesday</p>
-        <h1 class="clock-time" id="clockTime">8:50</h1>
-        <p class="clock-date" id="clockDate">April 21, 2026</p>
-        <div class="now-playing-chip" id="nowPlayingChip" hidden>
-          <span class="now-playing-label">Now Playing</span>
-          <strong id="nowPlayingText">Velofy</strong>
+      <section class="app-library-home" id="appLibraryHome" aria-labelledby="appLibraryTitle">
+        <header class="app-library-header">
+          <div class="app-library-brand">
+            <span class="app-library-mark" aria-hidden="true"></span>
+            <strong>vel.os</strong>
+          </div>
+          <div class="app-library-tools">
+            <div class="app-library-clock" aria-label="Current date and time">
+              <strong id="clockTime">8:50</strong>
+              <span><b id="clockDay">Tuesday</b> <i id="clockDate">April 21, 2026</i></span>
+            </div>
+            <button class="app-library-network" type="button" data-open-panel="network" aria-label="Open network settings" title="Network">
+              <i class="system-live-dot" aria-hidden="true"></i>
+              <span id="desktopNetworkStatus">Direct Mode</span>
+            </button>
+            <label class="app-library-search" for="appLibrarySearch">
+              <span aria-hidden="true"></span>
+              <input id="appLibrarySearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search apps" aria-label="Search app library" />
+            </label>
+          </div>
+        </header>
+
+        <section class="app-library-hero" aria-label="vel.os">
+          <span class="app-library-hero-mark" aria-hidden="true"></span>
+          <h1 id="appLibraryTitle">vel.os</h1>
+          <span class="app-library-hero-line" aria-hidden="true"></span>
+        </section>
+
+        <div class="app-library-overview">
+          <div>
+            <p class="section-label">Your library</p>
+            <strong aria-live="polite"><span id="appLibraryCount">0</span> apps</strong>
+          </div>
+          <button class="now-playing-chip" id="nowPlayingChip" type="button" data-open-panel="music" hidden>
+            <span class="now-playing-label">Now Playing</span>
+            <strong id="nowPlayingText">Velofy</strong>
+          </button>
         </div>
+
+        <section class="desktop-shortcuts" id="desktopShortcuts" aria-label="App library">
+          <button class="desktop-shortcut" type="button" data-open-panel="youtube">
+            <span class="desktop-shortcut-badge youtube-badge">YT</span>
+            <strong>YouTube</strong>
+          </button>
+          <button class="desktop-shortcut" type="button" data-open-panel="music">
+            <span class="desktop-shortcut-badge">VF</span>
+            <strong>Velofy</strong>
+          </button>
+          <button class="desktop-shortcut" type="button" data-open-panel="settings">
+            <span class="desktop-shortcut-badge">ST</span>
+            <strong>Settings</strong>
+          </button>
+        </section>
+        <p class="app-library-empty" id="appLibraryEmpty" hidden>No apps match that search.</p>
       </section>
 
-      <section class="desktop-status" aria-label="System status">
-        <span>vel.OS</span>
-        <strong id="desktopNetworkStatus">Direct Mode</strong>
-        <button class="status-pill-button" type="button" data-open-panel="network">Network</button>
-      </section>
-
-      <section class="desktop-shortcuts" id="desktopShortcuts" aria-label="Desktop shortcuts">
-        <button class="desktop-shortcut" type="button" data-open-panel="youtube">
-          <span class="desktop-shortcut-badge youtube-badge">YT</span>
-          <strong>YouTube</strong>
+      <nav class="app-switcher" id="appSwitcher" aria-label="Current app navigation">
+        <button class="app-switcher-back" id="showDesktopButton" type="button" data-switch-panel="desktop" aria-label="Back to app library" title="Back to library">
+          <span class="app-switcher-logo" aria-hidden="true"></span>
+          <span class="app-switcher-arrow" aria-hidden="true"></span>
+          <strong>back</strong>
         </button>
-        <button class="desktop-shortcut" type="button" data-open-panel="music">
-          <span class="desktop-shortcut-badge">VF</span>
-          <strong>Velofy</strong>
-        </button>
-        <button class="desktop-shortcut" type="button" data-open-panel="settings">
-          <span class="desktop-shortcut-badge">ST</span>
-          <strong>Settings</strong>
-        </button>
-      </section>
+        <span class="app-switcher-title" id="appSwitcherTitle">App</span>
+      </nav>
 
       <section class="welcome-gate" id="welcomeGate" aria-modal="true" role="dialog" aria-labelledby="welcomeGateTitle" hidden>
         <div class="welcome-card">
@@ -71,7 +133,7 @@
         <div class="terms-card">
           <p class="micro-label">vel.os terms</p>
           <h2 id="termsGateTitle">Before you enter</h2>
-          <p>vel.os is a private desktop-style space with live chat, shared apps, admin moderation, Remote Deck sounds, and optional screen-share tools.</p>
+          <p>vel.os is a private app library with live chat, shared tools, admin moderation, Remote Deck sounds, and optional screen-share tools.</p>
           <ul>
             <li><strong>Remote Deck:</strong> Sounds can play on this device only after this device allows them.</li>
             <li><strong>Screen sharing:</strong> Your browser still asks what to share, and vel.os shows a visible sharing badge while it is active.</li>
@@ -166,7 +228,7 @@
             <div>
               <p class="micro-label">vel.os</p>
               <h2>Launcher</h2>
-              <p class="drawer-copy">Games, music, web tools, and settings in one clean desktop.</p>
+              <p class="drawer-copy">Games, music, web tools, and settings in one focused library.</p>
             </div>
             <button class="close-button" type="button" data-close-panel="launcher">Close</button>
           </header>
@@ -230,6 +292,53 @@
               </button>
             </div>
           </section>
+        </div>
+      </section>
+
+      <section class="drawer media-drawer" id="mediaDrawer" aria-hidden="true">
+        <button class="drawer-scrim" type="button" aria-label="Close TikTok" data-close-panel="media"></button>
+        <div class="drawer-panel media-panel">
+          <header class="drawer-head media-head">
+            <div>
+              <p class="micro-label">vel.os</p>
+              <h2>TikTok</h2>
+              <p class="drawer-copy">Paste a TikTok link to watch it here.</p>
+            </div>
+            <button class="ghost-button" type="button" data-close-panel="media">Close</button>
+          </header>
+
+          <form class="media-search" id="mediaSearchForm">
+            <input id="mediaSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Paste a TikTok video link" aria-label="TikTok link or search" />
+            <button class="ghost-button is-solid" type="submit">Play</button>
+          </form>
+
+          <div class="media-tabs" role="tablist" aria-label="TikTok views">
+            <button class="is-active" type="button" data-media-provider="tiktok" role="tab" aria-selected="true">Videos</button>
+          </div>
+
+          <section class="media-player" id="mediaPlayer" hidden>
+            <div class="media-player-head">
+              <div>
+                <p class="micro-label" id="mediaPlayerProvider">TikTok</p>
+                <h3 id="mediaPlayerTitle">Video</h3>
+                <p id="mediaPlayerMeta"></p>
+              </div>
+              <button class="ghost-button" id="mediaPlayerClose" type="button">Close video</button>
+            </div>
+            <div class="media-player-frame" id="mediaPlayerFrame"></div>
+          </section>
+
+          <div class="media-status">
+            <div>
+              <p class="section-label" id="mediaResultsTitle">Your videos</p>
+              <p id="mediaResultsCopy">Paste a public TikTok link above, or connect your account.</p>
+            </div>
+            <span id="mediaLoading" hidden>Loading...</span>
+          </div>
+          <div class="media-grid" id="mediaGrid"></div>
+          <div class="load-more-wrap">
+            <button class="ghost-button" id="mediaLoadMore" type="button" hidden>Load more</button>
+          </div>
         </div>
       </section>
 
@@ -357,7 +466,7 @@
             <div>
               <p class="micro-label">vel.os</p>
               <h2>Vel Hub</h2>
-              <p class="drawer-copy">A clean movie room built into the desktop.</p>
+              <p class="drawer-copy">A clean movie room built into your app library.</p>
             </div>
             <div class="window-actions">
               <button class="close-button" id="velHubWindowButton" type="button">Window</button>
@@ -953,7 +1062,7 @@
               <div>
                 <p class="section-label">Connection</p>
                 <h3>Direct Mode</h3>
-              <p>vel.os opens web apps in a simple desktop window.</p>
+              <p>vel.os opens web apps directly inside the library.</p>
               </div>
               <div class="network-orb" aria-hidden="true"><span></span></div>
             </article>
@@ -1135,7 +1244,7 @@
             <div>
               <p class="micro-label">vel.os admin</p>
               <h2>Remote Deck</h2>
-              <p class="drawer-copy">Whitelisted sound deck with target selection and opt-in playback.</p>
+              <p class="drawer-copy">Admin sound deck with target selection and opt-in playback.</p>
             </div>
             <div class="drawer-head-actions">
               <button class="close-button" type="button" id="remoteDeckFullscreen">Fullscreen</button>
@@ -1147,7 +1256,7 @@
             <aside class="remote-deck-side">
               <p class="section-label">Pick Device First</p>
               <h3 id="remoteDeckSelectedName">No target selected</h3>
-              <p class="tiny-note" id="remoteDeckStatus">Select Owner iPad, Owner PC, or multiple whitelisted devices, then tap a sound pad.</p>
+              <p class="tiny-note" id="remoteDeckStatus">Select one or more online devices, then tap a sound pad.</p>
               <button class="ghost-button is-solid" type="button" id="remoteDeckAllow">Allow this device</button>
               <button class="ghost-button" type="button" id="remoteDeckRefresh">Refresh devices</button>
               <div class="remote-device-list" id="remoteDeckTargets"></div>
@@ -1226,8 +1335,8 @@
                 <p class="catalog-empty">No active bans.</p>
               </div>
               <div class="dev-whitelist-list" id="devWhitelistList">
-                <p class="section-label">Dev Whitelist</p>
-                <p class="catalog-empty">Only your owner iPad is whitelisted.</p>
+                <p class="section-label">Remote Trust</p>
+                <p class="catalog-empty">Unlock Dev Panel to manage keyless Remote Deck access.</p>
               </div>
             </article>
           </div>
@@ -1242,7 +1351,7 @@
             <div>
               <p class="micro-label">vel.os</p>
               <h2>Calculator</h2>
-              <p class="drawer-copy">A clean desktop calculator with a tiny hidden vault.</p>
+              <p class="drawer-copy">A clean calculator with a tiny hidden vault.</p>
             </div>
             <button class="close-button" type="button" data-close-panel="calculator">Close</button>
           </header>
@@ -1299,7 +1408,7 @@
             <div>
               <p class="micro-label">vel.os</p>
               <h2>Settings</h2>
-              <p class="drawer-copy">Switch wallpapers and fonts without leaving the desktop.</p>
+              <p class="drawer-copy">Tune the look and feel of your app library.</p>
             </div>
             <button class="close-button" type="button" data-close-panel="settings">Close</button>
           </header>
@@ -1320,16 +1429,16 @@
             <article class="settings-card">
               <p class="section-label">Fonts</p>
               <div class="font-picker">
-                <button class="font-option" type="button" data-font-option="system"><strong>System Sans</strong><span>Clean desktop look</span><span class="font-sample font-sample-system">vel.os stays sharp and minimal.</span></button>
+                <button class="font-option" type="button" data-font-option="system"><strong>System Sans</strong><span>Clean library look</span><span class="font-sample font-sample-system">vel.os stays sharp and minimal.</span></button>
                 <button class="font-option" type="button" data-font-option="serif"><strong>Serif</strong><span>Cinematic reading vibe</span><span class="font-sample font-sample-serif">vel.os feels more dramatic and polished.</span></button>
                 <button class="font-option" type="button" data-font-option="rounded"><strong>Rounded</strong><span>Softer tablet feel</span><span class="font-sample font-sample-rounded">vel.os feels lighter and more casual.</span></button>
               </div>
               <p class="tiny-note settings-note">Your wallpaper and font save on this device after refresh.</p>
             </article>
             <article class="settings-card chat-settings-card" id="chatSettingsCard">
-              <p class="section-label">Global Chat</p>
+              <p class="section-label">Stranger Chat</p>
               <h3>Chat Identity</h3>
-              <p class="settings-card-copy">Pick the name people see when you talk in the bottom-left site chat.</p>
+              <p class="settings-card-copy">Pick the name people see when you join the vel.os public chat.</p>
               <form class="chat-settings-form" id="velChatLoginForm">
                 <input id="velChatName" type="text" maxlength="24" autocomplete="nickname" placeholder="Your chat name" aria-label="Chat display name" />
                 <button class="ghost-button is-solid" type="submit">Save Login</button>
@@ -1352,19 +1461,19 @@
                 <button class="theme-pack-card is-active" type="button" data-theme-pack="noir">
                   <span class="theme-pack-preview theme-pack-noir"></span>
                   <strong>Noir Core</strong>
-                  <span>Default black glass, clean taskbar, classic boot.</span>
+                  <span>Default black glass, crisp app tiles, classic boot.</span>
                   <em>Owned</em>
                 </button>
                 <button class="theme-pack-card" type="button" data-theme-pack="revamp">
                   <span class="theme-pack-preview theme-pack-revamp"></span>
                   <strong>Nova Shell</strong>
-                  <span>Editorial glass, punchier cards, cleaner dock.</span>
+                  <span>Editorial glass, punchier cards, brighter accents.</span>
                   <em>Owned</em>
                 </button>
                 <button class="theme-pack-card" type="button" data-theme-pack="frost">
                   <span class="theme-pack-preview theme-pack-frost"></span>
                   <strong>Frost Byte</strong>
-                  <span>Snow wallpaper polish, icy taskbar, white boot glow.</span>
+                  <span>Snow wallpaper polish, icy controls, white boot glow.</span>
                   <em>120 VC</em>
                 </button>
                 <button class="theme-pack-card" type="button" data-theme-pack="violet">
@@ -1376,11 +1485,11 @@
                 <button class="theme-pack-card" type="button" data-theme-pack="terminal">
                   <span class="theme-pack-preview theme-pack-terminal"></span>
                   <strong>Terminal Ghost</strong>
-                  <span>Hacker green accents, scanline taskbar, sharp boot.</span>
+                  <span>Hacker green accents, scanline details, sharp boot.</span>
                   <em>220 VC</em>
                 </button>
               </div>
-              <p class="tiny-note settings-note">Themes change the taskbar, icons, and boot style. Wallpapers stay separate.</p>
+              <p class="tiny-note settings-note">Themes change controls, icons, and boot style. Wallpapers stay separate.</p>
             </article>
             <article class="settings-card">
               <p class="section-label">Custom Wallpaper</p>
@@ -1408,37 +1517,30 @@
                 <button class="font-option" type="button" data-zoom-option="mini"><strong>80%</strong><span>Extra small</span><span class="font-sample">Maximum screen room.</span></button>
                 <button class="font-option" type="button" data-zoom-option="ipad"><strong>iPad Air</strong><span>Tablet spacious mode</span><span class="font-sample">Zooms the whole OS out and keeps panels organized.</span></button>
               </div>
-              <p class="section-label settings-sub-label">Taskbar</p>
-              <div class="font-picker">
-                <button class="font-option" type="button" data-taskbar-position="bottom"><strong>Bottom</strong><span>Classic dock</span><span class="font-sample">Apps sit along the bottom.</span></button>
-                <button class="font-option" type="button" data-taskbar-position="left"><strong>Left Side</strong><span>Vertical dock</span><span class="font-sample">More room for windows.</span></button>
-                <button class="font-option" type="button" data-taskbar-position="right"><strong>Right Side</strong><span>Vertical dock</span><span class="font-sample">Keeps the desktop clean.</span></button>
-              </div>
-              <button class="ghost-button settings-action" type="button" data-reset-windows>Reset Window Positions</button>
-              <button class="ghost-button settings-action" type="button" id="homeEditButton">Homescreen Change</button>
-              <p class="tiny-note settings-note">Drag any window by its top bar. Positions save after refresh.</p>
+              <button class="ghost-button settings-action" type="button" id="homeEditButton">Organize Apps</button>
+              <p class="tiny-note settings-note">Library order is saved on this device.</p>
             </article>
           </div>
         </div>
       </section>
 
       <aside class="home-edit-toolbar" id="homeEditToolbar" hidden>
-        <strong>Homescreen Change</strong>
-        <span>Drag the clock and app icons. Move the taskbar anywhere.</span>
-        <button type="button" data-home-taskbar="bottom">Bottom</button>
-        <button type="button" data-home-taskbar="left">Left</button>
-        <button type="button" data-home-taskbar="right">Right</button>
-        <button type="button" id="homeEditReset">Reset</button>
+        <strong>Organize Apps</strong>
+        <span>Editing library order</span>
+        <button type="button" id="homeEditReset">Reset Order</button>
         <button type="button" id="homeEditDone">Done</button>
       </aside>
 
       <footer class="taskbar" aria-label="vel.os taskbar">
         <div class="taskbar-left">
-          <button class="start-button" type="button" id="startButton" aria-label="Open catalog"><span class="start-glyph" aria-hidden="true"></span><span>Catalog</span></button>
+          <button class="start-button" type="button" id="startButton" aria-label="Open apps"><span class="start-glyph" aria-hidden="true"></span><span>Apps</span></button>
           <button class="taskbar-search" type="button" data-open-panel="launcher" aria-label="Search games and apps"><span aria-hidden="true"></span><strong>Search</strong></button>
         </div>
         <div class="taskbar-center">
+          <button class="taskbar-app taskbar-pinned" type="button" data-open-web="browser" aria-label="Open Web Browser"><img class="taskbar-icon" src="./assets/images/apps/web-browser.svg" alt="" /><span class="taskbar-label">Browser</span></button>
           <button class="taskbar-app" type="button" id="openLocalGamesButton"><span class="taskbar-icon taskbar-icon-text">LG</span><span class="taskbar-label">Local Games</span></button>
+          <button class="taskbar-app taskbar-pinned" type="button" data-open-panel="music" aria-label="Open Velofy"><span class="taskbar-icon taskbar-icon-text">VF</span><span class="taskbar-label">Velofy</span></button>
+          <button class="taskbar-app taskbar-pinned" type="button" data-open-panel="dev" aria-label="Open Dev Panel"><span class="taskbar-icon taskbar-icon-text">DV</span><span class="taskbar-label">Dev</span></button>
           <div class="recent-apps-tray" id="recentAppsTray" aria-label="Recently played apps"></div>
         </div>
         <div class="taskbar-right">
@@ -1463,11 +1565,11 @@
           <span class="vel-chat-unread" id="velChatUnread" hidden>0</span>
         </button>
 
-        <section class="vel-chat-panel" id="velChatPanel" aria-label="Global chat panel">
+        <section class="vel-chat-panel" id="velChatPanel" aria-label="Stranger chat panel">
           <header class="vel-chat-head">
             <div>
               <p class="micro-label">vel.os</p>
-              <h2>Global Chat</h2>
+              <h2 id="velChatTitle">Stranger Chat</h2>
             </div>
             <div class="vel-chat-head-actions">
               <button class="vel-chat-mini-button vel-chat-clear-button" type="button" id="velChatClearLog">Clear</button>
@@ -1485,7 +1587,7 @@
           <form class="vel-chat-form" id="velChatForm">
             <button class="vel-chat-attach-button" type="button" id="velChatAttachButton" aria-label="Attach picture or video">Media</button>
             <input id="velChatAttachmentInput" type="file" accept="image/*,video/mp4,video/webm,video/ogg" hidden />
-            <input id="velChatInput" type="text" maxlength="360" autocomplete="off" placeholder="Message everyone on vel.os..." aria-label="Chat message" />
+            <input id="velChatInput" type="text" maxlength="360" autocomplete="off" placeholder="Say something to everyone here..." aria-label="Chat message" />
             <button type="submit">Send</button>
           </form>
           <p class="vel-chat-attachment" id="velChatAttachmentName" hidden></p>
@@ -1506,6 +1608,6 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=nova-ui-v2"></script>
+    <script src="./script.js?v=clever-entry-v5"></script>
   </body>
 </html>

@@ -2023,6 +2023,10 @@ gameCatalog.forEach((game) => {
   };
 });
 
+if (webApps.minecraftclassic) {
+  webApps.minecraftclassic.badgeSrc = "./assets/images/apps/voxel-sandbox-cover.png";
+}
+
 const utilityApps = {
   browser: {
     title: "Web Browser",
@@ -2040,9 +2044,23 @@ const utilityApps = {
   youtube: {
     title: "YouTube",
     label: "YouTube",
-    badgeText: "YT",
+    badgeSrc: "./assets/images/apps/youtube.svg",
     action: "panel",
     panel: "youtube"
+  },
+  media: {
+    title: "TikTok",
+    label: "TikTok",
+    badgeSrc: "./assets/images/apps/tiktok.svg",
+    action: "panel",
+    panel: "media"
+  },
+  chat: {
+    title: "Stranger Chat",
+    label: "Chat",
+    badgeSrc: "./assets/images/apps/stranger-chat-cover.png",
+    action: "panel",
+    panel: "chat"
   },
   velhub: {
     title: "Vel Hub",
@@ -2596,6 +2614,8 @@ const clockTime = document.getElementById("clockTime");
 const clockDate = document.getElementById("clockDate");
 const heroClock = document.querySelector(".hero-clock");
 const bootScreen = document.getElementById("bootScreen");
+const cleverEntryGate = document.getElementById("cleverEntryGate");
+const cleverEntryButtons = [...document.querySelectorAll("[data-clever-enter]")];
 const welcomeGate = document.getElementById("welcomeGate");
 const welcomeGateTitle = document.getElementById("welcomeGateTitle");
 const welcomeNameForm = document.getElementById("welcomeNameForm");
@@ -2606,6 +2626,9 @@ const termsAcceptButton = document.getElementById("termsAcceptButton");
 const termsSoundOptIn = document.getElementById("termsSoundOptIn");
 const termsStatus = document.getElementById("termsStatus");
 const desktopShortcuts = document.getElementById("desktopShortcuts");
+const appLibrarySearch = document.getElementById("appLibrarySearch");
+const appLibraryCount = document.getElementById("appLibraryCount");
+const appLibraryEmpty = document.getElementById("appLibraryEmpty");
 const launcherGameSearch = document.getElementById("launcherGameSearch");
 const launcherOfflineToggle = document.getElementById("launcherOfflineToggle");
 const appStoreTabs = document.getElementById("appStoreTabs");
@@ -2649,11 +2672,14 @@ const openMusicButton = document.getElementById("openMusicButton");
 const openSettingsButton = document.getElementById("openSettingsButton");
 const openNetworkButton = document.getElementById("openNetworkButton");
 const startButton = document.getElementById("startButton");
+const showDesktopButton = document.getElementById("showDesktopButton");
+const appSwitcherTitle = document.getElementById("appSwitcherTitle");
 const closePanelButtons = [...document.querySelectorAll("[data-close-panel]")];
 const panelOpenButtons = [...document.querySelectorAll("[data-open-panel]")];
 const gameLaunchButtons = [...document.querySelectorAll("[data-launch-game]")];
 const webButtons = [...document.querySelectorAll("[data-open-web]")];
 const switchButtons = [...document.querySelectorAll("[data-game-switch]")];
+const appSwitcherButtons = [...document.querySelectorAll("[data-switch-panel]")];
 const taskbarButtons = [
   startButton,
   openLauncherButton,
@@ -2662,7 +2688,7 @@ const taskbarButtons = [
   openMusicButton,
   openSettingsButton,
   openNetworkButton,
-  ...[...document.querySelectorAll(".taskbar-app[data-open-web]")]
+  ...[...document.querySelectorAll(".taskbar-app[data-open-web], .taskbar-app[data-open-panel]")]
 ].filter(Boolean);
 
 const webTag = document.getElementById("webTag");
@@ -2681,6 +2707,7 @@ const webNote = document.getElementById("webNote");
 const webWarning = document.getElementById("webWarning");
 const webWarningText = document.getElementById("webWarningText");
 const webFrame = document.getElementById("webFrame");
+const webFrameBaseSandbox = webFrame?.getAttribute("sandbox") || "allow-forms allow-modals allow-presentation allow-scripts allow-downloads";
 const webFrameHelper = document.getElementById("webFrameHelper");
 const webHelperMirrorButton = document.getElementById("webHelperMirrorButton");
 const webHelperLocalButton = document.getElementById("webHelperLocalButton");
@@ -3135,6 +3162,7 @@ let customThemeDraft = null;
 let homeEditMode = false;
 let welcomeTypeTimer = null;
 let welcomeGateStep = "name";
+const CLEVER_ENTRY_SESSION_KEY = "clever-entry-open-v1";
 let secretVaultUnlocked = false;
 let secretVaultLoading = false;
 let secretVaultVideos = [];
@@ -3146,6 +3174,7 @@ let devPollTimer = null;
 let devPresenceTimer = null;
 let devAccessTimer = null;
 let devLoading = false;
+let devUiUnlocked = false;
 let ownerLockMode = "";
 let pendingScreenShare = null;
 let activeScreenShareStream = null;
@@ -3182,6 +3211,7 @@ let remoteDeckPeers = readStoredJson(REMOTE_DECK_PEERS_KEY, {});
 remoteDeckPeers = remoteDeckPeers && typeof remoteDeckPeers === "object" && !Array.isArray(remoteDeckPeers) ? remoteDeckPeers : {};
 let remoteDeckAllowed = storage.get(REMOTE_DECK_ALLOW_KEY, "0") === "1";
 let remoteDeckChannel = null;
+let remoteDeckChannelStarted = false;
 let remoteDeckOnlineUsers = [];
 let remoteDeckTargetsLoading = false;
 let remoteDeckPendingPayload = null;
@@ -3225,6 +3255,9 @@ unlockedThemePacks = Array.isArray(unlockedThemePacks) ? [...new Set(["noir", "r
 let installedApps = readStoredJson("vel-installed-apps", [
   "web:browser",
   "panel:youtube",
+  "panel:media",
+  "panel:chat",
+  "web:minecraftclassic",
   "panel:velhub",
   "panel:lobbies",
   "panel:soundboard",
@@ -3235,7 +3268,7 @@ let installedApps = readStoredJson("vel-installed-apps", [
 ]);
 installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
-  : ["web:browser", "panel:youtube", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
+  : ["web:browser", "panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
 installedApps = installedApps.filter((item) => item !== "panel:ai");
 installedApps = installedApps.filter((item) => item !== "panel:remoteDeck" || isRemoteDeckWhitelistedDevice());
 storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
@@ -3279,6 +3312,12 @@ if (storage.get("vel-installed-apps-v9", "0") !== "1" && !installedApps.includes
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v9", "1");
 }
+if (storage.get("vel-installed-apps-v10", "0") !== "1") {
+  const featuredApps = ["panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "web:browser"];
+  installedApps = [...featuredApps, ...installedApps.filter((ref) => !featuredApps.includes(ref))].slice(0, 40);
+  storage.set("vel-installed-apps", JSON.stringify(installedApps));
+  storage.set("vel-installed-apps-v10", "1");
+}
 let recentApps = readStoredJson("vel-recent-apps", []);
 recentApps = Array.isArray(recentApps) ? recentApps.filter((item) => !(item?.type === "panel" && item?.id === "ai")) : [];
 storage.set("vel-recent-apps", JSON.stringify(recentApps.slice(0, 7)));
@@ -3308,6 +3347,7 @@ let mediaState = {
   tiktokVideos: [],
   tiktokError: "",
   tiktokAuthRequired: true,
+  tiktokLinkOnly: false,
   loading: false
 };
 
@@ -3448,6 +3488,15 @@ if (storage.get("vel-desktop-browser-shortcut-v1", "0") !== "1") {
   storage.set("vel-desktop-browser-shortcut-v1", "1");
 }
 
+if (storage.get("vel-app-wall-order-v1", "0") !== "1") {
+  const featuredOrder = ["panel:launcher", "panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "web:browser"];
+  const savedDesktopOrder = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
+  const previousOrder = Array.isArray(savedDesktopOrder) ? savedDesktopOrder : [];
+  const nextDesktopOrder = [...featuredOrder, ...previousOrder.filter((ref) => !featuredOrder.includes(ref))];
+  storage.set(DESKTOP_SHORTCUT_ORDER_KEY, JSON.stringify(nextDesktopOrder.slice(0, 40)));
+  storage.set("vel-app-wall-order-v1", "1");
+}
+
 function getDesktopShortcutPositions() {
   const positions = readStoredJson(DESKTOP_SHORTCUT_POSITIONS_KEY, {});
   return positions && typeof positions === "object" && !Array.isArray(positions) ? positions : {};
@@ -3478,7 +3527,7 @@ function getDesktopShortcutOrder() {
   const ordered = Array.isArray(savedOrder)
     ? savedOrder.filter((ref) => defaults.includes(ref))
     : [];
-  return [...ordered, ...defaults.filter((ref) => !ordered.includes(ref))].slice(0, 12);
+  return [...ordered, ...defaults.filter((ref) => !ordered.includes(ref))].slice(0, 40);
 }
 
 function saveDesktopShortcutOrder(order = []) {
@@ -3504,7 +3553,7 @@ function getAppMetaFromRef(ref) {
     return {
       title: "App Store",
       label: "Store",
-      badgeText: "AS",
+      badgeSrc: "./assets/images/favicon.svg",
       action: "panel",
       panel: "launcher"
     };
@@ -3544,6 +3593,10 @@ function openAppRef(ref) {
       openYouTubeApp();
       return;
     }
+    if (id === "media") {
+      openMediaProvider("tiktok");
+      return;
+    }
     if (id === "velhub") {
       openVelHubApp();
       return;
@@ -3577,21 +3630,39 @@ function removeInstalledApp(ref) {
   renderLauncherCatalog();
 }
 
+function filterAppLibrary() {
+  if (!desktopShortcuts) return;
+  const query = String(appLibrarySearch?.value || "").trim().toLowerCase();
+  const buttons = [...desktopShortcuts.querySelectorAll(".desktop-shortcut")];
+  let visibleCount = 0;
+  buttons.forEach((button) => {
+    const matches = !query || button.textContent.toLowerCase().includes(query);
+    button.hidden = !matches;
+    if (matches) visibleCount += 1;
+  });
+  if (appLibraryCount) appLibraryCount.textContent = String(visibleCount);
+  if (appLibraryEmpty) {
+    appLibraryEmpty.hidden = visibleCount > 0;
+    appLibraryEmpty.textContent = query ? "No apps match that search." : "No apps installed yet.";
+  }
+}
+
 function renderDesktopShortcuts() {
   if (!desktopShortcuts) return;
   const shortcutRefs = getDesktopShortcutOrder()
     .map((ref) => ({ ref, meta: getAppMetaFromRef(ref) }))
     .filter((item) => item.meta)
-    .slice(0, 12);
+    .slice(0, 40);
   saveDesktopShortcutOrder(shortcutRefs.map((item) => item.ref));
 
   desktopShortcuts.innerHTML = shortcutRefs.map(({ ref, meta }) => `
-    <button class="desktop-shortcut" type="button" draggable="true" data-desktop-shortcut="${escapeHtml(ref)}" data-app-open-ref="${escapeHtml(ref)}" aria-label="Open ${escapeHtml(meta.title)}. Drag in Homescreen Change mode to move.">
+    <button class="desktop-shortcut" type="button" draggable="false" data-desktop-shortcut="${escapeHtml(ref)}" data-app-open-ref="${escapeHtml(ref)}" aria-label="Open ${escapeHtml(meta.title)}">
       ${renderBadge(meta, `desktop-shortcut-badge${ref === "panel:youtube" ? " youtube-badge" : ""}`)}
       <strong>${escapeHtml(meta.title)}</strong>
     </button>
   `).join("");
   applyDesktopShortcutPositions();
+  filterAppLibrary();
 }
 
 let desktopShortcutDragRef = "";
@@ -3601,8 +3672,6 @@ let desktopShortcutPointerMoved = false;
 let desktopShortcutPointerButton = null;
 let desktopShortcutStartX = 0;
 let desktopShortcutStartY = 0;
-let desktopShortcutOriginX = 0;
-let desktopShortcutOriginY = 0;
 
 function clearDesktopShortcutDragState() {
   desktopShortcuts?.querySelectorAll(".desktop-shortcut").forEach((button) => {
@@ -3676,9 +3745,21 @@ function renderRecentApps() {
 }
 
 function syncTaskbarState() {
+  document.body.classList.toggle("has-open-app", Boolean(activePanel));
+  document.body.dataset.activePanel = activePanel || "desktop";
+  let activeAppTitle = utilityApps[activePanel]?.title || "App";
+  if (activePanel === "launcher") activeAppTitle = "App Store";
+  if (activePanel === "web") activeAppTitle = webApps[activeWeb]?.title || "Web Browser";
+  if (activePanel === "game") activeAppTitle = localGameMeta[activeLocalGame]?.title || "Local Arcade";
+  if (appSwitcherTitle) appSwitcherTitle.textContent = activeAppTitle;
   taskbarButtons.forEach((button) => button.classList.remove("is-active"));
   recentAppsTray?.querySelectorAll(".taskbar-app").forEach((button) => {
     button.classList.remove("is-active");
+  });
+  appSwitcherButtons.forEach((button) => {
+    const isActive = button.dataset.switchPanel === (activePanel || "desktop");
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-current", isActive ? "page" : "false");
   });
 
   if (activePanel === "launcher" || activePanel === "game") {
@@ -3696,6 +3777,10 @@ function syncTaskbarState() {
 
   if (activePanel === "youtube") {
     recentAppsTray?.querySelector('[data-recent-type="panel"][data-recent-id="youtube"]')?.classList.add("is-active");
+  }
+
+  if (activePanel === "media" || activePanel === "chat") {
+    recentAppsTray?.querySelector(`[data-recent-type="panel"][data-recent-id="${activePanel}"]`)?.classList.add("is-active");
   }
 
   if (activePanel === "velhub") {
@@ -3759,6 +3844,7 @@ function pauseDynamicGames(nextGame) {
 
 function unloadWebFrame() {
   if (!webFrame) return;
+  webFrame.setAttribute("sandbox", webFrameBaseSandbox);
   webFrame.removeAttribute("srcdoc");
   webFrame.src = "about:blank";
 }
@@ -3823,12 +3909,16 @@ function suspendPanelPlayback(name) {
 
 function openPanel(name) {
   if (name === "remoteDeck" && !isRemoteDeckWhitelistedDevice()) {
-    showOwnerLockOverlay("Not whitelisted", "Remote Deck only shows on whitelisted admin devices.", { mode: "app" });
+    openPanel("dev");
+    setDevStatus("Unlock Dev Panel to use Remote Deck.", "warn");
     return false;
   }
   if (isDevAppLocked(name)) {
     showDevAppLocked(name);
     return false;
+  }
+  if (activePanel === "chat" && name !== "chat") {
+    setVelChatCollapsed(true);
   }
   pauseAllFeedMedia();
 
@@ -3843,6 +3933,10 @@ function openPanel(name) {
   });
   activePanel = name;
 
+  if (name === "chat") {
+    setVelChatCollapsed(false);
+  }
+
   if (name !== "game") {
     pauseDynamicGames("");
   }
@@ -3855,6 +3949,10 @@ function openPanel(name) {
 
   if (name === "youtube") {
     recordRecentApp({ type: "panel", id: "youtube" });
+  }
+
+  if (name === "media" || name === "chat") {
+    recordRecentApp({ type: "panel", id: name });
   }
 
   if (name === "velhub") {
@@ -3910,6 +4008,9 @@ function openPanel(name) {
 }
 
 function closeAllPanels() {
+  if (activePanel === "chat") {
+    setVelChatCollapsed(true);
+  }
   Object.keys(drawers).forEach((key) => {
     if (isDrawerOpen(key)) {
       suspendPanelPlayback(key);
@@ -3923,6 +4024,9 @@ function closeAllPanels() {
 }
 
 function closePanel(name) {
+  if (name === "chat") {
+    setVelChatCollapsed(true);
+  }
   suspendPanelPlayback(name);
   setDrawerState(name, false);
   if (activePanel === name) {
@@ -4026,6 +4130,7 @@ function getVelDeviceName() {
 }
 
 function isRemoteDeckWhitelistedDevice(deviceId = velDeviceId) {
+  if (devUiUnlocked) return true;
   const id = String(deviceId || "").trim();
   if (!id) return false;
   const extraIds = readStoredJson("vel-remote-deck-extra-whitelist", []);
@@ -5669,7 +5774,10 @@ async function fetchRemoteDeckTargets() {
   try {
     const response = await fetch("/api/dev/presence", {
       method: "POST",
-      headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+      headers: {
+        ...getVelChatHeaders({ "Content-Type": "application/json" }),
+        ...(devAdminCode ? { "x-vel-admin-code": devAdminCode } : {})
+      },
       body: JSON.stringify({
         action: "remote-list",
         ...getDevIdentityPayload()
@@ -5882,7 +5990,10 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
     try {
       const response = await fetch("/api/dev/presence", {
         method: "POST",
-        headers: getVelChatHeaders({ "Content-Type": "application/json" }),
+        headers: {
+          ...getVelChatHeaders({ "Content-Type": "application/json" }),
+          ...(devAdminCode ? { "x-vel-admin-code": devAdminCode } : {})
+        },
         body: JSON.stringify({
           action: "remote-sound",
           ...getDevIdentityPayload(),
@@ -5924,7 +6035,8 @@ function announceRemoteDeckPeer() {
 }
 
 function initRemoteDeckChannel() {
-  if (!isRemoteDeckWhitelistedDevice()) return;
+  if (!isRemoteDeckWhitelistedDevice() || remoteDeckChannelStarted) return;
+  remoteDeckChannelStarted = true;
   rememberRemoteDeckPeer({
     deviceId: velDeviceId,
     username: velChatUser?.username || "This device",
@@ -5997,7 +6109,7 @@ function getActiveDevAppInfo() {
 
 function getDevActivityLabel() {
   if (document.activeElement === velChatInput && velChatInput?.value.trim()) {
-    return "Typing in Global Chat";
+    return "Typing in Stranger Chat";
   }
   if (!activePanel) return "On desktop";
   if (activePanel === "youtube") {
@@ -6005,6 +6117,8 @@ function getDevActivityLabel() {
     if (youtubeAppState.query) return `Browsing YouTube: ${youtubeAppState.query}`;
     return "Browsing YouTube";
   }
+  if (activePanel === "media") return "Watching TikTok";
+  if (activePanel === "chat") return "Using Stranger Chat";
   if (activePanel === "music") {
     const localTrack = playlist[currentTrackIndex];
     if (localTrack?.title) return `Velofy: ${localTrack.title}`;
@@ -6102,6 +6216,8 @@ function getDevBanDurationOptions() {
 function getDevAppLockOptions(activeApp = "") {
   const options = [
     ["youtube", "YouTube"],
+    ["media", "TikTok"],
+    ["chat", "Stranger Chat"],
     ["music", "Velofy"],
     ["game", "Local Games"],
     ["web", "Web"],
@@ -6150,7 +6266,7 @@ function renderDevPanel(users = [], meta = {}) {
             <small>${escapeHtml(user.deviceName || "Unknown device")}</small>
             <small>${escapeHtml(user.deviceId ? `Device ${user.deviceId.slice(0, 8)}` : "No device ID")}</small>
             <small class="dev-audio-note${normalizeRemoteDeckAudioInfo(user).remoteSilent ? " is-silent" : " is-ready"}">${escapeHtml(getRemoteDeckAudioLabel(user))}</small>
-            ${user.devWhitelisted || whitelistedKeys.has(user.deviceId) ? '<small class="dev-lock-note">Dev Panel whitelisted</small>' : ""}
+            ${user.devWhitelisted || whitelistedKeys.has(user.deviceId) ? '<small class="dev-lock-note">Trusted for Remote Deck</small>' : ""}
             ${user.siteLocked ? '<small class="dev-lock-note">Site locked by owner</small>' : ""}
             ${Array.isArray(user.lockedApps) && user.lockedApps.length ? `<small class="dev-lock-note">Locked apps: ${escapeHtml(user.lockedApps.join(", "))}</small>` : ""}
           </div>
@@ -6169,8 +6285,8 @@ function renderDevPanel(users = [], meta = {}) {
             <button type="button" data-dev-grant-vc="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Give VC</button>
           ` : `
             ${user.devWhitelisted || whitelistedKeys.has(user.deviceId)
-              ? `<button type="button" data-dev-revoke-admin="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove Dev</button>`
-              : `<button type="button" data-dev-whitelist="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Whitelist Dev</button>`}
+              ? `<button type="button" data-dev-revoke-admin="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Remove Trust</button>`
+              : `<button type="button" data-dev-whitelist="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Trust Remote</button>`}
             <button type="button" data-dev-kick="${escapeHtml(user.userId || "")}" data-dev-device="${escapeHtml(user.deviceId || "")}">Kick off site</button>
             <select aria-label="Ban duration" data-dev-duration="${escapeHtml(user.userId || "")}">
               ${getDevBanDurationOptions()}
@@ -6214,7 +6330,7 @@ function renderDevWhitelist(adminDevices = []) {
     deviceName: device.deviceName || "Dev whitelist"
   }));
   devWhitelistList.innerHTML = `
-    <p class="section-label">Dev Whitelist${devices.length ? ` (${devices.length})` : ""}</p>
+    <p class="section-label">Remote Trust${devices.length ? ` (${devices.length})` : ""}</p>
     ${devices.length ? devices.map((device) => `
       <article class="dev-whitelist-row">
         <div>
@@ -6226,7 +6342,7 @@ function renderDevWhitelist(adminDevices = []) {
           ? '<em>Protected</em>'
           : `<button type="button" data-dev-revoke-admin-device="${escapeHtml(device.deviceId || "")}">Remove</button>`}
       </article>
-    `).join("") : '<p class="catalog-empty">Only your owner iPad is whitelisted.</p>'}
+    `).join("") : '<p class="catalog-empty">No devices have keyless Remote Deck access.</p>'}
   `;
 }
 
@@ -6249,13 +6365,28 @@ function renderDevBans(bans = []) {
 }
 
 function setDevUnlocked(unlocked) {
+  const didChange = devUiUnlocked !== Boolean(unlocked);
+  devUiUnlocked = Boolean(unlocked);
   if (devAuthCard) devAuthCard.hidden = unlocked;
   if (devDashboard) devDashboard.hidden = !unlocked;
   if (!unlocked && devOnlineList) {
     devOnlineList.innerHTML = '<p class="catalog-empty">Unlock Dev Panel to view sessions.</p>';
   }
   if (!unlocked && devWhitelistList) {
-    devWhitelistList.innerHTML = '<p class="section-label">Dev Whitelist</p><p class="catalog-empty">Unlock Dev Panel to manage devices.</p>';
+    devWhitelistList.innerHTML = '<p class="section-label">Remote Trust</p><p class="catalog-empty">Unlock Dev Panel to manage trusted Remote Deck devices.</p>';
+  }
+  if (unlocked && !installedApps.includes("panel:remoteDeck")) {
+    installedApps = ["panel:remoteDeck", ...installedApps].slice(0, 40);
+    saveInstalledApps();
+  }
+  if (unlocked) {
+    initRemoteDeckChannel();
+  }
+  if (didChange) {
+    syncRemoteDeckLaunchButton();
+    renderLauncherCatalog();
+    renderDesktopShortcuts();
+    renderRecentApps();
   }
 }
 
@@ -6492,8 +6623,8 @@ async function sendDevControl(command, payload = {}) {
     "flappy-remove-pipes": "Removing Flappy pipe hits",
     "flappy-set-speed": "Setting Flappy speed",
     "screen-request": "Requesting screen share",
-    "whitelist-admin": "Whitelisting device",
-    "revoke-admin": "Removing whitelist",
+    "whitelist-admin": "Trusting device",
+    "revoke-admin": "Removing trust",
     "clear-locks": "Clearing locks",
     "set-announcement": "Broadcasting",
     "clear-announcement": "Clearing announcement"
@@ -6534,8 +6665,8 @@ async function sendDevControl(command, payload = {}) {
       "flappy-remove-pipes": "Flappy pipe hits removed.",
       "flappy-set-speed": "Flappy speed updated.",
       "screen-request": "Screen request sent.",
-      "whitelist-admin": "Device whitelisted.",
-      "revoke-admin": "Whitelist removed.",
+      "whitelist-admin": "Remote Deck trust added.",
+      "revoke-admin": "Remote Deck trust removed.",
       "clear-locks": "Locks cleared.",
       "set-announcement": "Announcement sent.",
       "clear-announcement": "Announcement cleared."
@@ -10173,8 +10304,8 @@ function renderLauncherCatalog() {
     if (gameSourceTabs) gameSourceTabs.hidden = true;
     if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
     const utilitySections = {
-      tools: ["browser", "lobbies", "soundboard", "remoteDeck", "dev", "calculator", "settings", "network"],
-      media: ["youtube", "music", "velhub", "soundboard", "browser"],
+      tools: ["browser", "chat", "lobbies", "soundboard", "remoteDeck", "dev", "calculator", "settings", "network"],
+      media: ["youtube", "media", "chat", "music", "velhub", "soundboard", "browser"],
       music: ["music"],
       movies: ["velhub"],
       youtube: ["youtube"]
@@ -10341,18 +10472,20 @@ function setHomeEditMode(active) {
   homeEditMode = Boolean(active);
   document.body.classList.toggle("is-home-editing", homeEditMode);
   if (homeEditToolbar) homeEditToolbar.hidden = !homeEditMode;
+  renderDesktopShortcuts();
   if (homeEditMode) {
     closePanel("settings");
-    setWelcomeStatus("Homescreen edit mode on. Drag the clock and app icons.", "live");
+    if (appLibrarySearch) {
+      appLibrarySearch.value = "";
+      filterAppLibrary();
+    }
+    setWelcomeStatus("Library edit mode on. Drag apps to reorder them.", "live");
   }
 }
 
 function resetHomeLayout() {
-  saveHomeClockPosition(0, 0);
-  applyHomeClockPosition();
   saveDesktopShortcutOrder(getDefaultDesktopShortcutRefs());
   saveDesktopShortcutPositions({});
-  applyTaskbarPosition("bottom");
   renderDesktopShortcuts();
 }
 
@@ -10780,6 +10913,53 @@ function maybeShowWelcomeGate() {
   return false;
 }
 
+function hasEnteredCleverSite() {
+  try {
+    return window.sessionStorage.getItem(CLEVER_ENTRY_SESSION_KEY) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function showCleverEntryGate() {
+  if (!cleverEntryGate) return;
+  cleverEntryGate.hidden = false;
+  cleverEntryGate.setAttribute("aria-hidden", "false");
+  document.body.classList.add("is-clever-entry");
+  document.body.classList.remove("is-onboarding");
+  if (welcomeGate) welcomeGate.hidden = true;
+  if (termsGate) termsGate.hidden = true;
+}
+
+function completeCleverEntryGate({ animate = false } = {}) {
+  if (!cleverEntryGate) return;
+  const finish = () => {
+    cleverEntryGate.hidden = true;
+    cleverEntryGate.setAttribute("aria-hidden", "true");
+    cleverEntryGate.classList.remove("is-leaving");
+    document.body.classList.remove("is-clever-entry", "is-onboarding");
+    cleverEntryButtons.forEach((button) => button.toggleAttribute("disabled", false));
+  };
+
+  if (!animate || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+    finish();
+    return;
+  }
+
+  cleverEntryGate.classList.add("is-leaving");
+  window.setTimeout(finish, 260);
+}
+
+function enterCleverSite() {
+  try {
+    window.sessionStorage.setItem(CLEVER_ENTRY_SESSION_KEY, "1");
+  } catch (error) {
+    // The entry still works when browser storage is unavailable.
+  }
+  cleverEntryButtons.forEach((button) => button.toggleAttribute("disabled", true));
+  completeCleverEntryGate({ animate: true });
+}
+
 async function submitWelcomeName() {
   const username = cleanVelChatName(welcomeNameInput?.value || "");
   if (!username) {
@@ -10805,6 +10985,11 @@ function showBootScreen() {
   clearLegacyStoredChatPin();
   if (bootScreen) bootScreen.classList.add("is-hidden");
   document.body.classList.remove("is-booting");
+  if (cleverEntryGate) {
+    if (hasEnteredCleverSite()) completeCleverEntryGate();
+    else showCleverEntryGate();
+    return;
+  }
   if (!maybeShowTermsGate()) {
     maybeShowWelcomeGate();
   }
@@ -11565,6 +11750,7 @@ async function loadTikTokData() {
   mediaState.loading = true;
   mediaState.tiktokError = "";
   mediaState.tiktokAuthRequired = false;
+  mediaState.tiktokLinkOnly = false;
   renderMediaHub();
 
   try {
@@ -11588,7 +11774,14 @@ async function loadTikTokData() {
     mediaState.tiktokProfile = profile;
     mediaState.tiktokVideos = videos.videos || [];
   } catch (error) {
-    mediaState.tiktokError = error.message || "TikTok could not load.";
+    const message = error.message || "TikTok could not load.";
+    if (/credentials.+not configured|not configured.+credentials/i.test(message)) {
+      mediaState.tiktokLinkOnly = true;
+      mediaState.tiktokProfile = null;
+      mediaState.tiktokVideos = [];
+    } else {
+      mediaState.tiktokError = message;
+    }
   } finally {
     mediaState.loading = false;
     renderMediaHub();
@@ -11612,8 +11805,26 @@ function renderTikTokConnectCard() {
   `;
 }
 
+function renderTikTokLinkCard() {
+  return `
+    <article class="media-card media-config-card media-link-card" data-tiktok-focus role="button" tabindex="0" aria-label="Paste a TikTok link">
+      <div class="media-card-thumb media-logo-thumb">
+        <img class="media-provider-logo" src="./assets/images/apps/tiktok.svg" alt="" loading="lazy" />
+        <span>TikTok</span>
+      </div>
+      <div class="media-card-body">
+        <p class="section-label">Ready to watch</p>
+        <h4>Paste a public TikTok link.</h4>
+        <p>The official player opens the video here without leaving vel.os.</p>
+        <span class="media-card-action">Paste a link</span>
+      </div>
+    </article>
+  `;
+}
+
 function renderTikTokCards() {
   if (mediaState.loading && !mediaState.tiktokVideos.length) return renderSkeletonCards(4);
+  if (mediaState.tiktokLinkOnly) return renderTikTokLinkCard();
   if (mediaState.tiktokAuthRequired) return renderTikTokConnectCard();
   if (mediaState.tiktokError) {
     return `
@@ -11878,7 +12089,7 @@ function renderMediaHub() {
   mediaResultsTitle.textContent = `${providerLabel(provider)} Results`;
   if (provider === "tiktok") {
     mediaResultsCopy.textContent =
-      "Connect a TikTok account to show profile videos.";
+      "Paste a public TikTok video link above to watch it inside vel.os.";
   } else {
     mediaResultsCopy.textContent =
       provider === "youtube"
@@ -11942,6 +12153,12 @@ function openMediaProvider(provider) {
 
 function selectMediaCard(card) {
   if (!card) return;
+
+  if (card.dataset.tiktokFocus !== undefined) {
+    mediaSearchInput?.focus({ preventScroll: false });
+    mediaSearchInput?.select();
+    return;
+  }
 
   if (card.dataset.mediaRetry === "youtube") {
     searchYouTube();
@@ -12151,6 +12368,16 @@ function getBrowserShellApp(url = currentWebUrl) {
 
 function loadWebFrameUrl(url, app = {}) {
   if (!webFrame) return;
+  let trustedFrameHost = false;
+  try {
+    trustedFrameHost = new URL(url).hostname === "classic.minecraft.net";
+  } catch (error) {
+    trustedFrameHost = false;
+  }
+  webFrame.setAttribute(
+    "sandbox",
+    trustedFrameHost ? `${webFrameBaseSandbox} allow-same-origin allow-pointer-lock` : webFrameBaseSandbox
+  );
   if (app.mode === "videoEmbed" && url === "about:blank") {
     webFrame.removeAttribute("src");
     webFrame.srcdoc = makeVideoPromptFrame(app);
@@ -12382,6 +12609,24 @@ startButton?.addEventListener("click", () => {
   togglePanel("launcher");
 });
 
+showDesktopButton?.addEventListener("click", () => {
+  closeAllPanels();
+});
+
+appLibrarySearch?.addEventListener("input", filterAppLibrary);
+
+appLibrarySearch?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    appLibrarySearch.value = "";
+    filterAppLibrary();
+    appLibrarySearch.blur();
+    return;
+  }
+  if (event.key !== "Enter") return;
+  const firstMatch = desktopShortcuts?.querySelector(".desktop-shortcut:not([hidden])");
+  firstMatch?.click();
+});
+
 desktopShortcuts?.addEventListener("click", (event) => {
   if (homeEditMode || desktopShortcutSuppressClick) {
     event.preventDefault();
@@ -12450,8 +12695,6 @@ desktopShortcuts?.addEventListener("pointerdown", (event) => {
   desktopShortcutPointerMoved = false;
   desktopShortcutStartX = event.clientX;
   desktopShortcutStartY = event.clientY;
-  desktopShortcutOriginX = Number.parseFloat(button.style.getPropertyValue("--shortcut-x")) || 0;
-  desktopShortcutOriginY = Number.parseFloat(button.style.getPropertyValue("--shortcut-y")) || 0;
   button.classList.add("is-dragging");
   button.setPointerCapture?.(event.pointerId);
 });
@@ -12462,10 +12705,10 @@ desktopShortcuts?.addEventListener("pointermove", (event) => {
   const deltaY = event.clientY - desktopShortcutStartY;
   if (Math.abs(deltaX) < 3 && Math.abs(deltaY) < 3) return;
   desktopShortcutPointerMoved = true;
-  const nextX = clampNumber(desktopShortcutOriginX + deltaX, -180, window.innerWidth - 130);
-  const nextY = clampNumber(desktopShortcutOriginY + deltaY, -260, window.innerHeight - 140);
-  desktopShortcutPointerButton.style.setProperty("--shortcut-x", `${nextX}px`);
-  desktopShortcutPointerButton.style.setProperty("--shortcut-y", `${nextY}px`);
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("button[data-desktop-shortcut]");
+  desktopShortcuts.querySelectorAll(".desktop-shortcut.is-drop-target").forEach((item) => {
+    item.classList.toggle("is-drop-target", item === target && item !== desktopShortcutPointerButton);
+  });
   event.preventDefault();
 });
 
@@ -12473,12 +12716,9 @@ desktopShortcuts?.addEventListener("pointerup", (event) => {
   if (!homeEditMode || !desktopShortcutPointerRef || !desktopShortcutPointerButton) return;
   const sourceRef = desktopShortcutPointerRef;
   if (desktopShortcutPointerMoved) {
-    const positions = getDesktopShortcutPositions();
-    positions[sourceRef] = {
-      x: Number.parseFloat(desktopShortcutPointerButton.style.getPropertyValue("--shortcut-x")) || 0,
-      y: Number.parseFloat(desktopShortcutPointerButton.style.getPropertyValue("--shortcut-y")) || 0
-    };
-    saveDesktopShortcutPositions(positions);
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("button[data-desktop-shortcut]");
+    const targetRef = target?.dataset.desktopShortcut || "";
+    if (targetRef && targetRef !== sourceRef) reorderDesktopShortcut(sourceRef, targetRef);
     desktopShortcutSuppressClick = true;
     window.setTimeout(() => {
       desktopShortcutSuppressClick = false;
@@ -12547,6 +12787,10 @@ velChatToggle?.addEventListener("click", () => {
 });
 
 velChatHide?.addEventListener("click", () => {
+  if (activePanel === "chat") {
+    closeAllPanels();
+    return;
+  }
   setVelChatCollapsed(true);
 });
 
@@ -12557,6 +12801,10 @@ velChatBottomButton?.addEventListener("click", () => {
 
 velChatClearLog?.addEventListener("click", () => {
   clearVelChatLog();
+});
+
+cleverEntryButtons.forEach((button) => {
+  button.addEventListener("click", enterCleverSite);
 });
 
 welcomeNameForm?.addEventListener("submit", (event) => {
@@ -12912,7 +13160,7 @@ devOnlineList?.addEventListener("click", (event) => {
   const whitelistButton = event.target.closest("[data-dev-whitelist]");
   if (whitelistButton) {
     const username = whitelistButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
-    if (window.confirm(`Whitelist ${username} for Dev Panel access? They will still need the admin code.`)) {
+    if (window.confirm(`Trust ${username} for keyless Remote Deck access?`)) {
       sendDevControl("whitelist-admin", {
         targetUserId: whitelistButton.dataset.devWhitelist || "",
         targetDeviceId: whitelistButton.dataset.devDevice || ""
@@ -12924,7 +13172,7 @@ devOnlineList?.addEventListener("click", (event) => {
   const revokeAdminButton = event.target.closest("[data-dev-revoke-admin]");
   if (revokeAdminButton) {
     const username = revokeAdminButton.closest(".dev-user-row")?.querySelector("strong")?.textContent || "this user";
-    if (window.confirm(`Remove Dev Panel access for ${username}?`)) {
+    if (window.confirm(`Remove keyless Remote Deck access for ${username}?`)) {
       sendDevControl("revoke-admin", {
         targetUserId: revokeAdminButton.dataset.devRevokeAdmin || "",
         targetDeviceId: revokeAdminButton.dataset.devDevice || ""
@@ -13081,7 +13329,7 @@ devOnlineList?.addEventListener("click", (event) => {
 devWhitelistList?.addEventListener("click", (event) => {
   const revokeButton = event.target.closest("[data-dev-revoke-admin-device]");
   if (!revokeButton) return;
-  if (window.confirm("Remove this device from the Dev Panel whitelist?")) {
+  if (window.confirm("Remove this device from Remote Deck trust?")) {
     sendDevControl("revoke-admin", {
       targetDeviceId: revokeButton.dataset.devRevokeAdminDevice || ""
     });
@@ -13798,7 +14046,8 @@ document.addEventListener("keydown", (event) => {
   if (event.target?.closest?.(".vel-chat")) {
     if (event.key === "Escape") {
       event.preventDefault();
-      setVelChatCollapsed(true);
+      if (activePanel === "chat") closeAllPanels();
+      else setVelChatCollapsed(true);
     }
     return;
   }

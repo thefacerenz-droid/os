@@ -1,0 +1,2585 @@
+/* Signal UI: the visual shell for vel.os. Feature-specific layout stays in styles.css. */
+:root {
+  --signal-bg: #0d0f10;
+  --signal-panel: #141718;
+  --signal-panel-raised: #1b1f20;
+  --signal-panel-soft: rgba(20, 23, 24, 0.84);
+  --signal-line: #363c3a;
+  --signal-line-soft: rgba(255, 255, 255, 0.11);
+  --signal-text: #f4f1e9;
+  --signal-muted: #aeb5b1;
+  --signal-green: #8ce99a;
+  --signal-orange: #ff9868;
+  --signal-blue: #73b9ff;
+  --signal-rose: #ff748c;
+  --signal-yellow: #f1cf68;
+  --signal-focus: var(--signal-green);
+  --signal-switcher-height: 52px;
+  --signal-radius: 6px;
+  --text: var(--signal-text);
+  --muted: var(--signal-muted);
+  --line: var(--signal-line-soft);
+  --line-strong: rgba(255, 255, 255, 0.24);
+  --accent: var(--signal-green);
+  --accent-strong: #58d975;
+  --accent-warm: var(--signal-orange);
+  --accent-rose: var(--signal-rose);
+  --accent-blue: var(--signal-blue);
+}
+
+*,
+*::before,
+*::after {
+  letter-spacing: 0 !important;
+}
+
+html,
+body {
+  color: var(--signal-text);
+  background: var(--signal-bg);
+  font-family: "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+}
+
+body[data-active-panel="web"] {
+  --signal-focus: var(--signal-blue);
+}
+
+body[data-active-panel="music"] {
+  --signal-focus: var(--signal-orange);
+}
+
+body[data-active-panel="youtube"] {
+  --signal-focus: var(--signal-rose);
+}
+
+body[data-active-panel="dev"],
+body[data-active-panel="remoteDeck"] {
+  --signal-focus: var(--signal-yellow);
+}
+
+body[data-active-panel="settings"],
+body[data-active-panel="network"] {
+  --signal-focus: var(--signal-green);
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: var(--signal-radius);
+}
+
+button {
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, opacity 140ms ease, transform 140ms ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--signal-focus);
+  outline-offset: 2px;
+}
+
+.desktop-shell {
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #080a0a;
+}
+
+.desktop-wallpaper {
+  background: var(--wallpaper-image) center center / cover no-repeat;
+  filter: saturate(0.78) contrast(1.07) brightness(0.72);
+  transform: none;
+}
+
+.wallpaper-shade,
+body[data-wallpaper-effect="cinema"] .wallpaper-shade {
+  background: linear-gradient(90deg, rgba(6, 8, 8, 0.84) 0%, rgba(6, 8, 8, 0.32) 48%, rgba(6, 8, 8, 0.58) 100%);
+}
+
+.wallpaper-grain {
+  opacity: 0.12;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+body .desktop-status,
+body[data-theme-pack="revamp"] .desktop-status {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 20;
+  display: flex;
+  width: 100%;
+  height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--signal-line-soft);
+  border-radius: 0;
+  background: rgba(10, 12, 12, 0.86);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+}
+
+.desktop-status > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  padding: 0;
+  color: var(--signal-text);
+  font-size: 0.83rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.system-live-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--signal-green);
+  box-shadow: 0 0 0 3px rgba(140, 233, 154, 0.13);
+}
+
+.desktop-status strong,
+.desktop-status .status-pill-button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--signal-radius);
+  background: transparent;
+  color: var(--signal-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.desktop-status .status-pill-button {
+  border-color: var(--signal-line-soft);
+  color: var(--signal-text);
+}
+
+.desktop-status .status-pill-button:hover {
+  border-color: var(--signal-green);
+  background: rgba(140, 233, 154, 0.1);
+}
+
+.hero-clock {
+  inset: 82px auto auto 40px;
+  z-index: 3;
+  display: grid;
+  gap: 5px;
+  width: min(430px, calc(100vw - 80px));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.62);
+}
+
+body[data-theme-pack="revamp"] .hero-clock {
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.62);
+}
+
+.clock-day,
+.clock-date {
+  color: var(--signal-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: none;
+}
+
+.clock-time {
+  margin: 0;
+  color: var(--signal-text);
+  font-size: 4rem;
+  font-weight: 680;
+  line-height: 0.95;
+}
+
+.now-playing-chip {
+  width: max-content;
+  max-width: 100%;
+  margin-top: 16px;
+  padding: 9px 11px;
+  border: 1px solid var(--signal-line-soft);
+  border-left: 3px solid var(--signal-orange);
+  border-radius: var(--signal-radius);
+  background: rgba(13, 15, 16, 0.76);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+.now-playing-label {
+  color: var(--signal-orange);
+  font-size: 0.67rem;
+}
+
+.now-playing-chip strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--signal-text);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-shortcuts {
+  position: fixed;
+  inset: 78px 30px auto auto;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  gap: 10px;
+  width: auto;
+  max-width: none;
+}
+
+.desktop-shortcut,
+body[data-theme-pack="revamp"] .desktop-shortcut {
+  --tile-a: var(--signal-green);
+  display: grid;
+  grid-template-rows: 52px auto;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  width: 100px;
+  min-height: 92px;
+  padding: 9px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--signal-radius);
+  background: transparent;
+  box-shadow: none;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.desktop-shortcut:nth-child(4n + 2) {
+  --tile-a: var(--signal-blue);
+}
+
+.desktop-shortcut:nth-child(4n + 3) {
+  --tile-a: var(--signal-orange);
+}
+
+.desktop-shortcut:nth-child(4n) {
+  --tile-a: var(--signal-rose);
+}
+
+.desktop-shortcut:hover,
+.desktop-shortcut:focus-visible,
+body[data-theme-pack="revamp"] .desktop-shortcut:hover,
+body[data-theme-pack="revamp"] .desktop-shortcut:focus-visible {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(20, 23, 24, 0.78);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+  transform: translateY(-2px);
+}
+
+.desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .app-badge,
+body[data-icon-pack="revamp"] .taskbar-icon,
+body[data-icon-pack="revamp"] .taskbar-icon-text {
+  width: 50px;
+  height: 50px;
+  border: 1px solid color-mix(in srgb, var(--tile-a) 56%, #ffffff 8%);
+  border-radius: var(--signal-radius);
+  background: color-mix(in srgb, var(--tile-a) 20%, #111515 80%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 10px 24px rgba(0, 0, 0, 0.3);
+  color: var(--signal-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.desktop-shortcut strong {
+  max-width: 92px;
+  color: var(--signal-text);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.16;
+}
+
+body.has-open-app .hero-clock,
+body.has-open-app .desktop-status,
+body.has-open-app .desktop-shortcuts,
+body.has-open-app .lyrics-show-button {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-switcher {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: var(--signal-switcher-height);
+  padding: 6px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--signal-line-soft);
+  background: rgba(10, 12, 12, 0.96);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  transform: translateY(-110%);
+  transition: transform 180ms ease;
+  scrollbar-width: none;
+}
+
+.app-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+body.has-open-app .app-switcher {
+  transform: translateY(0);
+}
+
+.app-switcher-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--signal-radius);
+  background: transparent;
+  color: var(--signal-muted);
+}
+
+.app-switcher-button:hover {
+  border-color: var(--signal-line-soft);
+  background: var(--signal-panel-raised);
+  color: var(--signal-text);
+}
+
+.app-switcher-button.is-active {
+  border-color: color-mix(in srgb, var(--signal-focus) 46%, transparent);
+  background: color-mix(in srgb, var(--signal-focus) 11%, var(--signal-panel-raised));
+  color: var(--signal-text);
+}
+
+.app-switcher-glyph {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border: 1px solid var(--signal-line);
+  border-radius: 4px;
+  background: #202526;
+  color: currentColor;
+  font-size: 0.61rem;
+  font-weight: 850;
+}
+
+.app-switcher-home {
+  grid-template-columns: repeat(2, 5px);
+  grid-template-rows: repeat(2, 5px);
+  gap: 2px;
+}
+
+.app-switcher-home::before,
+.app-switcher-home::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: currentColor;
+  box-shadow: 7px 0 currentColor, 0 7px currentColor, 7px 7px currentColor;
+}
+
+.app-switcher-home::after {
+  display: none;
+}
+
+.app-switcher-button strong {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.drawer {
+  z-index: 100;
+  padding: 0;
+  background: transparent;
+}
+
+.drawer[aria-hidden="false"] {
+  background: var(--signal-bg);
+}
+
+.drawer-scrim {
+  display: none;
+}
+
+body .drawer-panel,
+body[data-theme-pack="revamp"] .drawer-panel,
+body .youtube-panel,
+body .velhub-panel {
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: calc(var(--signal-switcher-height) + 12px) 16px 16px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--signal-bg);
+  box-shadow: none;
+  scrollbar-color: #59615e #171a1b;
+}
+
+.drawer[aria-hidden="true"] .drawer-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.995);
+}
+
+.drawer[aria-hidden="false"] .drawer-panel {
+  opacity: 1;
+  transform: none;
+}
+
+.drawer-head,
+.game-toolbar,
+body[data-theme-pack="revamp"] .drawer-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--signal-line-soft);
+  border-radius: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.drawer-head > div:first-child {
+  min-width: 0;
+}
+
+.drawer-head h2,
+.track-copy h3 {
+  color: var(--signal-text);
+  font-size: 1.35rem;
+  font-weight: 720;
+  line-height: 1.1;
+}
+
+.drawer-copy {
+  margin-top: 4px;
+  color: var(--signal-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.micro-label,
+.section-label,
+body[data-theme-pack="revamp"] .micro-label,
+body[data-theme-pack="revamp"] .section-label {
+  color: var(--signal-focus);
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-shadow: none;
+  text-transform: uppercase;
+}
+
+.drawer-head-actions,
+.window-actions {
+  gap: 6px;
+}
+
+.close-button,
+.ghost-button,
+.transport-button,
+.switch-chip,
+.brand-pill,
+.load-more,
+.media-card-action,
+.catalog-filter-button,
+.app-store-tab,
+.catalog-source-tab,
+.taskbar-media-button,
+.web-link-button,
+.youtube-toolbar button,
+.youtube-chip-row button,
+.youtube-sidebar button,
+.youtube-video-fullscreen,
+.vel-chat-mini-button,
+.vel-chat-user-pill,
+.remote-sound-prompt button,
+.dev-user-controls button,
+.dev-user-controls select,
+.dev-user-controls input,
+.dev-ban-row button,
+.dev-whitelist-row button,
+.dev-whitelist-row em,
+.calculator-keys button,
+.track-add-button,
+.spotify-result-actions button,
+.sound-pad {
+  min-height: 36px;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel-raised);
+  color: var(--signal-text);
+  box-shadow: none;
+}
+
+.close-button {
+  border-color: rgba(255, 116, 140, 0.35);
+  background: rgba(255, 116, 140, 0.1);
+}
+
+.ghost-button.is-solid,
+.transport-main,
+.store-action-primary,
+.youtube-search-form button,
+.vel-chat-form button[type="submit"] {
+  border-color: var(--signal-focus);
+  background: var(--signal-focus);
+  color: #0b110d;
+}
+
+.close-button:hover,
+.ghost-button:hover,
+.transport-button:hover,
+.switch-chip:hover,
+.brand-pill:hover,
+.load-more:hover,
+.media-card-action:hover,
+.catalog-filter-button:hover,
+.app-store-tab:hover,
+.catalog-source-tab:hover,
+.taskbar-media-button:hover,
+.web-link-button:hover,
+.youtube-toolbar button:hover,
+.youtube-chip-row button:hover,
+.youtube-sidebar button:hover,
+.calculator-keys button:hover,
+.track-add-button:hover,
+.spotify-result-actions button:hover,
+.sound-pad:hover {
+  border-color: var(--signal-focus);
+  background: color-mix(in srgb, var(--signal-focus) 12%, var(--signal-panel-raised));
+  transform: translateY(-1px);
+}
+
+input,
+select,
+textarea,
+.url-input,
+.mini-search-input {
+  border: 1px solid var(--signal-line);
+  border-radius: var(--signal-radius);
+  background: #0b0d0e;
+  color: var(--signal-text);
+  box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #737c77;
+}
+
+.launcher-section,
+.settings-card,
+.network-card,
+.music-now-playing,
+.playlist-card,
+.spotify-card,
+.game-stage,
+.game-sidebar,
+.dev-admin-card,
+.dev-dashboard,
+.remote-deck-side,
+.remote-deck-main,
+.calculator-shell,
+.soundboard-card {
+  border: 1px solid var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel);
+  box-shadow: none;
+}
+
+.icon-grid,
+.media-grid,
+.velhub-grid,
+.soundboard-grid {
+  gap: 10px;
+}
+
+.app-icon,
+.app-card,
+.media-card,
+.velhub-card,
+.remote-device-card,
+.track-button,
+.wallpaper-option,
+.font-option,
+.theme-pack-card,
+.dev-user-row,
+.dev-ban-row,
+.dev-whitelist-row {
+  border: 1px solid var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel-raised);
+  box-shadow: none;
+}
+
+.app-icon:hover,
+.app-card:hover,
+.media-card:hover,
+.velhub-card:hover,
+.remote-device-card:hover,
+.track-button:hover,
+.wallpaper-option:hover,
+.font-option:hover,
+.theme-pack-card:hover {
+  border-color: color-mix(in srgb, var(--signal-focus) 52%, transparent);
+  background: color-mix(in srgb, var(--signal-focus) 8%, var(--signal-panel-raised));
+}
+
+.app-store-tab.is-active,
+.catalog-source-tab.is-active,
+.switch-chip.is-active,
+.youtube-chip-row button.is-active,
+.remote-device-card.is-selected,
+.track-button.is-active,
+.wallpaper-option.is-active,
+.font-option.is-active,
+.theme-pack-card.is-active {
+  border-color: var(--signal-focus);
+  background: color-mix(in srgb, var(--signal-focus) 13%, var(--signal-panel-raised));
+  color: var(--signal-text);
+}
+
+.web-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.web-panel .drawer-head {
+  min-height: 42px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+.web-panel .drawer-copy {
+  display: none;
+}
+
+.web-toolbar {
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.web-tab-strip {
+  gap: 4px;
+}
+
+.web-tab {
+  min-width: 190px;
+  min-height: 34px;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel);
+  color: var(--signal-muted);
+}
+
+.web-tab.is-active {
+  border-color: var(--signal-blue);
+  background: rgba(115, 185, 255, 0.11);
+  color: var(--signal-text);
+}
+
+.web-browser-chrome {
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  gap: 6px;
+}
+
+.web-nav-cluster .ghost-button,
+.web-mode-cluster .ghost-button,
+.web-panel .url-input,
+.web-panel .url-form .ghost-button {
+  min-height: 38px;
+}
+
+.web-mode-cluster .is-active {
+  border-color: var(--signal-orange);
+  background: rgba(255, 152, 104, 0.12);
+}
+
+.web-quick-row button {
+  border-color: var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel);
+  color: var(--signal-muted);
+}
+
+.web-shell,
+.web-frame-wrap,
+.web-frame {
+  min-height: 0;
+  height: 100%;
+}
+
+.web-shell {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.web-frame {
+  display: block;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: 3px;
+  background: #fff;
+}
+
+.taskbar,
+body[data-taskbar-style="revamp"] .taskbar {
+  position: fixed;
+  inset: auto 12px 12px;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(0, 1.5fr) minmax(230px, 0.75fr);
+  gap: 8px;
+  width: auto;
+  min-height: 58px;
+  height: 58px;
+  padding: 7px;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: 8px;
+  background: rgba(13, 15, 16, 0.92);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(20px);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+body.has-open-app .taskbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(100% + 18px));
+}
+
+.taskbar-left,
+.taskbar-center,
+.taskbar-right {
+  gap: 5px;
+  min-width: 0;
+}
+
+.taskbar-center,
+body[data-taskbar-style="revamp"] .taskbar-center,
+body[data-taskbar-style="revamp"] .taskbar-now-playing {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.start-button,
+.taskbar-app,
+.taskbar-search,
+body[data-taskbar-style="revamp"] .start-button,
+body[data-taskbar-style="revamp"] .taskbar-app,
+body[data-taskbar-style="revamp"] .taskbar-search {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: var(--signal-radius);
+  background: transparent;
+  color: var(--signal-muted);
+}
+
+.start-button,
+body[data-taskbar-style="revamp"] .start-button {
+  border-color: rgba(140, 233, 154, 0.34);
+  background: rgba(140, 233, 154, 0.11);
+  color: var(--signal-text);
+}
+
+.taskbar-app:hover,
+.taskbar-search:hover,
+.taskbar-app.is-active,
+.taskbar-search.is-active {
+  border-color: var(--signal-line-soft);
+  background: var(--signal-panel-raised);
+  color: var(--signal-text);
+}
+
+.taskbar-search {
+  width: min(210px, 23vw);
+}
+
+.taskbar-icon,
+.taskbar-icon-text,
+body[data-icon-pack="revamp"] .taskbar .taskbar-icon,
+body[data-icon-pack="revamp"] .taskbar .taskbar-icon-text {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  font-size: 0.61rem;
+}
+
+.recent-apps-tray {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.recent-apps-tray::-webkit-scrollbar {
+  display: none;
+}
+
+.taskbar-label {
+  font-size: 0.7rem;
+}
+
+.taskbar-now-playing {
+  max-width: 250px;
+  padding: 4px 6px;
+}
+
+.taskbar-clock {
+  min-width: 66px;
+}
+
+.taskbar-clock strong {
+  font-size: 0.82rem;
+}
+
+.taskbar-clock span {
+  color: var(--signal-muted);
+  font-size: 0.62rem;
+}
+
+.vel-chat {
+  z-index: 45;
+  bottom: 80px;
+}
+
+.vel-chat-bubble,
+.vel-chat-panel,
+.remote-sound-prompt,
+.screen-share-request,
+.screen-viewer,
+.global-announcement,
+.owner-lock-card,
+.welcome-card,
+.terms-card {
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.46);
+}
+
+.lyrics-widget,
+.lyrics-show-button {
+  border-radius: var(--signal-radius);
+}
+
+.home-edit-toolbar {
+  border-radius: var(--signal-radius);
+  background: var(--signal-panel);
+}
+
+@media (max-width: 980px) {
+  .desktop-shortcuts {
+    grid-template-columns: repeat(3, 92px);
+  }
+
+  .desktop-shortcut,
+  body[data-theme-pack="revamp"] .desktop-shortcut {
+    width: 92px;
+  }
+
+  .taskbar,
+  body[data-taskbar-style="revamp"] .taskbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .taskbar-now-playing,
+  .taskbar-search strong,
+  .taskbar-label {
+    display: none;
+  }
+
+  .taskbar-search {
+    width: 42px;
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --signal-switcher-height: 50px;
+  }
+
+  .desktop-status {
+    height: 44px;
+    padding-inline: 10px;
+  }
+
+  .desktop-status strong {
+    display: none;
+  }
+
+  .hero-clock {
+    inset: 64px 12px auto;
+    width: auto;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .clock-time {
+    font-size: 3.25rem;
+  }
+
+  .now-playing-chip {
+    margin-top: 9px;
+  }
+
+  .desktop-shortcuts {
+    inset: 202px 8px auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    width: auto;
+  }
+
+  .desktop-shortcut,
+  body[data-theme-pack="revamp"] .desktop-shortcut {
+    width: 100%;
+    min-width: 0;
+    min-height: 82px;
+    grid-template-rows: 44px auto;
+    padding: 6px 2px;
+  }
+
+  .desktop-shortcut-badge,
+  body[data-icon-pack="revamp"] .desktop-shortcut-badge {
+    width: 42px;
+    height: 42px;
+  }
+
+  .desktop-shortcut strong {
+    max-width: 80px;
+    font-size: 0.66rem;
+  }
+
+  .app-switcher {
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 5px 7px;
+  }
+
+  .app-switcher-button {
+    flex: 1 0 42px;
+    justify-content: center;
+    min-height: 38px;
+    padding: 4px;
+  }
+
+  .app-switcher-button strong {
+    display: none;
+  }
+
+  body .drawer-panel,
+  body[data-theme-pack="revamp"] .drawer-panel,
+  body .youtube-panel,
+  body .velhub-panel {
+    padding: calc(var(--signal-switcher-height) + 8px) 8px 8px;
+  }
+
+  .drawer-head,
+  .game-toolbar,
+  body[data-theme-pack="revamp"] .drawer-head {
+    gap: 8px;
+    min-height: 48px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .drawer-head h2,
+  .track-copy h3 {
+    font-size: 1.08rem;
+  }
+
+  .drawer-copy {
+    display: none;
+  }
+
+  .drawer-head-actions,
+  .window-actions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .web-browser-chrome {
+    grid-template-columns: 1fr;
+  }
+
+  .web-panel .drawer-head h2 {
+    white-space: nowrap;
+  }
+
+  #webReloadButton,
+  #webFullscreenButton {
+    display: none;
+  }
+
+  .web-nav-cluster,
+  .web-mode-cluster,
+  .web-quick-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .web-browser-status {
+    flex: 0 0 auto;
+    margin-left: 0;
+    white-space: nowrap;
+  }
+
+  .web-tab {
+    min-width: 158px;
+  }
+
+  .taskbar,
+  body[data-taskbar-style="revamp"] .taskbar {
+    inset: auto 7px 7px;
+    min-height: 56px;
+    height: 56px;
+    padding: 6px;
+  }
+
+  .taskbar-left {
+    display: flex;
+  }
+
+  .taskbar-left .taskbar-search,
+  .taskbar-right .system-taskbar-app,
+  .recent-apps-tray {
+    display: none;
+  }
+
+  .taskbar-center {
+    justify-content: center;
+  }
+
+  .start-button span:last-child {
+    display: none;
+  }
+
+  .vel-chat {
+    right: 7px;
+    bottom: 72px;
+  }
+}
+
+@media (max-width: 420px) and (max-height: 720px) {
+  .hero-clock {
+    top: 56px;
+  }
+
+  .clock-time {
+    font-size: 2.75rem;
+  }
+
+  .now-playing-chip {
+    display: none;
+  }
+
+  .desktop-shortcuts {
+    top: 150px;
+  }
+
+  .desktop-shortcut,
+  body[data-theme-pack="revamp"] .desktop-shortcut {
+    min-height: 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* App Library home */
+body:not(.has-open-app) {
+  overflow-y: auto;
+}
+
+body .taskbar,
+body[data-taskbar-style="revamp"] .taskbar,
+.hero-clock,
+.desktop-status,
+.lyrics-show-button {
+  display: none !important;
+}
+
+body:not(.has-open-app) .desktop-shell {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.desktop-wallpaper {
+  position: fixed;
+  opacity: 0.26;
+  filter: grayscale(0.35) saturate(0.72) contrast(1.08) brightness(0.52);
+}
+
+.wallpaper-shade,
+body[data-wallpaper-effect="cinema"] .wallpaper-shade,
+body[data-wallpaper-effect="clear"] .wallpaper-shade {
+  position: fixed;
+  background: rgba(7, 9, 9, 0.78);
+}
+
+.wallpaper-grain {
+  position: fixed;
+  opacity: 0;
+  background-image: none;
+}
+
+.app-library-home {
+  position: relative;
+  z-index: 5;
+  width: min(1240px, 100%);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 28px 32px 108px;
+  transition: opacity 150ms ease, visibility 150ms ease;
+}
+
+body.has-open-app .app-library-home {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body:not(.has-open-app) .vel-chat {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  left: auto;
+}
+
+.app-library-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 62px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--signal-line-soft);
+}
+
+.app-library-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: max-content;
+}
+
+.app-library-mark {
+  display: block;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 8px;
+  background: #111 url("./assets/images/favicon.svg") center / cover no-repeat;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+}
+
+.app-library-brand p,
+.app-library-brand h1,
+.app-library-overview p,
+.app-library-clock b,
+.app-library-clock i {
+  margin: 0;
+}
+
+.app-library-brand p {
+  color: var(--signal-green);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.app-library-brand h1 {
+  color: var(--signal-text);
+  font-size: 1.45rem;
+  font-weight: 720;
+  line-height: 1.08;
+}
+
+.app-library-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.app-library-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(360px, 38vw);
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: rgba(18, 21, 21, 0.88);
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.app-library-search:focus-within {
+  border-color: color-mix(in srgb, var(--signal-green) 66%, transparent);
+  background: rgba(22, 26, 25, 0.96);
+}
+
+.app-library-search > span {
+  position: relative;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--signal-muted);
+  border-radius: 50%;
+}
+
+.app-library-search > span::after {
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
+  width: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--signal-muted);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.app-library-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--signal-text);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.app-library-search input::placeholder {
+  color: #8f9893;
+}
+
+.app-library-network {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: var(--signal-radius);
+  background: rgba(18, 21, 21, 0.88);
+  color: var(--signal-text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.app-library-network:hover {
+  border-color: color-mix(in srgb, var(--signal-green) 54%, transparent);
+  background: var(--signal-panel-raised);
+}
+
+.app-library-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 86px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--signal-line-soft);
+}
+
+.app-library-overview > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.app-library-overview .section-label {
+  color: var(--signal-muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.app-library-overview > div:first-child > strong {
+  font-size: 1.05rem;
+  font-weight: 720;
+}
+
+.app-library-overview .now-playing-chip {
+  margin: 0;
+  background: rgba(18, 21, 21, 0.9);
+  text-shadow: none;
+}
+
+.app-library-clock {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: max-content;
+  padding-left: 16px;
+  border-left: 1px solid var(--signal-line-soft);
+}
+
+.app-library-clock > strong {
+  color: var(--signal-text);
+  font-size: 1.35rem;
+  font-weight: 720;
+  line-height: 1;
+}
+
+.app-library-clock > span {
+  display: grid;
+  color: var(--signal-muted);
+  font-size: 0.68rem;
+  font-style: normal;
+  line-height: 1.28;
+}
+
+.app-library-clock b,
+.app-library-clock i {
+  font-style: normal;
+  font-weight: 650;
+}
+
+.app-library-home .desktop-shortcuts,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin-top: 24px;
+  padding: 0;
+  overflow: visible;
+  transform: none !important;
+  transform-origin: center;
+}
+
+.app-library-home .desktop-shortcut:nth-child(4n + 2),
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:nth-child(4n + 2) {
+  --tile-a: var(--signal-blue);
+}
+
+.app-library-home .desktop-shortcut:nth-child(4n + 3),
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:nth-child(4n + 3) {
+  --tile-a: var(--signal-orange);
+}
+
+.app-library-home .desktop-shortcut:nth-child(4n),
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:nth-child(4n) {
+  --tile-a: var(--signal-rose);
+}
+
+.app-library-home .desktop-shortcut,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut {
+  position: relative;
+  display: grid;
+  grid-template-rows: 58px minmax(32px, auto);
+  justify-items: start;
+  align-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 132px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: 8px;
+  background: rgba(18, 21, 21, 0.83);
+  box-shadow: none;
+  text-align: left;
+  text-shadow: none;
+  transform: none !important;
+  backdrop-filter: blur(14px);
+}
+
+.app-library-home .desktop-shortcut::after {
+  position: absolute;
+  inset: auto 12px 12px auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tile-a);
+  content: "";
+  opacity: 0.72;
+}
+
+.app-library-home .desktop-shortcut:hover,
+.app-library-home .desktop-shortcut:focus-visible,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:hover,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:focus-visible {
+  border-color: color-mix(in srgb, var(--tile-a) 48%, rgba(255, 255, 255, 0.15));
+  background: rgba(27, 31, 31, 0.96);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.26);
+  transform: translateY(-2px) !important;
+}
+
+.app-library-home .desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .app-library-home .desktop-shortcut-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.app-library-home .desktop-shortcut strong {
+  width: calc(100% - 12px);
+  max-width: none;
+  overflow-wrap: anywhere;
+  color: var(--signal-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.app-library-home .desktop-shortcut[hidden] {
+  display: none !important;
+}
+
+.app-library-empty {
+  margin: 24px 0 0;
+  padding: 32px 16px;
+  border: 1px dashed var(--signal-line);
+  border-radius: 8px;
+  color: var(--signal-muted);
+  text-align: center;
+}
+
+.app-library-empty[hidden] {
+  display: none;
+}
+
+body.is-home-editing .app-library-home .desktop-shortcut {
+  cursor: grab;
+  outline: 1px dashed color-mix(in srgb, var(--tile-a) 52%, transparent);
+  outline-offset: -5px;
+  touch-action: none;
+}
+
+body.is-home-editing .app-library-home .desktop-shortcut.is-dragging {
+  z-index: 2;
+  opacity: 0.56;
+  cursor: grabbing;
+  transform: scale(0.98) !important;
+}
+
+body.is-home-editing .app-library-home .desktop-shortcut.is-drop-target {
+  border-color: var(--signal-green);
+  background: rgba(44, 72, 51, 0.72);
+  box-shadow: inset 0 0 0 2px rgba(140, 233, 154, 0.2);
+}
+
+.home-edit-toolbar {
+  bottom: 18px;
+  max-width: calc(100vw - 24px);
+  border: 1px solid var(--signal-line);
+  border-radius: 8px;
+  background: rgba(15, 18, 18, 0.97);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+}
+
+.home-edit-toolbar button {
+  border-radius: var(--signal-radius);
+}
+
+@media (min-width: 1500px) {
+  .app-library-home {
+    width: min(1360px, 100%);
+  }
+
+  .app-library-home .desktop-shortcuts,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .app-library-home {
+    padding: 18px 14px 102px;
+  }
+
+  .app-library-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 16px;
+  }
+
+  .app-library-brand h1 {
+    font-size: 1.3rem;
+  }
+
+  .app-library-tools {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .app-library-search {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
+  .app-library-network {
+    flex: 0 0 42px;
+    width: 42px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .app-library-network span {
+    display: none;
+  }
+
+  .app-library-overview {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 72px;
+    padding: 13px 0;
+  }
+
+  .app-library-overview .now-playing-chip {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .app-library-clock {
+    gap: 8px;
+    padding-left: 12px;
+  }
+
+  .app-library-clock > strong {
+    font-size: 1.15rem;
+  }
+
+  .app-library-clock i {
+    display: none;
+  }
+
+  .app-library-home .desktop-shortcuts,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .vel-chat {
+    right: 8px;
+    bottom: 10px;
+    left: auto;
+  }
+
+  .app-library-home .desktop-shortcut,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut {
+    grid-template-rows: 48px minmax(30px, auto);
+    gap: 12px;
+    min-height: 108px;
+    padding: 11px;
+  }
+
+  .app-library-home .desktop-shortcut-badge,
+  body[data-icon-pack="revamp"] .app-library-home .desktop-shortcut-badge {
+    width: 46px;
+    height: 46px;
+  }
+
+  .app-library-home .desktop-shortcut strong {
+    font-size: 0.7rem;
+  }
+
+  .home-edit-toolbar {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+    transform: none;
+  }
+
+  .home-edit-toolbar strong {
+    align-self: center;
+  }
+
+  .home-edit-toolbar span {
+    display: none;
+  }
+}
+
+@media (max-width: 330px) {
+  .app-library-home .desktop-shortcuts,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* App wall: spacious home library and one consistent fullscreen return path. */
+:root {
+  --signal-switcher-height: 64px;
+}
+
+.desktop-shell {
+  overflow: visible;
+  background: #080a0a;
+}
+
+.desktop-wallpaper {
+  opacity: 0.32;
+  background-position: center 24%;
+  filter: grayscale(0.58) saturate(0.72) contrast(1.16) brightness(0.46);
+}
+
+.wallpaper-shade,
+body[data-wallpaper-effect="cinema"] .wallpaper-shade,
+body[data-wallpaper-effect="clear"] .wallpaper-shade {
+  background: rgba(6, 8, 8, 0.74);
+}
+
+.app-library-home {
+  width: min(1480px, 100%);
+  padding: 0 30px 80px;
+}
+
+.app-library-header {
+  min-height: 64px;
+  padding: 0;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.app-library-brand {
+  gap: 9px;
+}
+
+.app-library-mark {
+  flex-basis: 34px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.app-library-brand > strong {
+  color: #f7f5ef;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.app-library-tools {
+  gap: 8px;
+}
+
+.app-library-search,
+.app-library-network {
+  min-height: 38px;
+  background: rgba(12, 15, 15, 0.82);
+}
+
+.app-library-search {
+  width: min(320px, 31vw);
+}
+
+.app-library-clock {
+  gap: 8px;
+  padding: 0 11px 0 0;
+  border: 0;
+  border-right: 1px solid var(--signal-line-soft);
+}
+
+.app-library-clock > strong {
+  font-size: 0.92rem;
+}
+
+.app-library-clock > span {
+  font-size: 0.6rem;
+}
+
+.app-library-hero {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 240px;
+  padding: 24px 0 16px;
+  text-align: center;
+}
+
+.app-library-hero-mark {
+  display: block;
+  width: 82px;
+  height: 82px;
+  margin-bottom: 13px;
+  border-radius: 8px;
+  background: url("./assets/images/favicon.svg") center / contain no-repeat;
+  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.45));
+}
+
+.app-library-hero h1 {
+  margin: 0;
+  color: #fbfaf6;
+  font-size: 3.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.app-library-hero-line {
+  position: relative;
+  display: block;
+  width: min(420px, 76vw);
+  height: 15px;
+  margin-top: 19px;
+  border-top: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 50%;
+  transform: rotate(-1deg);
+}
+
+.app-library-hero-line::after {
+  position: absolute;
+  top: 4px;
+  right: 12%;
+  left: 7%;
+  height: 8px;
+  border-top: 1px solid rgba(115, 185, 255, 0.42);
+  border-radius: 50%;
+  content: "";
+  transform: rotate(1.5deg);
+}
+
+.app-library-overview {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 68px;
+  padding: 12px 0;
+}
+
+.app-library-overview > div:first-child > strong {
+  font-size: 1.12rem;
+}
+
+.app-library-home .desktop-shortcuts,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.app-library-home .desktop-shortcut,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border-color: rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: #191d1e;
+  box-shadow: 0 13px 30px rgba(0, 0, 0, 0.24);
+  backdrop-filter: none;
+}
+
+.app-library-home .desktop-shortcut::after {
+  display: none;
+}
+
+.app-library-home .desktop-shortcut:hover,
+.app-library-home .desktop-shortcut:focus-visible,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:hover,
+body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut:focus-visible {
+  border-color: rgba(255, 255, 255, 0.58);
+  background: #24292a;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  transform: translateY(-3px) !important;
+}
+
+.app-library-home .desktop-shortcut-badge,
+body[data-icon-pack="revamp"] .app-library-home .desktop-shortcut-badge {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+
+.app-library-home .desktop-shortcut-badge.taskbar-icon-text {
+  background: #2b3334;
+  color: #f7f5ef;
+  font-size: 2.2rem;
+  font-weight: 850;
+}
+
+.app-library-home .desktop-shortcut:nth-child(6n + 2) .desktop-shortcut-badge.taskbar-icon-text {
+  background: #b9414c;
+}
+
+.app-library-home .desktop-shortcut:nth-child(6n + 3) .desktop-shortcut-badge.taskbar-icon-text {
+  background: #187d86;
+}
+
+.app-library-home .desktop-shortcut:nth-child(6n + 4) .desktop-shortcut-badge.taskbar-icon-text {
+  background: #41643b;
+}
+
+.app-library-home .desktop-shortcut:nth-child(6n + 5) .desktop-shortcut-badge.taskbar-icon-text {
+  background: #9b642c;
+}
+
+.app-library-home .desktop-shortcut:nth-child(6n) .desktop-shortcut-badge.taskbar-icon-text {
+  background: #534775;
+}
+
+.app-library-home .desktop-shortcut strong {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  overflow: hidden;
+  background: rgba(7, 9, 9, 0.9);
+  color: #fff;
+  font-size: 0.79rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-switcher {
+  justify-content: flex-start;
+  gap: 18px;
+  height: var(--signal-switcher-height);
+  padding: 8px 18px;
+  overflow: hidden;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(7, 9, 9, 0.97);
+}
+
+.app-switcher-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 154px;
+  min-height: 46px;
+  padding: 4px 7px 4px 3px;
+  border: 0;
+  background: transparent;
+  color: #f8f6ef;
+}
+
+.app-switcher-back:hover,
+.app-switcher-back:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.app-switcher-logo {
+  display: block;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+  background: url("./assets/images/favicon.svg") center / contain no-repeat;
+}
+
+.app-switcher-arrow {
+  position: relative;
+  display: block;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 18px;
+  border-top: 2px solid #f7f5ef;
+  border-radius: 50%;
+  transform: translateY(6px) rotate(-5deg);
+}
+
+.app-switcher-arrow::before {
+  position: absolute;
+  top: -7px;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  border-top: 2px solid #f7f5ef;
+  border-left: 2px solid #f7f5ef;
+  content: "";
+  transform: rotate(-40deg);
+}
+
+.app-switcher-back strong {
+  font-family: "Segoe Print", "Comic Sans MS", cursive;
+  font-size: 0.92rem;
+  font-weight: 700;
+  transform: rotate(-3deg);
+}
+
+.app-switcher-title {
+  position: absolute;
+  left: 50%;
+  max-width: min(48vw, 520px);
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.drawer-head > [data-close-panel],
+.drawer-head > .window-actions > [data-close-panel] {
+  display: none;
+}
+
+body .drawer-panel,
+body[data-theme-pack="revamp"] .drawer-panel,
+body .youtube-panel,
+body .velhub-panel {
+  padding-top: calc(var(--signal-switcher-height) + 14px);
+}
+
+body[data-active-panel="media"] {
+  --signal-focus: #25f4ee;
+}
+
+.media-panel {
+  max-width: none;
+  background: #0d0f10;
+}
+
+.media-panel > .media-head,
+.media-panel > .media-search,
+.media-panel > .media-tabs,
+.media-panel > .media-player,
+.media-panel > .media-status,
+.media-panel > .media-grid,
+.media-panel > .load-more-wrap {
+  width: min(1100px, 100%);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.media-search {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 18px;
+}
+
+.media-search input {
+  min-height: 46px;
+  border-radius: 7px;
+}
+
+.media-tabs {
+  width: fit-content !important;
+  margin-top: 12px !important;
+  margin-left: max(0px, calc((100% - 1100px) / 2)) !important;
+  padding: 3px;
+  border: 1px solid var(--signal-line-soft);
+  border-radius: 7px;
+  background: #15191a;
+}
+
+.media-tabs button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--signal-muted);
+}
+
+.media-tabs button.is-active {
+  background: #f4f1e9;
+  color: #0b0d0d;
+}
+
+.media-player {
+  padding: 10px 0 22px;
+  border: 0;
+  border-bottom: 1px solid var(--signal-line-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.media-player-frame {
+  width: min(420px, 100%);
+  height: min(68dvh, 730px);
+  margin: 0 auto;
+  aspect-ratio: 9 / 16;
+  border-radius: 8px;
+}
+
+.media-status {
+  margin-top: 16px;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.media-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.media-card,
+.media-card-thumb {
+  border-radius: 8px;
+}
+
+body:not([data-active-panel="chat"]) .vel-chat {
+  display: none;
+}
+
+body[data-active-panel="chat"] {
+  --signal-focus: #73b9ff;
+}
+
+body[data-active-panel="chat"] .vel-chat {
+  position: fixed;
+  inset: var(--signal-switcher-height) 0 0;
+  z-index: 140;
+  display: block;
+  width: auto;
+  pointer-events: auto;
+}
+
+body[data-active-panel="chat"] .vel-chat-bubble,
+body[data-active-panel="chat"] .vel-chat-resize-handle {
+  display: none;
+}
+
+body[data-active-panel="chat"] .vel-chat-panel,
+body[data-active-panel="chat"] .vel-chat.is-collapsed .vel-chat-panel {
+  display: flex;
+  width: 100%;
+  height: calc(100dvh - var(--signal-switcher-height));
+  min-height: 0;
+  max-height: none;
+  padding: 18px 30px 20px;
+  border: 0;
+  border-radius: 0;
+  background: #0d0f10;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+body[data-active-panel="chat"] .vel-chat-head,
+body[data-active-panel="chat"] .vel-chat-login-needed,
+body[data-active-panel="chat"] .vel-chat-messages,
+body[data-active-panel="chat"] .vel-chat-typing,
+body[data-active-panel="chat"] .vel-chat-form,
+body[data-active-panel="chat"] .vel-chat-attachment,
+body[data-active-panel="chat"] .vel-chat-status {
+  width: min(960px, 100%);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+body[data-active-panel="chat"] .vel-chat-head {
+  min-height: 58px;
+  padding-bottom: 12px;
+}
+
+body[data-active-panel="chat"] .vel-chat-messages {
+  padding: 18px 8px;
+}
+
+body[data-active-panel="chat"] .vel-chat-message-bubble,
+body[data-active-panel="chat"] .vel-chat-message.is-own .vel-chat-message-bubble,
+body[data-active-panel="chat"] .vel-chat-link-card,
+body[data-active-panel="chat"] .vel-chat-media {
+  border-radius: 8px;
+}
+
+body[data-active-panel="chat"] .vel-chat-form {
+  padding: 12px 0 0;
+  background: #0d0f10;
+}
+
+@media (min-width: 1500px) {
+  .app-library-home {
+    width: min(1480px, 100%);
+  }
+
+  .app-library-home .desktop-shortcuts,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+    grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --signal-switcher-height: 58px;
+  }
+
+  .app-library-home {
+    padding: 0 12px 42px;
+  }
+
+  .app-library-header {
+    min-height: 108px;
+    padding: 10px 0;
+  }
+
+  .app-library-brand {
+    min-width: 96px;
+  }
+
+  .app-library-tools {
+    display: grid;
+    grid-template-columns: auto 42px minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .app-library-clock {
+    padding-right: 8px;
+  }
+
+  .app-library-clock > span,
+  .app-library-network span {
+    display: none;
+  }
+
+  .app-library-network {
+    width: 42px;
+    padding: 0;
+  }
+
+  .app-library-search {
+    width: 100%;
+  }
+
+  .app-library-hero {
+    min-height: 170px;
+    padding: 18px 0 8px;
+  }
+
+  .app-library-hero-mark {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 9px;
+  }
+
+  .app-library-hero h1 {
+    font-size: 2.55rem;
+  }
+
+  .app-library-hero-line {
+    margin-top: 14px;
+  }
+
+  .app-library-overview {
+    min-height: 58px;
+    padding: 9px 0;
+  }
+
+  .app-library-home .desktop-shortcuts,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .app-library-home .desktop-shortcut,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcut {
+    display: block;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .app-library-home .desktop-shortcut-badge,
+  body[data-icon-pack="revamp"] .app-library-home .desktop-shortcut-badge {
+    width: 100%;
+    height: 100%;
+  }
+
+  .app-library-home .desktop-shortcut-badge.taskbar-icon-text {
+    font-size: 1.5rem;
+  }
+
+  .app-library-home .desktop-shortcut strong {
+    min-height: 34px;
+    padding: 6px 7px;
+    font-size: 0.66rem;
+  }
+
+  .app-switcher {
+    padding: 6px 9px;
+  }
+
+  .app-switcher-back {
+    min-width: 135px;
+    min-height: 44px;
+    gap: 6px;
+  }
+
+  .app-switcher-logo {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .app-switcher-arrow {
+    flex-basis: 32px;
+    width: 32px;
+  }
+
+  .app-switcher-title {
+    right: 10px;
+    left: auto;
+    max-width: calc(100vw - 160px);
+    transform: none;
+  }
+
+  body .drawer-panel,
+  body[data-theme-pack="revamp"] .drawer-panel,
+  body .youtube-panel,
+  body .velhub-panel {
+    padding-top: calc(var(--signal-switcher-height) + 9px);
+  }
+
+  .media-search {
+    grid-template-columns: 1fr;
+  }
+
+  .media-player-head,
+  .media-status {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .media-player-frame {
+    height: min(62dvh, 620px);
+  }
+
+  body[data-active-panel="chat"] .vel-chat-panel,
+  body[data-active-panel="chat"] .vel-chat.is-collapsed .vel-chat-panel {
+    height: calc(100dvh - var(--signal-switcher-height));
+    padding: 10px 10px 12px;
+    border-radius: 0;
+  }
+
+  body[data-active-panel="chat"] .vel-chat-head {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  body[data-active-panel="chat"] .vel-chat-head-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 340px) {
+  .app-library-home .desktop-shortcuts,
+  body[data-theme-pack="revamp"] .app-library-home .desktop-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Clever entry gateway. This is a visual continue screen and collects no credentials. */
+body.is-clever-entry {
+  overflow: hidden;
+  background: #fff;
+}
+
+.clever-entry-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  grid-template-rows: 72px minmax(0, 1fr);
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #fff;
+  color: #171844;
+  font-family: "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+  opacity: 1;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.clever-entry-gate[hidden] {
+  display: none;
+}
+
+.clever-entry-gate.is-leaving {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+
+.clever-entry-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0 max(24px, calc((100vw - 1200px) / 2));
+  border-bottom: 1px solid #eceafd;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 18px rgba(48, 35, 112, 0.08);
+}
+
+.clever-entry-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.clever-entry-brand img {
+  display: block;
+  width: 36px;
+  height: 36px;
+}
+
+.clever-entry-brand strong {
+  color: #5631ff;
+  font-size: 1.7rem;
+  font-weight: 780;
+}
+
+.clever-entry-header-login,
+.clever-entry-login {
+  border: 1px solid #5631ff;
+  border-radius: 8px;
+  background: #5631ff;
+  color: #fff;
+  font-weight: 750;
+}
+
+.clever-entry-header-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 18px;
+  font-size: 0.86rem;
+}
+
+.clever-entry-header-login:hover,
+.clever-entry-header-login:focus-visible,
+.clever-entry-login:hover,
+.clever-entry-login:focus-visible {
+  border-color: #4020db;
+  background: #4020db;
+  transform: translateY(-1px);
+}
+
+.clever-entry-user-icon {
+  position: relative;
+  display: block;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.clever-entry-user-icon::before {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  width: 5px;
+  height: 5px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  content: "";
+}
+
+.clever-entry-user-icon::after {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  left: 3px;
+  height: 4px;
+  border: 1.5px solid currentColor;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  content: "";
+}
+
+.clever-entry-hero {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  background: #ececf5 url("./assets/images/clever-classroom-hero.png") center / cover no-repeat;
+}
+
+.clever-entry-hero::before {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.58);
+  content: "";
+}
+
+.clever-entry-content {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  width: min(1200px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 46px 0 74px;
+}
+
+.clever-entry-kicker,
+.clever-entry-content h1,
+.clever-entry-content h2,
+.clever-entry-copy,
+.clever-entry-note {
+  max-width: 520px;
+  margin: 0;
+}
+
+.clever-entry-kicker {
+  color: #5631ff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.clever-entry-content h1 {
+  margin-top: 12px;
+  color: #171844;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 4.6rem;
+  font-weight: 700;
+  line-height: 0.98;
+}
+
+.clever-entry-content h2 {
+  margin-top: 17px;
+  color: #242452;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.35rem;
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.clever-entry-copy {
+  margin-top: 18px;
+  color: #34345c;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.clever-entry-login {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(360px, 100%);
+  min-height: 66px;
+  margin-top: 30px;
+  padding: 0 17px 0 22px;
+  font-size: 1.12rem;
+}
+
+.clever-entry-login-arrow {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff;
+  color: #5631ff;
+  font-size: 1.12rem;
+}
+
+.clever-entry-note {
+  margin-top: 14px;
+  color: #52526f;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .clever-entry-gate {
+    grid-template-rows: 62px minmax(0, 1fr);
+  }
+
+  .clever-entry-header {
+    padding: 0 16px;
+  }
+
+  .clever-entry-brand img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .clever-entry-brand strong {
+    font-size: 1.38rem;
+  }
+
+  .clever-entry-header-login {
+    min-height: 38px;
+    padding: 0 13px;
+  }
+
+  .clever-entry-hero {
+    background-position: 64% center;
+  }
+
+  .clever-entry-hero::before {
+    background: rgba(255, 255, 255, 0.76);
+  }
+
+  .clever-entry-content {
+    width: calc(100% - 32px);
+    padding: 34px 0 44px;
+  }
+
+  .clever-entry-content h1 {
+    font-size: 3.25rem;
+  }
+
+  .clever-entry-content h2 {
+    max-width: 310px;
+    font-size: 1.8rem;
+  }
+
+  .clever-entry-copy {
+    max-width: 320px;
+    font-size: 0.92rem;
+  }
+
+  .clever-entry-login {
+    width: 100%;
+    min-height: 60px;
+    margin-top: 24px;
+  }
+}
