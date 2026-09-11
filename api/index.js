@@ -9,6 +9,7 @@ const handleYoutubeGlobal = require("../lib/api/youtube/global.js");
 const handleYoutubeSearch = require("../lib/api/youtube/search.js");
 const handleTikTok = require("../lib/api/tiktok.js");
 const handleMessenger = require("../lib/api/messenger.js");
+const handleProxy = require("../lib/api/proxy.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -37,6 +38,7 @@ function getApiPath(req) {
 
 module.exports = async function handler(req, res) {
   const apiPath = getApiPath(req);
+  if (apiPath === "proxy") return handleProxy(req, res);
 
   if (apiPath === "youtube/search") return handleYoutubeSearch(req, res);
   if (apiPath === "youtube/global") return handleYoutubeGlobal(req, res);

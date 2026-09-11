@@ -3010,7 +3010,7 @@ if (storage.get("vel-revamp-theme-v1", "0") !== "1") {
 let currentTaskbarPosition = storage.get("vel-taskbar-position", "bottom");
 let currentWebUrl = "https://bloxd.io/";
 let currentWebMirrorIndex = 0;
-const WEB_BROWSER_HOME_URL = "/safe-browser.html";
+const WEB_BROWSER_HOME_URL = "about:blank";
 const WEB_BROWSER_TABS_KEY = "vel-browser-tabs-v1";
 const WEB_BROWSER_ACTIVE_TAB_KEY = "vel-browser-active-tab";
 const WEB_BROWSER_PROXY_KEY = "vel-browser-proxy-mode";
@@ -3021,8 +3021,8 @@ if (storage.get(WEB_BROWSER_STAY_INSIDE_KEY, "0") !== "1") {
   storage.set(WEB_BROWSER_PROXY_KEY, webBrowserProxyMode);
   storage.set(WEB_BROWSER_STAY_INSIDE_KEY, "1");
 }
-let webBrowserTabState = normalizeWebBrowserTabs(readStoredJson(WEB_BROWSER_TABS_KEY, []));
-let activeWebBrowserTabId = storage.get(WEB_BROWSER_ACTIVE_TAB_KEY, "");
+let webBrowserTabState = [];
+let activeWebBrowserTabId = "";
 let feedVideoObserver = null;
 let tiktokEmbedObserver = null;
 let youtubePlayer = null;
@@ -5338,9 +5338,14 @@ function renderMessengerCall() {
     const tile = ensureMessengerVideoTile(participant.userId, participant.username, local);
     const stream = local ? messengerState.localStream : messengerState.peers.get(participant.userId)?.stream;
     const video = tile?.querySelector("video");
-    if (video && stream && video.srcObject !== stream) {
-      video.srcObject = stream;
-      video.play().catch(() => setMessengerStatus("Tap a call tile to enable its sound.", "warn"));
+    if (video && stream) {
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = local;
+      if (video.srcObject !== stream) video.srcObject = stream;
+      const startPlayback = () => video.play().catch(() => setMessengerStatus("Tap the video tile to start remote media.", "warn"));
+      video.onloadedmetadata = startPlayback;
+      startPlayback();
     }
     tile?.classList.toggle("has-video", Boolean(stream?.getVideoTracks().some((track) => track.enabled && !track.muted && track.readyState === "live")));
   });
@@ -5390,7 +5395,9 @@ async function fetchMessengerSnapshot(options = {}) {
   try {
     const data = await messengerRequest("snapshot");
     await applyMessengerSnapshot(data);
-    setMessengerStatus("Connected", "live");
+    setMessengerStatus(data.persistent && ["redis", "redis-rest", "kv"].includes(data.storage)
+      ? "Connected worldwide"
+      : "Connected locally", "live");
   } catch (error) {
     messengerState.connected = false;
     renderMessagesApp();
@@ -13227,8 +13234,11 @@ function createWebBrowserTab(url = WEB_BROWSER_HOME_URL, options = {}) {
 }
 
 function persistWebBrowserTabs() {
-  storage.set(WEB_BROWSER_TABS_KEY, JSON.stringify(webBrowserTabState.slice(-10)));
-  storage.set(WEB_BROWSER_ACTIVE_TAB_KEY, activeWebBrowserTabId || "");
+  // Browsing history stays in this page's memory and is discarded on reload.
+  try {
+    window.localStorage.removeItem(WEB_BROWSER_TABS_KEY);
+    window.localStorage.removeItem(WEB_BROWSER_ACTIVE_TAB_KEY);
+  } catch (error) { /* Storage may be disabled. */ }
 }
 
 function renderWebBrowserTabs() {

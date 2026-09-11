@@ -15,10 +15,13 @@
       this.peer.onicecandidate = ({ candidate }) => {
         if (candidate) onSignal({ type: "candidate", candidate: candidate.toJSON() }).catch((error) => onState("error", error));
       };
-      this.peer.ontrack = ({ track }) => {
-        if (!this.stream.getTracks().some((item) => item.id === track.id)) this.stream.addTrack(track);
+      this.peer.ontrack = ({ track, streams = [] }) => {
+        // Safari is more reliable when the video element receives the stream supplied by WebRTC.
+        if (streams[0]) this.stream = streams[0];
+        else if (!this.stream.getTracks().some((item) => item.id === track.id)) this.stream.addTrack(track);
         track.onunmute = () => onStream(this.stream);
         track.onmute = () => onStream(this.stream);
+        track.onended = () => onStream(this.stream);
         onStream(this.stream);
       };
       this.peer.onconnectionstatechange = () => onState(this.peer.connectionState);
