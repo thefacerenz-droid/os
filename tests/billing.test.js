@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const handle = require("../lib/api/billing");
 process.env.PAYWALL_SESSION_SECRET = "test-secret-with-at-least-32-characters";
 process.env.PAYWALL_FREE_KEY = "test-owner-key";
-process.env.STRIPE_SECRET_KEY = "test-only";
+process.env.STRIPE_SECRET_KEY = "sk_test_mock_only";
 process.env.APP_BASE_URL = "https://example.test";
 async function call(action, body, cookie = "") {
   const headers = {};
@@ -11,6 +11,16 @@ async function call(action, body, cookie = "") {
   await handle({ method: body ? "POST" : "GET", body, headers: { cookie, origin: "https://example.test" } }, res, action);
   return { ...res, cookie: (headers["Set-Cookie"] || []).map(v => v.split(";")[0]).join("; ") };
 }
+test("invalid configuration produces actionable messages without leaking secrets", async () => {
+  process.env.APP_BASE_URL = "example.test";
+  assert.match((await call("checkout", { plan: "week" })).data.message, /APP_BASE_URL/);
+  process.env.APP_BASE_URL = "https://example.test";
+  process.env.STRIPE_SECRET_KEY = "pk_test_private_value";
+  const result = await call("checkout", { plan: "week" });
+  assert.match(result.data.message, /STRIPE_SECRET_KEY/);
+  assert.ok(!result.data.message.includes("private_value"));
+  process.env.STRIPE_SECRET_KEY = "sk_test_mock_only";
+});
 test("private key creates signed access; modified and revoked cookies fail", async () => {
   assert.equal((await call("key", { key: "wrong" })).statusCode, 403);
   const owner = await call("key", { key: "test-owner-key" });
