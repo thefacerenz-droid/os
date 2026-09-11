@@ -1072,6 +1072,7 @@ async function handleProxyRequest(req, res, url) {
 
 function serveStatic(req, res, url) {
   const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  if (/^\/data\//i.test(requestedPath)) return sendJson(res, 403, { error: "forbidden" });
   const filePath = path.resolve(PUBLIC_DIR, `.${requestedPath}`);
   if (!filePath.startsWith(PUBLIC_DIR) || filePath.includes(`${path.sep}.env`)) {
     res.writeHead(403);

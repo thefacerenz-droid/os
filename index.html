@@ -12,7 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/images/clever-c.svg" />
     <link rel="shortcut icon" href="./assets/images/clever-c.svg" />
     <link rel="stylesheet" href="./styles.css?v=core-v3" />
-    <link rel="stylesheet" href="./ui-remake.css?v=messages-v11" />
+    <link rel="stylesheet" href="./ui-remake.css?v=original-games-messages-v17" />
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -1122,6 +1122,7 @@
                 <p class="game-tip" id="flappyStatus" aria-live="polite">Tap, click, Space, W, or Up to flap through the pipes.</p>
               </div>
             </section>
+
           </div>
         </div>
       </section>
@@ -1338,6 +1339,13 @@
               <p class="section-label">Pick Device First</p>
               <h3 id="remoteDeckSelectedName">No target selected</h3>
               <p class="tiny-note" id="remoteDeckStatus">Select one or more online devices, then tap a sound pad.</p>
+              <form class="remote-deck-code" id="remoteDeckCodeForm">
+                <label for="remoteDeckCodeInput">Remote Deck code</label>
+                <div>
+                  <input id="remoteDeckCodeInput" type="password" autocomplete="off" placeholder="Enter code" />
+                  <button class="ghost-button is-solid" type="submit">Unlock</button>
+                </div>
+              </form>
               <button class="ghost-button is-solid" type="button" id="remoteDeckAllow">Allow this device</button>
               <button class="ghost-button" type="button" id="remoteDeckRefresh">Refresh devices</button>
               <div class="remote-device-list" id="remoteDeckTargets"></div>
@@ -1689,6 +1697,7 @@
     </main>
 
     <script src="./assets/lyrics/library.js"></script>
-    <script src="./script.js?v=messages-v11"></script>
+    <script src="./assets/js/call-peer.js?v=2"></script>
+    <script src="./script.js?v=original-games-messages-v17"></script>
   </body>
 </html>

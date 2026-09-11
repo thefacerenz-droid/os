@@ -2011,11 +2011,12 @@ gameCatalog.forEach((game) => {
   webApps[game.id] = {
     title: game.title,
     tag: `${game.category} Game`,
-    description: `${game.title} opened inside vel.os.`,
-    url: game.url,
+    description: `${game.title} from its original game source.`,
+    url: game.title === "2048" ? "/assets/games/2048/index.html" : game.url,
     mirrors: game.mirrors || [],
     embedBlocked: Boolean(game.embedBlocked),
-    note: game.note,
+    localOriginal: game.title === "2048",
+    note: game.title === "2048" ? "Original 2048 by Gabriele Cirulli." : "Original game. Availability depends on its publisher.",
     badgeText: game.badgeText || game.title.slice(0, 2).toUpperCase(),
     badgeSrc: game.badgeSrc || createGameBadgeSrc(game.title, game.category),
     category: game.category,
@@ -2939,6 +2940,8 @@ const soundboardStatus = document.getElementById("soundboardStatus");
 const remoteDeckPanel = document.querySelector(".remote-deck-panel");
 const remoteDeckSelectedName = document.getElementById("remoteDeckSelectedName");
 const remoteDeckStatus = document.getElementById("remoteDeckStatus");
+const remoteDeckCodeForm = document.getElementById("remoteDeckCodeForm");
+const remoteDeckCodeInput = document.getElementById("remoteDeckCodeInput");
 const remoteDeckAllow = document.getElementById("remoteDeckAllow");
 const remoteDeckRefresh = document.getElementById("remoteDeckRefresh");
 const remoteDeckTargets = document.getElementById("remoteDeckTargets");
@@ -3007,7 +3010,7 @@ if (storage.get("vel-revamp-theme-v1", "0") !== "1") {
 let currentTaskbarPosition = storage.get("vel-taskbar-position", "bottom");
 let currentWebUrl = "https://bloxd.io/";
 let currentWebMirrorIndex = 0;
-const WEB_BROWSER_HOME_URL = "https://www.bing.com/";
+const WEB_BROWSER_HOME_URL = "/safe-browser.html";
 const WEB_BROWSER_TABS_KEY = "vel-browser-tabs-v1";
 const WEB_BROWSER_ACTIVE_TAB_KEY = "vel-browser-active-tab";
 const WEB_BROWSER_PROXY_KEY = "vel-browser-proxy-mode";
@@ -3242,10 +3245,13 @@ const REMOTE_DECK_ADMIN_DEVICE_IDS = HARDCODED_ADMIN_DEVICE_IDS;
 const REMOTE_DECK_PEERS_KEY = "vel-remote-deck-peers";
 const REMOTE_DECK_ALLOW_KEY = "vel-remote-deck-allow";
 const REMOTE_DECK_SEND_VOLUME_KEY = "vel-remote-deck-send-volume";
+const REMOTE_DECK_CODE_SESSION_KEY = "vel-remote-deck-code";
 let remoteDeckSelectedDevices = new Set();
 let remoteDeckPeers = readStoredJson(REMOTE_DECK_PEERS_KEY, {});
 remoteDeckPeers = remoteDeckPeers && typeof remoteDeckPeers === "object" && !Array.isArray(remoteDeckPeers) ? remoteDeckPeers : {};
 let remoteDeckAllowed = storage.get(REMOTE_DECK_ALLOW_KEY, "0") === "1";
+let remoteDeckCode = sessionStorage.getItem(REMOTE_DECK_CODE_SESSION_KEY) || "";
+let remoteDeckAuthorized = false;
 let remoteDeckChannel = null;
 let remoteDeckChannelStarted = false;
 let remoteDeckOnlineUsers = [];
@@ -3306,7 +3312,6 @@ installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
   : ["web:browser", "panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
 installedApps = installedApps.filter((item) => item !== "panel:ai");
-installedApps = installedApps.filter((item) => item !== "panel:remoteDeck" || isRemoteDeckWhitelistedDevice());
 storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
@@ -3338,7 +3343,7 @@ if (storage.get("vel-installed-apps-v7", "0") !== "1" && !installedApps.includes
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v7", "1");
 }
-if (isRemoteDeckWhitelistedDevice() && storage.get("vel-installed-apps-v8", "0") !== "1" && !installedApps.includes("panel:remoteDeck")) {
+if (storage.get("vel-installed-apps-v8", "0") !== "1" && !installedApps.includes("panel:remoteDeck")) {
   installedApps = ["panel:remoteDeck", ...installedApps].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
   storage.set("vel-installed-apps-v8", "1");
@@ -3926,8 +3931,7 @@ function suspendPanelPlayback(name) {
   }
 
   if (name === "messages") {
-    window.clearTimeout(messengerState.pollTimer);
-    leaveMessengerCall();
+    scheduleMessengerPoll(messengerState.joinedCall ? 900 : 15000);
     return;
   }
 
@@ -3990,11 +3994,6 @@ function exitSiteFullscreen() {
 }
 
 function openPanel(name) {
-  if (name === "remoteDeck" && !isRemoteDeckWhitelistedDevice()) {
-    openPanel("dev");
-    setDevStatus("Unlock Dev Panel to use Remote Deck.", "warn");
-    return false;
-  }
   if (isDevAppLocked(name)) {
     showDevAppLocked(name);
     return false;
@@ -4230,7 +4229,7 @@ function isRemoteDeckWhitelistedDevice(deviceId = velDeviceId) {
 }
 
 function isUtilityAppVisible(id = "") {
-  return id !== "remoteDeck" || isRemoteDeckWhitelistedDevice();
+  return true;
 }
 
 function createVelChatUser(name) {
@@ -4704,7 +4703,7 @@ function setVelFaviconBadge(count = 0) {
   document.querySelectorAll('link[rel~="icon"]').forEach((link) => {
     link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
   });
-  document.title = count > 0 ? `(${label}) vel.os` : "vel.os";
+  document.title = count > 0 ? `(${label}) Clever` : "Clever";
 }
 
 function renderVelChatUnread() {
@@ -5104,8 +5103,24 @@ const messengerState = {
   pollTimer: null,
   createMode: "group",
   mobileThreadOpen: false,
-  persistent: false
+  persistent: false,
+  connected: false,
+  sending: false,
+  joining: false,
+  callConversationId: "",
+  callId: "",
+  revision: -1,
+  iceServers: [],
+  relayConfigured: false,
+  signalQueue: Promise.resolve(),
+  dismissedCalls: new Set(),
+  authToken: storage.get("vel-messenger-token", "")
 };
+
+if (!messengerState.authToken) {
+  messengerState.authToken = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  storage.set("vel-messenger-token", messengerState.authToken);
+}
 
 function messengerIdentity(extra = {}) {
   const user = normalizeVelChatUser(velChatUser);
@@ -5113,7 +5128,11 @@ function messengerIdentity(extra = {}) {
     userId: user?.id || "",
     username: user?.username || "",
     deviceId: velDeviceId,
+    authToken: messengerState.authToken,
     conversationId: messengerState.selectedId || "global",
+    activeCallId: messengerState.joinedCall ? messengerState.callId : "",
+    activeCallConversationId: messengerState.joinedCall ? messengerState.callConversationId : "",
+    ackSignals: [...messengerState.seenSignals].slice(-600),
     ...extra
   };
 }
@@ -5122,10 +5141,11 @@ async function messengerRequest(action = "snapshot", extra = {}) {
   const response = await fetch("/api/messenger", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(12000),
     body: JSON.stringify(messengerIdentity({ action, ...extra }))
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || "Messages could not connect.");
+  if (!response.ok) throw Object.assign(new Error(data.message || "Messages could not connect."), { code: data.error });
   return data;
 }
 
@@ -5160,28 +5180,46 @@ function selectedMessengerConversation() {
     || { id: "global", type: "global", name: "Everyone", members: [] };
 }
 
-function applyMessengerSnapshot(data = {}) {
+async function applyMessengerSnapshot(data = {}, select = false) {
+  if (Number(data.revision) < messengerState.revision) return;
+  messengerState.revision = Number(data.revision);
+  messengerState.connected = true;
+  messengerState.iceServers = data.iceServers || messengerState.iceServers;
+  messengerState.relayConfigured = Boolean(data.relayConfigured);
   messengerState.users = Array.isArray(data.users) ? data.users : [];
   messengerState.conversations = Array.isArray(data.conversations) ? data.conversations : [];
-  messengerState.messages = Array.isArray(data.messages) ? data.messages : [];
-  messengerState.selectedId = data.selectedConversationId || messengerState.selectedId || "global";
-  messengerState.call = data.call || null;
+  if (select) messengerState.selectedId = data.selectedConversationId || "global";
+  if (data.selectedConversationId === messengerState.selectedId) {
+    messengerState.messages = Array.isArray(data.messages) ? data.messages : [];
+    messengerState.call = data.call || null;
+  }
   messengerState.persistent = Boolean(data.persistent);
   storage.set("vel-messages-conversation", messengerState.selectedId);
-  processMessengerSignals(Array.isArray(data.signals) ? data.signals : []);
   renderMessagesApp();
-  if (messengerState.joinedCall) syncMessengerPeers();
+  const signals = Array.isArray(data.signals) ? data.signals : [];
+  messengerState.signalQueue = messengerState.signalQueue.catch(() => {}).then(async () => {
+    if (messengerState.joinedCall && messengerState.call?.id !== messengerState.callId) {
+      await leaveMessengerCall();
+      setMessengerStatus("This call ended. You can start another call.", "warn");
+      return;
+    }
+    await processMessengerSignals(signals);
+    if (messengerState.joinedCall) await syncMessengerPeers();
+  });
+  messengerState.signalQueue.catch((error) => setMessengerStatus(error.message || "Call connection failed", "error"));
 }
 
 function renderMessagesSelf() {
   if (!messagesSelf) return;
   const user = normalizeVelChatUser(velChatUser);
+  if (messagesSelf.dataset.identity === (user?.id || "guest") && messagesSelf.dataset.name === (user?.username || "")) return;
+  messagesSelf.dataset.identity = user?.id || "guest";
+  messagesSelf.dataset.name = user?.username || "";
   messagesSelf.innerHTML = user ? `
     <span class="messages-avatar is-self">${escapeHtml(messengerInitials(user.username))}</span>
-    <div><strong>${escapeHtml(user.username)}</strong><span><i></i> Online now</span></div>
+    <div><strong>${escapeHtml(user.username)}</strong><span>Chat profile</span></div>
   ` : `
-    <span class="messages-avatar">?</span>
-    <div><strong>Choose a name</strong><button type="button" data-messages-login>Open settings</button></div>
+    <form id="messagesNameForm"><label for="messagesNameInput">Your chat name</label><input id="messagesNameInput" name="name" maxlength="24" autocomplete="nickname" required /><button type="submit">Join Messages</button></form>
   `;
 }
 
@@ -5225,6 +5263,9 @@ function renderMessagesOnline() {
 
 function renderMessagesHistory() {
   if (!messagesHistory) return;
+  const signature = `${messengerState.selectedId}:${messengerState.messages.map((message) => message.id).join(",")}`;
+  if (messagesHistory.dataset.signature === signature) return;
+  messagesHistory.dataset.signature = signature;
   const ownId = normalizeVelChatUser(velChatUser)?.id;
   if (!messengerState.messages.length) {
     messagesHistory.innerHTML = '<div class="messages-empty-thread"><strong>No messages yet</strong><span>Start the conversation.</span></div>';
@@ -5277,8 +5318,9 @@ function renderMessengerCall() {
   }
   const conversation = selectedMessengerConversation();
   messagesCallTitle.textContent = `${conversation.name} call`;
+  const connected = [...messengerState.peers.values()].filter((record) => record.peer.connectionState === "connected").length;
   messagesCallStatus.textContent = messengerState.joinedCall
-    ? `${Math.max(1, participants.length)} connected`
+    ? connected ? `${connected + 1} connected` : participants.length > 1 ? "Connecting participants..." : "Waiting for others to join"
     : `${participants.length} ${participants.length === 1 ? "person" : "people"} in call`;
   messagesJoinCall.hidden = messengerState.joinedCall;
   messagesCallControls.hidden = !messengerState.joinedCall;
@@ -5296,8 +5338,11 @@ function renderMessengerCall() {
     const tile = ensureMessengerVideoTile(participant.userId, participant.username, local);
     const stream = local ? messengerState.localStream : messengerState.peers.get(participant.userId)?.stream;
     const video = tile?.querySelector("video");
-    if (video && stream && video.srcObject !== stream) video.srcObject = stream;
-    tile?.classList.toggle("has-video", Boolean(stream?.getVideoTracks().some((track) => track.enabled)));
+    if (video && stream && video.srcObject !== stream) {
+      video.srcObject = stream;
+      video.play().catch(() => setMessengerStatus("Tap a call tile to enable its sound.", "warn"));
+    }
+    tile?.classList.toggle("has-video", Boolean(stream?.getVideoTracks().some((track) => track.enabled && !track.muted && track.readyState === "live")));
   });
 }
 
@@ -5318,20 +5363,23 @@ function renderMessagesApp() {
       : conversation.type === "group" ? `${conversation.members?.length || 0} members, ${count} online` : count ? "Online" : "Offline";
   }
   if (messagesInput) {
-    messagesInput.disabled = !normalizeVelChatUser(velChatUser);
+    messagesInput.disabled = !normalizeVelChatUser(velChatUser) || !messengerState.connected || messengerState.sending;
     messagesInput.placeholder = `Message ${conversation.name || "Everyone"}`;
   }
   messagesDrawer?.classList.toggle("is-mobile-thread", messengerState.mobileThreadOpen);
+  [messagesAudioCall, messagesVideoCall].forEach((button) => { if (button) button.disabled = !messengerState.connected || messengerState.joining || messengerState.joinedCall; });
+  if (messagesCompose) messagesCompose.querySelector("button").disabled = messagesInput.disabled;
+  renderMessengerIncoming();
 }
 
 function scheduleMessengerPoll(delay = 1800) {
   window.clearTimeout(messengerState.pollTimer);
-  if (!isDrawerOpen("messages")) return;
+  if (!normalizeVelChatUser(velChatUser)) return;
   messengerState.pollTimer = window.setTimeout(fetchMessengerSnapshot, delay);
 }
 
 async function fetchMessengerSnapshot(options = {}) {
-  if (!isDrawerOpen("messages") || messengerState.polling) return;
+  if (messengerState.polling) return;
   const user = normalizeVelChatUser(velChatUser);
   if (!user) {
     renderMessagesApp();
@@ -5341,13 +5389,15 @@ async function fetchMessengerSnapshot(options = {}) {
   messengerState.polling = true;
   try {
     const data = await messengerRequest("snapshot");
-    applyMessengerSnapshot(data);
-    setMessengerStatus(data.persistent ? "Live" : "Temporary local room", data.persistent ? "live" : "warn");
+    await applyMessengerSnapshot(data);
+    setMessengerStatus("Connected", "live");
   } catch (error) {
+    messengerState.connected = false;
+    renderMessagesApp();
     setMessengerStatus(error.message || "Messages offline", "error");
   } finally {
     messengerState.polling = false;
-    scheduleMessengerPoll(messengerState.joinedCall ? 900 : 1800);
+    scheduleMessengerPoll(messengerState.joinedCall ? 900 : isDrawerOpen("messages") ? 1800 : 15000);
   }
 }
 
@@ -5359,6 +5409,8 @@ async function selectMessengerConversation(conversationId) {
   }
   if (messengerState.joinedCall) await leaveMessengerCall();
   messengerState.selectedId = conversationId;
+  messengerState.messages = [];
+  messengerState.call = null;
   messengerState.mobileThreadOpen = true;
   messagesHistory?.removeAttribute("data-rendered");
   renderMessagesApp();
@@ -5368,28 +5420,32 @@ async function selectMessengerConversation(conversationId) {
 async function createMessengerConversation(type, memberIds, name = "") {
   try {
     const data = await messengerRequest("create", { type, memberIds, name });
-    applyMessengerSnapshot(data);
+    await applyMessengerSnapshot(data, true);
     messengerState.mobileThreadOpen = true;
     closeMessengerCreator();
+    renderMessagesApp();
     setMessengerStatus("Conversation created", "live");
   } catch (error) {
     if (messagesCreateStatus) messagesCreateStatus.textContent = error.message || "Could not create conversation.";
+    setMessengerStatus(error.message || "Could not create conversation.", "error");
   }
 }
 
 async function sendMessengerMessage(text) {
   const value = String(text || "").trim();
-  if (!value) return;
+  if (!value || messengerState.sending || !messengerState.connected) return;
+  messengerState.sending = true;
   messagesInput.disabled = true;
   try {
-    const data = await messengerRequest("message", { text: value });
+    const data = await messengerRequest("message", { text: value, clientMessageId: crypto.randomUUID() });
     messagesInput.value = "";
-    applyMessengerSnapshot(data);
+    await applyMessengerSnapshot(data);
     setMessengerStatus("Sent", "live");
   } catch (error) {
     setMessengerStatus(error.message || "Message failed", "error");
   } finally {
-    messagesInput.disabled = false;
+    messengerState.sending = false;
+    renderMessagesApp();
     messagesInput.focus({ preventScroll: true });
   }
 }
@@ -5417,7 +5473,7 @@ function setMessengerCreateMode(mode) {
 
 function openMessengerCreator(mode = "group", selectedUserId = "") {
   if (!normalizeVelChatUser(velChatUser)) {
-    openChatSettings();
+    document.getElementById("messagesNameInput")?.focus();
     return;
   }
   messagesCreateOverlay.hidden = false;
@@ -5435,137 +5491,129 @@ function closeMessengerCreator() {
 }
 
 async function sendMessengerSignal(toUserId, signal) {
-  try {
-    const data = await messengerRequest("signal", { toUserId, signal });
-    messengerState.call = data.call || messengerState.call;
-  } catch (error) {
-    return;
-  }
+  if (!messengerState.joinedCall) return;
+  await messengerRequest("signal", { toUserId, signal, callId: messengerState.callId, conversationId: messengerState.callConversationId });
 }
 
 function closeMessengerPeer(userId) {
   const record = messengerState.peers.get(userId);
-  record?.peer?.close();
+  record?.close();
   messengerState.peers.delete(userId);
 }
 
 function ensureMessengerPeer(userId) {
   if (messengerState.peers.has(userId)) return messengerState.peers.get(userId);
-  const remoteUser = messengerState.users.find((user) => user.id === userId);
-  const peer = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  const record = new VelCallPeer({
+    iceServers: messengerState.iceServers,
+    localStream: messengerState.localStream,
+    onSignal: (signal) => sendMessengerSignal(userId, signal),
+    onStream: () => renderMessengerCall(),
+    onState: (state, error) => {
+      renderMessengerCall();
+      if (state === "failed" || state === "error") {
+        setMessengerStatus(error?.message || (messengerState.relayConfigured
+          ? "Call connection failed. Leave and rejoin to retry."
+          : "This network needs a call relay. The server has no TURN relay configured."), "error");
+      }
+    }
   });
-  const record = { peer, stream: null, offered: false, pendingCandidates: [] };
   messengerState.peers.set(userId, record);
-  messengerState.localStream?.getTracks().forEach((track) => peer.addTrack(track, messengerState.localStream));
-  peer.onicecandidate = (event) => {
-    if (event.candidate) sendMessengerSignal(userId, { type: "candidate", candidate: event.candidate.toJSON() });
-  };
-  peer.ontrack = (event) => {
-    record.stream = event.streams[0] || new MediaStream([event.track]);
-    const tile = ensureMessengerVideoTile(userId, remoteUser?.username || "Participant", false);
-    const video = tile?.querySelector("video");
-    if (video) video.srcObject = record.stream;
-    tile?.classList.toggle("has-video", Boolean(record.stream.getVideoTracks().length));
-  };
-  peer.onconnectionstatechange = () => {
-    if (["failed", "closed"].includes(peer.connectionState)) closeMessengerPeer(userId);
-  };
   return record;
-}
-
-async function makeMessengerOffer(userId) {
-  const record = ensureMessengerPeer(userId);
-  if (record.offered || record.peer.signalingState !== "stable") return;
-  record.offered = true;
-  const offer = await record.peer.createOffer();
-  await record.peer.setLocalDescription(offer);
-  await sendMessengerSignal(userId, { type: "description", description: record.peer.localDescription });
 }
 
 async function processMessengerSignals(signals) {
   if (!messengerState.joinedCall) return;
   const ownId = normalizeVelChatUser(velChatUser)?.id;
   for (const item of signals) {
-    if (!item?.id || messengerState.seenSignals.has(item.id) || item.toUserId !== ownId) continue;
+    if (!item?.id || messengerState.seenSignals.has(item.id) || item.toUserId !== ownId || item.callId !== messengerState.callId) continue;
+    if (!messengerState.call?.participants?.[item.fromUserId]) continue;
+    await ensureMessengerPeer(item.fromUserId).accept(item.signal);
     messengerState.seenSignals.add(item.id);
-    if (item.callId !== messengerState.call?.id) continue;
-    try {
-      const record = ensureMessengerPeer(item.fromUserId);
-      if (item.signal?.type === "description") {
-        const description = item.signal.description;
-        await record.peer.setRemoteDescription(description);
-        for (const candidate of record.pendingCandidates.splice(0)) await record.peer.addIceCandidate(candidate);
-        if (description.type === "offer") {
-          const answer = await record.peer.createAnswer();
-          await record.peer.setLocalDescription(answer);
-          await sendMessengerSignal(item.fromUserId, { type: "description", description: record.peer.localDescription });
-        }
-      } else if (item.signal?.type === "candidate" && item.signal.candidate) {
-        if (record.peer.remoteDescription) await record.peer.addIceCandidate(item.signal.candidate);
-        else record.pendingCandidates.push(item.signal.candidate);
-      }
-    } catch (error) {
-      closeMessengerPeer(item.fromUserId);
-    }
   }
-  if (messengerState.seenSignals.size > 1000) messengerState.seenSignals.clear();
+  if (messengerState.seenSignals.size > 1200) messengerState.seenSignals = new Set([...messengerState.seenSignals].slice(-600));
 }
 
 async function syncMessengerPeers() {
   if (!messengerState.joinedCall || !messengerState.call) return;
   const ownId = normalizeVelChatUser(velChatUser)?.id;
   const remoteIds = Object.keys(messengerState.call.participants || {}).filter((id) => id !== ownId);
-  [...messengerState.peers.keys()].forEach((id) => {
-    if (!remoteIds.includes(id)) closeMessengerPeer(id);
-  });
+  [...messengerState.peers.keys()].forEach((id) => { if (!remoteIds.includes(id)) closeMessengerPeer(id); });
   for (const userId of remoteIds) {
-    ensureMessengerPeer(userId);
-    if (ownId.localeCompare(userId) < 0) await makeMessengerOffer(userId);
+    const record = ensureMessengerPeer(userId);
+    if (ownId.localeCompare(userId) < 0) await record.offer();
   }
   renderMessengerCall();
 }
 
 async function joinMessengerCall(video = true) {
-  if (messengerState.joinedCall) return;
-  if (!navigator.mediaDevices?.getUserMedia || !("RTCPeerConnection" in window)) {
-    setMessengerStatus("Calling is unavailable in this browser", "error");
+  if (messengerState.joinedCall || messengerState.joining) return;
+  if (!normalizeVelChatUser(velChatUser)) {
+    document.getElementById("messagesNameInput")?.focus();
     return;
   }
+  if (!navigator.mediaDevices?.getUserMedia || !("RTCPeerConnection" in window)) {
+    setMessengerStatus("Calls require HTTPS (or localhost) and a browser with camera and microphone support.", "error");
+    return;
+  }
+  messengerState.joining = true;
+  renderMessagesApp();
+  const conversationId = messengerState.selectedId;
   try {
-    setMessengerStatus("Requesting camera and microphone", "");
-    messengerState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: Boolean(video) });
+    const before = await messengerRequest("snapshot", { conversationId });
+    await applyMessengerSnapshot(before);
+    setMessengerStatus(video ? "Allow camera and microphone to join" : "Allow microphone to join", "");
+    try {
+      messengerState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: Boolean(video) });
+    } catch (error) {
+      if (video && ["NotFoundError", "OverconstrainedError"].includes(error.name)) {
+        messengerState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        video = false;
+      } else throw error;
+    }
+    const data = await messengerRequest("call-join", { conversationId, video });
     messengerState.joinedCall = true;
+    messengerState.callConversationId = conversationId;
+    messengerState.callId = data.call.id;
     messengerState.seenSignals.clear();
-    const data = await messengerRequest("call-join");
-    applyMessengerSnapshot(data);
-    await syncMessengerPeers();
+    messagesMuteSelf.textContent = "Mute";
+    messagesMuteSelf.setAttribute("aria-pressed", "false");
+    messagesCameraToggle.textContent = video ? "Camera off" : "Camera on";
+    messagesCameraToggle.setAttribute("aria-pressed", String(!video));
+    await applyMessengerSnapshot(data, true);
     setMessengerStatus("In call", "live");
+    scheduleMessengerPoll(400);
   } catch (error) {
     messengerState.localStream?.getTracks().forEach((track) => track.stop());
     messengerState.localStream = null;
     messengerState.joinedCall = false;
-    setMessengerStatus(error.name === "NotAllowedError" ? "Camera or microphone permission was not allowed" : error.message || "Call could not start", "error");
+    setMessengerStatus(error.name === "NotAllowedError" ? "Microphone or camera permission was denied. Allow it in the browser, then join again." : error.message || "Call could not start", "error");
+  } finally {
+    messengerState.joining = false;
+    renderMessagesApp();
   }
 }
 
 async function leaveMessengerCall(options = {}) {
-  if (!messengerState.joinedCall && !messengerState.localStream) return;
+  const conversationId = messengerState.callConversationId || messengerState.selectedId;
+  const wasJoined = messengerState.joinedCall;
   messengerState.localStream?.getTracks().forEach((track) => track.stop());
   messengerState.localStream = null;
   messengerState.joinedCall = false;
+  messengerState.callId = "";
+  messengerState.callConversationId = "";
   [...messengerState.peers.keys()].forEach(closeMessengerPeer);
+  messengerState.call = null;
   messagesVideoGrid.innerHTML = "";
-  if (!options.silent) {
-    try {
-      const data = await messengerRequest("call-leave");
-      applyMessengerSnapshot(data);
-    } catch (error) {
-      messengerState.call = null;
+  renderMessengerCall();
+  if (wasJoined) {
+    if (options.silent) {
+      fetch("/api/messenger", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(messengerIdentity({ action: "call-leave", conversationId })) }).catch(() => {});
+    } else {
+      try { await messengerRequest("call-leave", { conversationId }); } catch (error) { setMessengerStatus(error.message, "error"); return; }
     }
   }
-  renderMessengerCall();
   setMessengerStatus("Call ended", "");
+  renderMessagesApp();
 }
 
 function toggleMessengerSelfMute() {
@@ -5577,14 +5625,58 @@ function toggleMessengerSelfMute() {
   messagesMuteSelf.textContent = muted ? "Unmute" : "Mute";
 }
 
-function toggleMessengerCamera() {
-  const tracks = messengerState.localStream?.getVideoTracks() || [];
-  if (!tracks.length) return;
-  const disabled = tracks.some((track) => track.enabled);
-  tracks.forEach((track) => { track.enabled = !disabled; });
-  messagesCameraToggle.setAttribute("aria-pressed", String(disabled));
-  messagesCameraToggle.textContent = disabled ? "Camera on" : "Camera off";
-  renderMessengerCall();
+async function toggleMessengerCamera() {
+  if (!messengerState.joinedCall) return;
+  let tracks = messengerState.localStream?.getVideoTracks() || [];
+  try {
+    if (!tracks.length) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      if (!messengerState.joinedCall) { stream.getTracks().forEach((track) => track.stop()); return; }
+      const track = stream.getVideoTracks()[0];
+      messengerState.localStream.addTrack(track);
+      await Promise.all([...messengerState.peers.values()].map((record) => record.replaceVideo(track)));
+      tracks = [track];
+      messagesCameraToggle.textContent = "Camera off";
+      messagesCameraToggle.setAttribute("aria-pressed", "false");
+    } else {
+      const disabled = tracks.some((track) => track.enabled);
+      tracks.forEach((track) => { track.enabled = !disabled; });
+      messagesCameraToggle.setAttribute("aria-pressed", String(disabled));
+      messagesCameraToggle.textContent = disabled ? "Camera on" : "Camera off";
+    }
+    renderMessengerCall();
+  } catch (error) { setMessengerStatus(error.message || "Camera could not start.", "error"); }
+}
+
+function renderMessengerIncoming() {
+  let notice = document.getElementById("messagesIncoming");
+  if (!notice) {
+    notice = document.createElement("aside");
+    notice.id = "messagesIncoming";
+    notice.setAttribute("aria-live", "polite");
+    document.body.append(notice);
+    notice.addEventListener("click", async (event) => {
+      if (event.target.closest("[data-dismiss-call]")) {
+        messengerState.dismissedCalls.add(notice.dataset.conversation);
+        notice.hidden = true;
+      }
+      if (event.target.closest("[data-answer-call]")) {
+        const id = notice.dataset.conversation;
+        const video = notice.dataset.video === "true";
+        openPanel("messages");
+        await selectMessengerConversation(id);
+        await joinMessengerCall(video);
+      }
+    });
+  }
+  const incoming = messengerState.conversations.find((item) => item.type !== "global" && item.callCount && !messengerState.dismissedCalls.has(item.id));
+  const activeIds = new Set(messengerState.conversations.filter((item) => item.callCount).map((item) => item.id));
+  for (const id of messengerState.dismissedCalls) if (!activeIds.has(id)) messengerState.dismissedCalls.delete(id);
+  notice.hidden = messengerState.joinedCall || !incoming;
+  if (notice.hidden) return;
+  notice.dataset.conversation = incoming.id;
+  notice.dataset.video = String(incoming.callVideo);
+  notice.innerHTML = `<strong>${escapeHtml(incoming.name)} is calling</strong><div><button type="button" data-answer-call>Join call</button><button type="button" data-dismiss-call>Dismiss</button></div>`;
 }
 
 function openMessagesApp() {
@@ -5594,6 +5686,18 @@ function openMessagesApp() {
 
 function initMessages() {
   renderMessagesApp();
+  scheduleMessengerPoll(500);
+  messagesSelf?.addEventListener("submit", (event) => {
+    if (event.target.id !== "messagesNameForm") return;
+    event.preventDefault();
+    const name = cleanVelChatName(document.getElementById("messagesNameInput")?.value || "");
+    if (!name) return;
+    saveVelChatUser(createVelChatUser(name));
+    messengerState.selectedId = "global";
+    messengerState.mobileThreadOpen = true;
+    renderMessagesApp();
+    fetchMessengerSnapshot();
+  });
   messagesConversationList?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-messages-conversation]");
     if (button) selectMessengerConversation(button.dataset.messagesConversation);
@@ -5623,7 +5727,7 @@ function initMessages() {
   });
   messagesAudioCall?.addEventListener("click", () => joinMessengerCall(false));
   messagesVideoCall?.addEventListener("click", () => joinMessengerCall(true));
-  messagesJoinCall?.addEventListener("click", () => joinMessengerCall(true));
+  messagesJoinCall?.addEventListener("click", () => joinMessengerCall(Boolean(messengerState.call?.video)));
   messagesLeaveCall?.addEventListener("click", () => leaveMessengerCall());
   messagesMuteSelf?.addEventListener("click", toggleMessengerSelfMute);
   messagesCameraToggle?.addEventListener("click", toggleMessengerCamera);
@@ -5632,6 +5736,7 @@ function initMessages() {
     renderMessagesApp();
   });
   messagesVideoGrid?.addEventListener("click", (event) => {
+    event.target.closest(".messages-video-tile")?.querySelector("video")?.play().catch(() => {});
     const button = event.target.closest("[data-mute-remote]");
     if (!button) return;
     const video = button.closest(".messages-video-tile")?.querySelector("video");
@@ -6396,7 +6501,8 @@ function renderRemoteDeckGrid() {
 }
 
 function renderRemoteDeck() {
-  if (!isRemoteDeckWhitelistedDevice()) return;
+  const authorized = remoteDeckAuthorized || isRemoteDeckWhitelistedDevice();
+  if (remoteDeckCodeForm) remoteDeckCodeForm.hidden = authorized;
   if (remoteDeckAllow) {
     remoteDeckAllow.textContent = remoteDeckAllowed ? "This device allowed" : "Allow this device";
     remoteDeckAllow.classList.toggle("is-solid", !remoteDeckAllowed);
@@ -6406,7 +6512,10 @@ function renderRemoteDeck() {
 }
 
 async function fetchRemoteDeckTargets() {
-  if (!isRemoteDeckWhitelistedDevice()) return;
+  if (!(remoteDeckAuthorized || isRemoteDeckWhitelistedDevice() || remoteDeckCode)) {
+    setRemoteDeckStatus("Enter the Remote Deck code to see online devices.", "warn");
+    return;
+  }
   if (!velChatPin) {
     setRemoteDeckStatus("Remote Deck is unavailable while site access is blocked.", "warn");
     return;
@@ -6419,7 +6528,8 @@ async function fetchRemoteDeckTargets() {
       method: "POST",
       headers: {
         ...getVelChatHeaders({ "Content-Type": "application/json" }),
-        ...(devAdminCode ? { "x-vel-admin-code": devAdminCode } : {})
+        ...(devAdminCode ? { "x-vel-admin-code": devAdminCode } : {}),
+        ...(remoteDeckCode ? { "x-vel-remote-code": remoteDeckCode } : {})
       },
       body: JSON.stringify({
         action: "remote-list",
@@ -6428,6 +6538,7 @@ async function fetchRemoteDeckTargets() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Remote Deck could not load online users.");
+    remoteDeckAuthorized = true;
     remoteDeckOnlineUsers = (Array.isArray(data.users) ? data.users : []).filter((user) => user?.deviceId);
     remoteDeckOnlineUsers.forEach((user) => rememberRemoteDeckPeer(user));
     renderRemoteDeck();
@@ -6446,7 +6557,7 @@ async function fetchRemoteDeckTargets() {
 
 function syncRemoteDeckLaunchButton() {
   if (!soundboardRemoteDeck) return;
-  soundboardRemoteDeck.hidden = !isRemoteDeckWhitelistedDevice();
+  soundboardRemoteDeck.hidden = false;
 }
 
 function postRemoteDeckMessage(message = {}) {
@@ -6633,9 +6744,10 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
     try {
       const response = await fetch("/api/dev/presence", {
         method: "POST",
-        headers: {
-          ...getVelChatHeaders({ "Content-Type": "application/json" }),
-          ...(devAdminCode ? { "x-vel-admin-code": devAdminCode } : {})
+      headers: {
+        ...getVelChatHeaders({ "Content-Type": "application/json" }),
+        ...(devAdminCode ? { "x-vel-admin-code": devAdminCode } : {}),
+        ...(remoteDeckCode ? { "x-vel-remote-code": remoteDeckCode } : {})
         },
         body: JSON.stringify({
           action: "remote-sound",
@@ -6667,7 +6779,7 @@ async function sendRemoteDeckSound(soundType = "generated", soundId = "", soundT
 }
 
 function announceRemoteDeckPeer() {
-  if (!isRemoteDeckWhitelistedDevice()) return;
+  if (!(remoteDeckAuthorized || isRemoteDeckWhitelistedDevice())) return;
   postRemoteDeckMessage({
     type: "hello",
     deviceId: velDeviceId,
@@ -6678,7 +6790,7 @@ function announceRemoteDeckPeer() {
 }
 
 function initRemoteDeckChannel() {
-  if (!isRemoteDeckWhitelistedDevice() || remoteDeckChannelStarted) return;
+  if (!(remoteDeckAuthorized || isRemoteDeckWhitelistedDevice()) || remoteDeckChannelStarted) return;
   remoteDeckChannelStarted = true;
   rememberRemoteDeckPeer({
     deviceId: velDeviceId,
@@ -6703,8 +6815,13 @@ function initRemoteDeckChannel() {
 }
 
 function openRemoteDeck() {
-  if (!isRemoteDeckWhitelistedDevice()) return;
   renderRemoteDeck();
+  if (!(remoteDeckAuthorized || isRemoteDeckWhitelistedDevice())) {
+    setRemoteDeckStatus("Enter the Remote Deck code to see online devices.", "warn");
+    remoteDeckCodeInput?.focus();
+    return;
+  }
+  initRemoteDeckChannel();
   loadSoundboardFiles();
   fetchRemoteDeckTargets();
   setRemoteDeckStatus(remoteDeckAllowed
@@ -10930,7 +11047,7 @@ function renderLauncherCatalog() {
   if (!launcherGameGrid) return;
 
   const categoryMeta = {
-    games: ["Celestial Games", "Direct web game shortcuts inspired by the reference shell."],
+    games: ["Game Library", "Original games"],
     local: ["Local Arcade", "Offline games that run directly inside vel.os."],
     media: ["Media", "YouTube, Velofy, Vel Hub, sound tools, and the browser in one section."],
     tools: ["System Tools", "Utilities, settings, network status, and browser tools."]
@@ -11032,7 +11149,7 @@ function renderLauncherCatalog() {
       ref: `web:${game.id}`,
       meta: app,
       title: game.title,
-      subtitle: `${getGameSourceLabel(game.source)} - ${game.category}`,
+      subtitle: `${app.localOriginal ? "Offline original" : "Original online"} - ${game.category}`,
       openLabel: "Play"
     });
   });
@@ -11639,6 +11756,7 @@ function showBootScreen() {
   }
 }
 
+
 function setActiveLocalGame(gameId, displayMeta = null) {
   const meta = displayMeta ?? localGameMeta[gameId];
   if (!meta || !localGameMeta[gameId]) return;
@@ -11674,7 +11792,7 @@ function setActiveLocalGame(gameId, displayMeta = null) {
 
 function openGame(gameId, displayMeta = null) {
   if (isDevAppLocked("game") || isDevAppLocked(gameId)) {
-    showDevAppLocked(localGameMeta[gameId]?.title || "game");
+    showDevAppLocked(displayMeta?.title || localGameMeta[gameId]?.title || "game");
     return;
   }
   setActiveLocalGame(gameId, displayMeta);
@@ -13189,7 +13307,7 @@ function loadWebFrameUrl(url, app = {}) {
   if (!webFrame) return;
   let trustedFrameHost = false;
   try {
-    trustedFrameHost = new URL(url).hostname === "classic.minecraft.net";
+    trustedFrameHost = Boolean(app.category) || new URL(url, window.location.href).hostname === "classic.minecraft.net";
   } catch (error) {
     trustedFrameHost = false;
   }
@@ -13206,12 +13324,14 @@ function loadWebFrameUrl(url, app = {}) {
   if (!canProxyWebUrl(url)) {
     webFrame.removeAttribute("srcdoc");
     webFrame.src = url || "about:blank";
-    setWebBrowserStatus("Blank tab ready.");
+    webFrame.title = app.title || "Website view";
+    setWebBrowserStatus(app.localOriginal ? "Original game" : "Blank tab ready.");
     return;
   }
   const useProxy = isBuiltInBrowserProxyActive(app);
   webFrame.removeAttribute("srcdoc");
   webFrame.src = useProxy ? getProxyWebUrl(url) : url;
+  webFrame.title = app.title || "Website view";
   setWebBrowserStatus(useProxy ? "Loading through proxy..." : "Loading direct...");
 }
 
@@ -13295,7 +13415,7 @@ function setWebWindow(app, url, mirrorIndex = 0, options = {}) {
     const isGameApp = Boolean(app.category || /game/i.test(app.tag || ""));
     const isTouchDevice = window.matchMedia?.("(pointer: coarse)")?.matches
       || navigator.maxTouchPoints > 0;
-    webFrameHelper.hidden = !(isGameApp && isTouchDevice);
+    webFrameHelper.hidden = true;
   }
   if (webHelperMirrorButton) {
     webHelperMirrorButton.hidden = sources.length < 2;
@@ -14480,6 +14600,29 @@ recentAppsTray?.addEventListener("click", (event) => {
 webUrlForm.addEventListener("submit", (event) => {
   event.preventDefault();
   openCustomWebUrl(webUrlInput.value);
+});
+
+remoteDeckCodeForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const code = String(remoteDeckCodeInput?.value || "").trim();
+  if (!code) {
+    setRemoteDeckStatus("Enter the Remote Deck code first.", "warn");
+    return;
+  }
+  remoteDeckCode = code;
+  sessionStorage.setItem(REMOTE_DECK_CODE_SESSION_KEY, code);
+  remoteDeckAuthorized = false;
+  await fetchRemoteDeckTargets();
+  if (!remoteDeckAuthorized) {
+    remoteDeckCode = "";
+    sessionStorage.removeItem(REMOTE_DECK_CODE_SESSION_KEY);
+    if (remoteDeckCodeInput) remoteDeckCodeInput.value = "";
+    return;
+  }
+  if (remoteDeckCodeInput) remoteDeckCodeInput.value = "";
+  initRemoteDeckChannel();
+  renderRemoteDeck();
+  setRemoteDeckStatus("Remote Deck unlocked. Pick an online device.", "live");
 });
 
 webBrowserTabs?.addEventListener("click", (event) => {
@@ -17528,6 +17671,12 @@ if (mediaSearchInput) {
 }
 renderMediaHub();
 const startupUrl = new URL(window.location.href);
+const startupGameId = startupUrl.searchParams.get("game");
+if (startupGameId && webApps[startupGameId]?.category) {
+  startupUrl.searchParams.delete("game");
+  window.history.replaceState({}, "", `${startupUrl.pathname}${startupUrl.search}${startupUrl.hash}`);
+  window.setTimeout(() => openWebApp(startupGameId), 0);
+}
 if (startupUrl.searchParams.get("media") === "tiktok") {
   startupUrl.searchParams.delete("media");
   window.history.replaceState({}, "", `${startupUrl.pathname}${startupUrl.search}${startupUrl.hash}`);

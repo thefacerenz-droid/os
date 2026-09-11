@@ -3878,3 +3878,19 @@ body[data-active-panel="messages"] .vel-chat {
     flex: 1;
   }
 }
+
+/* Messaging connection and incoming-call states. */
+#messagesNameForm { display: grid; gap: 8px; width: 100%; min-width: 0; }
+#messagesNameForm input { width: 100%; min-width: 0; padding: 10px; color: #f4f5f5; background: #151a1c; border: 1px solid #414b50; }
+#messagesNameForm button { padding: 10px; background: #70dcbc; color: #07110e; border: 0; font-weight: 700; }
+#messagesIncoming { position: fixed; right: 18px; bottom: 18px; z-index: 20000; display: grid; gap: 12px; width: min(340px, calc(100vw - 36px)); padding: 18px; border: 1px solid #70dcbc; border-radius: 8px; background: #171e20; box-shadow: 0 8px 32px #0008; }
+#messagesIncoming[hidden] { display: none; }
+#messagesIncoming > div { display: flex; gap: 8px; }
+#messagesIncoming button { padding: 8px 14px; background: #70dcbc; color: #07110e; border: 0; }
+#messagesIncoming [data-dismiss-call] { background: #343c40; color: white; }
+.messages-compose button:disabled, .messages-thread-actions button:disabled { opacity: .45; cursor: not-allowed; }
+
+.remote-deck-code { display: grid; gap: 7px; margin: 12px 0; }
+.remote-deck-code label { color: var(--ink-muted, #a7b1b5); font-size: .78rem; font-weight: 700; }
+.remote-deck-code div { display: flex; gap: 8px; }
+.remote-deck-code input { min-width: 0; flex: 1; border: 1px solid #445057; border-radius: 5px; padding: 9px; color: #f2f5f4; background: #101617; }
