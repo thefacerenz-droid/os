@@ -29,6 +29,7 @@ const handleMessenger = require("./lib/api/messenger.js");
 const handleFlappyLeaderboard = require("./lib/api/games/flappy.js");
 const handleLive = require("./lib/live.js");
 const handleProxyRequest = require("./lib/api/proxy.js");
+const handleBilling = require("./lib/api/billing.js");
 const sessions = new Map();
 
 const MIME_TYPES = {
@@ -834,6 +835,8 @@ function serveStatic(req, res, url) {
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || `localhost:${PORT}`}`);
   try {
+    if (url.pathname.startsWith("/api/billing/")) return await handleBilling(req, res, url.pathname.slice(13));
+    if (url.pathname.startsWith("/api/") && !handleBilling.requireAccess(req, res)) return;
     if (url.pathname === "/api/chat/messages" && url.searchParams.get("__typing") === "1") return await handleChatTyping(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
     if (url.pathname === "/api/chat/typing") return await handleChatTyping(req, res);

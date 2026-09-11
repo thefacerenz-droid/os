@@ -11700,6 +11700,10 @@ function showCleverEntryGate() {
 }
 
 function completeCleverEntryGate({ animate = false } = {}) {
+  if (!window.velBillingActive) {
+    window.openVelPaywall?.();
+    return;
+  }
   if (!cleverEntryGate) return;
   const finish = () => {
     cleverEntryGate.hidden = true;

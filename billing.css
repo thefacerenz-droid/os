@@ -1,0 +1,25 @@
+.vel-payment-locked { overflow: hidden !important; }
+.vel-paywall { position: fixed; inset: 0; z-index: 2147483647; overflow: auto; background: #f5f7fa; color: #182024; font: 16px/1.5 Arial, sans-serif; letter-spacing: 0; }
+.vel-paywall * { box-sizing: border-box; letter-spacing: 0; }
+.vel-paywall-inner { width: min(100% - 40px, 760px); margin: 0 auto; padding: 36px 0 60px; }
+.vel-paywall-brand { display: inline-block; color: #182024; font-size: 26px; font-weight: 800; text-decoration: none; margin-bottom: 55px; }
+.vel-paywall-eyebrow { color: #52606a; font-size: 12px; }
+.vel-paywall h1 { font-size: 38px; line-height: 1.15; margin: 10px 0 16px; color: #182024; }
+.vel-paywall-subtitle { color: #52606a; margin-bottom: 32px; }
+.vel-paywall-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.vel-paywall-plans article { padding: 26px; border: 1px solid #cfd7de; border-radius: 8px; background: white; }
+.vel-paywall h2 { font-size: 20px; color: #182024; margin: 0; }
+.vel-paywall-price { font-size: 48px; font-weight: 700; margin: 18px 0; }
+.vel-paywall-price span { font-size: 14px; font-weight: 400; color: #52606a; }
+.vel-paywall button { cursor: pointer; border: 0; border-radius: 6px; padding: 13px 18px; background: #146953; color: white; font: 600 15px Arial, sans-serif; min-height: 46px; }
+.vel-paywall button:disabled { opacity: .55; cursor: wait; }
+.vel-paywall button:focus-visible, .vel-paywall input:focus-visible { outline: 3px solid #d0952a; outline-offset: 3px; }
+.vel-paywall-plans button { width: 100%; margin-top: 12px; }
+.vel-paywall-note { font-size: 13px; color: #52606a; margin: 22px 0 34px; }
+.vel-paywall-key { border-top: 1px solid #cfd7de; padding-top: 24px; }
+.vel-paywall-key label { display: block; margin-bottom: 10px; }
+.vel-paywall-key > div { display: flex; gap: 10px; }
+.vel-paywall input { min-width: 0; flex: 1; background: white; color: #182024; border: 1px solid #acb9c4; border-radius: 6px; padding: 12px; font: inherit; }
+.vel-paywall .vel-paywall-check { background: transparent; color: #146953; padding-left: 0; margin-top: 16px; }
+.vel-paywall [role=status] { min-height: 24px; color: #743d13; }
+@media (max-width: 520px) { .vel-paywall-plans { grid-template-columns: 1fr; } .vel-paywall-brand { margin-bottom: 28px; } .vel-paywall h1 { font-size: 30px; } }

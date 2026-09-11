@@ -10,6 +10,7 @@ const handleYoutubeSearch = require("../lib/api/youtube/search.js");
 const handleTikTok = require("../lib/api/tiktok.js");
 const handleMessenger = require("../lib/api/messenger.js");
 const handleProxy = require("../lib/api/proxy.js");
+const handleBilling = require("../lib/api/billing.js");
 
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -38,6 +39,8 @@ function getApiPath(req) {
 
 module.exports = async function handler(req, res) {
   const apiPath = getApiPath(req);
+  if (apiPath.startsWith("billing/")) return handleBilling(req, res, apiPath.slice(8));
+  if (!handleBilling.requireAccess(req, res)) return;
   if (apiPath === "proxy") return handleProxy(req, res);
 
   if (apiPath === "youtube/search") return handleYoutubeSearch(req, res);
