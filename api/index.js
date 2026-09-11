@@ -9,7 +9,7 @@ const handleYoutubeGlobal = require("../lib/api/youtube/global.js");
 const handleYoutubeSearch = require("../lib/api/youtube/search.js");
 const handleTikTok = require("../lib/api/tiktok.js");
 const handleMessenger = require("../lib/api/messenger.js");
-const handleProxy = require("../lib/api/proxy.js");
+const handleProxy = require("../lib/api/configuredProxy.js");
 const handleBilling = require("../lib/api/billing.js");
 
 function sendJson(res, statusCode, payload) {

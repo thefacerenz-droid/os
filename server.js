@@ -28,7 +28,7 @@ const handleChatTyping = require("./lib/chatTyping.js");
 const handleMessenger = require("./lib/api/messenger.js");
 const handleFlappyLeaderboard = require("./lib/api/games/flappy.js");
 const handleLive = require("./lib/live.js");
-const handleProxyRequest = require("./lib/api/proxy.js");
+const handleProxyRequest = require("./lib/api/configuredProxy.js");
 const handleBilling = require("./lib/api/billing.js");
 const sessions = new Map();
 

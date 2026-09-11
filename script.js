@@ -13312,13 +13312,14 @@ function getBrowserShellApp(url = currentWebUrl) {
     embedBlocked: false,
     mirrors: [],
     note: webBrowserProxyMode === "proxy"
-      ? "Proxy mode fetches pages through the vel.os server. Some scripts, logins, and protected pages may still fail."
-      : "Direct mode loads the site in a normal browser frame. Use Proxy when a page blocks embedding."
+      ? "Read-only HTML and text through your configured proxy. Scripts, logins and streaming are not supported."
+      : "Direct mode connects your browser to the website without a proxy."
   };
 }
 
 function loadWebFrameUrl(url, app = {}) {
   if (!webFrame) return;
+  window.cancelVelProxyPage?.();
   let trustedFrameHost = false;
   try {
     trustedFrameHost = Boolean(app.category) || new URL(url, window.location.href).hostname === "classic.minecraft.net";
@@ -13343,6 +13344,14 @@ function loadWebFrameUrl(url, app = {}) {
     return;
   }
   const useProxy = isBuiltInBrowserProxyActive(app);
+  if (useProxy) {
+    webFrame.setAttribute("sandbox", "allow-scripts");
+    webFrame.removeAttribute("src");
+    webFrame.srcdoc = "<!doctype html><p style='font:16px system-ui;color:#ddd;background:#111;padding:24px'>Loading proxy view...</p>";
+    if (window.loadVelProxyPage) window.loadVelProxyPage(url);
+    else setWebBrowserStatus("Open Proxy settings to connect.");
+    return;
+  }
   webFrame.removeAttribute("srcdoc");
   webFrame.src = useProxy ? getProxyWebUrl(url) : url;
   webFrame.title = app.title || "Website view";
@@ -13440,7 +13449,7 @@ function setWebWindow(app, url, mirrorIndex = 0, options = {}) {
   } else if (knownBlocked) {
     webFrame.removeAttribute("src");
     webFrame.srcdoc = makeBlockedFrame(app, url);
-    setWebBrowserStatus("Direct frame blocked. Try Proxy or a mirror.", "warn");
+    setWebBrowserStatus("This website does not support direct embedded viewing.", "warn");
   } else {
     loadWebFrameUrl(url, app);
   }
@@ -14694,6 +14703,7 @@ window.addEventListener("message", (event) => {
 });
 
 webFrame?.addEventListener("load", () => {
+  if (isBuiltInBrowserProxyActive(webApps[activeWeb] || getBrowserShellApp(currentWebUrl))) return;
   if (!currentWebUrl || currentWebUrl === "about:blank") return;
   setWebBrowserStatus(isBuiltInBrowserProxyActive(webApps[activeWeb] || getBrowserShellApp(currentWebUrl))
     ? "Page loaded inside vel.os."

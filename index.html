@@ -648,6 +648,7 @@
             </form>
               <div class="web-mode-cluster">
                 <button class="ghost-button" id="webProxyToggle" type="button" aria-pressed="false">Direct</button>
+                <button class="ghost-button" id="proxySettingsOpen" type="button">Proxy settings</button>
                 <button class="ghost-button" id="webNewTabButton" type="button">New Tab</button>
               </div>
             </div>
@@ -657,7 +658,7 @@
               <button type="button" data-web-quick-url="https://example.com/">Example</button>
               <span class="web-browser-status" id="webBrowserStatus">Direct mode ready.</span>
             </div>
-            <p class="tiny-note web-note" id="webNote">Search, paste a URL, or switch to Proxy when a page blocks normal iframe loading.</p>
+            <p class="tiny-note web-note" id="webNote">Read-only proxy view supports HTML and text. Scripts, logins and streaming are not supported.</p>
           </div>
 
           <div class="web-shell">
@@ -1700,6 +1701,8 @@
     <script src="./assets/js/call-peer.js?v=2"></script>
     <link rel="stylesheet" href="./billing.css">
     <script src="./billing.js"></script>
-    <script src="./script.js?v=access-passes-v18"></script>
+    <script src="./script.js?v=configured-proxy-v19"></script>
+    <link rel="stylesheet" href="./proxy-browser.css">
+    <script src="./proxy-browser.js"></script>
   </body>
 </html>

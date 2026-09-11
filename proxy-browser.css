@@ -1,0 +1,15 @@
+.proxy-settings{width:min(520px,calc(100% - 32px));max-height:90dvh;overflow:auto;border:1px solid #52605d;border-radius:8px;padding:24px;background:#171c1e;color:#edf2f1;font:15px/1.5 system-ui;letter-spacing:0}
+.proxy-settings::backdrop{background:#000a}
+.proxy-settings header,.proxy-settings footer{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.proxy-settings h2{font-size:21px;margin:0}
+.proxy-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:22px}
+.proxy-fields label{display:grid;gap:6px;min-width:0}
+.proxy-wide{grid-column:1/-1}
+.proxy-settings input,.proxy-settings select{box-sizing:border-box;width:100%;min-width:0;padding:10px;border:1px solid #586564;border-radius:4px;background:#101415;color:#fff;font:inherit}
+.proxy-settings button{padding:10px 14px;border:1px solid #697c75;border-radius:4px;background:#253731;color:#fff;font:inherit;cursor:pointer}
+.proxy-settings button:disabled{opacity:.5;cursor:wait}
+.proxy-settings .proxy-close{padding:0;width:36px;height:36px;font-size:24px;background:transparent}
+.proxy-settings .proxy-help{font-size:13px;color:#b5c1be}
+.proxy-settings [role=status]{overflow-wrap:anywhere;min-height:44px;color:#bbdfca}
+.proxy-settings :focus-visible{outline:2px solid #a4dfbf;outline-offset:3px}
+@media(max-width:420px){.proxy-fields{grid-template-columns:1fr}.proxy-settings{padding:16px}.proxy-settings footer{flex-wrap:wrap}}
