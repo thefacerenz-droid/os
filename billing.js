@@ -8,7 +8,9 @@
       headers: data ? { "Content-Type": "application/json" } : {},
       body: data ? JSON.stringify(data) : undefined
     });
-    const result = await response.json();
+    let result;
+    try { result = JSON.parse(await response.text()); }
+    catch { throw new Error(`The server returned an invalid response (HTTP ${response.status}). The site owner needs to check the Vercel deployment logs and redeploy the updated server files.`); }
     if (!response.ok) throw new Error(result.message || "Unable to check access.");
     return result;
   }

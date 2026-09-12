@@ -3,7 +3,9 @@
   let generation = 0;
   async function api(data, signal) {
     const response = await fetch('/api/proxy', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal });
-    const result = await response.json();
+    let result;
+    try { result = JSON.parse(await response.text()); }
+    catch { throw new Error(`The proxy server returned an invalid response (HTTP ${response.status}). Check the Vercel deployment logs and rebuild with the updated dependencies.`); }
     if (!response.ok) throw new Error(result.message || 'The proxy request failed.');
     return result;
   }
