@@ -1,0 +1,20 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const os=require('node:os');
+process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY='1';
+(async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
+  const page=await browser.newPage({viewport:{width:1180,height:820},hasTouch:true});
+  await page.route('**/api/billing/status',r=>r.fulfill({json:{active:true}}));
+  await page.goto('http://localhost:3020',{waitUntil:'domcontentloaded'});
+  await page.evaluate(()=>{window.velBillingActive=true;completeCleverEntryGate();});
+  await page.locator('#desktopShortcuts [data-app-open-ref="web:mudline"]').click();
+  const frame=page.frameLocator('#webFrame');await frame.locator('#scene').waitFor();
+  const bounds=await page.locator('#webFrame').boundingBox();const back=await page.locator('#showDesktopButton').boundingBox();
+  assert.ok(bounds.y>=back.y+back.height-5,'Game sits below Veloi back bar');
+  await frame.locator('[data-panel="garage"]').click();await frame.locator('[data-vehicle="violet"]').click();await frame.locator('#applyTune').click();
+  await page.screenshot({path:path.join(os.tmpdir(),'mudline-in-veloi.png'),timeout:10000});
+  await page.locator('#showDesktopButton').click();
+  assert.ok(await page.locator('#desktopShortcuts [data-app-open-ref="web:mudline"]').isVisible());
+  console.log('Home shortcut, embedded garage and back-to-library passed.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

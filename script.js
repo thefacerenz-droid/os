@@ -1996,6 +1996,29 @@ megaGameSlugs.forEach((slug) => {
   });
 });
 
+// Curated playable games, including the locally hosted Mudline game.
+gameCatalog.splice(0, gameCatalog.length, {
+  id: "stickmanhook",
+  title: "Stickman Hook",
+  category: "Arcade",
+  source: "arcade",
+  badgeSrc: "https://stickmanhookgame.org/cache/data/image/game/stickman-hook-game-m110x70.jpg",
+  url: "https://stickmanhookgame.org/stickman-hook.embed",
+  mirrors: [],
+  embedBlocked: false
+}, {
+  id: "mudline",
+  title: "Mudline",
+  category: "Off-road",
+  source: "arcade",
+  badgeSrc: "./assets/games/mudline/cover.png",
+  url: "./assets/games/mudline/index.html",
+  mirrors: [],
+  embedBlocked: false,
+  localOriginal: true
+});
+Object.keys(localGameMeta).forEach((id) => delete localGameMeta[id]);
+
 Object.keys(webApps).forEach((id) => {
   const app = webApps[id];
   if (/game/i.test(app?.tag || "") || app?.category) {
@@ -2015,7 +2038,7 @@ gameCatalog.forEach((game) => {
     url: game.title === "2048" ? "/assets/games/2048/index.html" : game.url,
     mirrors: game.mirrors || [],
     embedBlocked: Boolean(game.embedBlocked),
-    localOriginal: game.title === "2048",
+    localOriginal: Boolean(game.localOriginal) || game.title === "2048",
     note: game.title === "2048" ? "Original 2048 by Gabriele Cirulli." : "Original game. Availability depends on its publisher.",
     badgeText: game.badgeText || game.title.slice(0, 2).toUpperCase(),
     badgeSrc: game.badgeSrc || createGameBadgeSrc(game.title, game.category),
@@ -2126,13 +2149,6 @@ const utilityApps = {
     action: "panel",
     panel: "calculator"
   },
-  localArcade: {
-    title: "Local Arcade",
-    label: "Arcade",
-    badgeText: "LG",
-    action: "game",
-    gameId: "snake"
-  }
 };
 
 const MEDIA_YOUTUBE_PAGE_SIZE = 12;
@@ -3039,7 +3055,7 @@ if (!["games", "local", "media", "tools"].includes(launcherStoreCategory)) {
   launcherStoreCategory = "games";
 }
 let launcherOfflineOnly = storage.get("vel-launcher-offline-only", isLikelyIpad() ? "1" : "0") === "1";
-let launcherGameSource = storage.get("vel-launcher-game-source", "all");
+let launcherGameSource = "all";
 if (!gameSourceLabels[launcherGameSource]) {
   launcherGameSource = "all";
 }
@@ -3521,6 +3537,13 @@ function saveInstalledApps() {
 
 const DESKTOP_SHORTCUT_ORDER_KEY = "vel-desktop-shortcut-order";
 const DESKTOP_SHORTCUT_POSITIONS_KEY = "vel-desktop-shortcut-positions";
+if (storage.get("vel-mudline-home-v1", "0") !== "1") {
+  installedApps = ["web:mudline", ...installedApps.filter(ref => ref !== "web:mudline")].slice(0, 40);
+  saveInstalledApps();
+  const order = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
+  storage.set(DESKTOP_SHORTCUT_ORDER_KEY, JSON.stringify(["web:mudline", ...(Array.isArray(order) ? order : []).filter(ref => ref !== "web:mudline")]));
+  storage.set("vel-mudline-home-v1", "1");
+}
 
 if (storage.get("vel-desktop-browser-shortcut-v1", "0") !== "1") {
   const savedDesktopOrder = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
@@ -11125,7 +11148,7 @@ function renderLauncherCatalog() {
     return;
   }
 
-  if (gameSourceTabs) gameSourceTabs.hidden = false;
+  if (gameSourceTabs) gameSourceTabs.hidden = true;
   if (launcherOfflineToggle) launcherOfflineToggle.hidden = true;
 
   const localGameIds = [];
@@ -13406,6 +13429,7 @@ function setWebProxyMode(mode = "direct") {
 }
 
 function setWebWindow(app, url, mirrorIndex = 0, options = {}) {
+  webDrawer?.classList.toggle("is-game-only", ["stickmanhook", "mudline"].includes(activeWeb));
   currentWebUrl = url;
   currentWebMirrorIndex = mirrorIndex;
   webTag.textContent = app.tag;
@@ -13533,6 +13557,8 @@ function openCustomWebUrl(value) {
     0
   );
   openPanel("web");
+  webDrawer?.classList.toggle("is-game-only", ["stickmanhook", "mudline"].includes(appId));
+  if (["stickmanhook", "mudline"].includes(appId)) setWebFullscreen(true);
 }
 
 function syncLoadedWebBrowserUrl(value = "") {

@@ -1,0 +1,8 @@
+.drawer.is-game-only .web-panel { display: flex !important; flex-direction: column; padding: var(--signal-switcher-height, 64px) 0 0 !important; }
+.drawer.is-game-only .web-panel > .drawer-head,
+.drawer.is-game-only .web-toolbar,
+.drawer.is-game-only .web-warning,
+.drawer.is-game-only .web-frame-helper { display: none !important; }
+.drawer.is-game-only .web-shell { flex: 1; width: 100%; min-height: 0; margin: 0 !important; }
+.drawer.is-game-only .web-frame-wrap,
+.drawer.is-game-only .web-frame { width: 100%; height: 100%; border: 0; border-radius: 0; }
