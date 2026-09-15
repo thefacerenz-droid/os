@@ -370,6 +370,7 @@ const gameSourceLabels = {
   sports: "Sports",
   sandbox: "Sandbox",
   celestial: "Celestial",
+  imported: "Imported",
   other: "More Sites"
 };
 
@@ -1996,7 +1997,70 @@ megaGameSlugs.forEach((slug) => {
   });
 });
 
-// Curated playable games, including the locally hosted Mudline game.
+const importedGameCatalog = [
+  ["wheely8", "Wheely 8", "Puzzle", "wheely8.html"],
+  ["subwaysurfersbeijing", "Subway Surfers Beijing", "Runner", "subwaysurfersbeijing.html"],
+  ["stickmanhook-local", "Stickman Hook", "Arcade", "stickmanhook.html"],
+  ["backrooms", "Backrooms", "Horror", "backrooms.html"],
+  ["awesometanks2", "Awesome Tanks 2", "Action", "awesometanks2.html"],
+  ["angrybirds", "Angry Birds", "Puzzle", "angrybirds.html"],
+  ["amongus", "Among Us", "Party", "amongus.html"],
+  ["agariolite", "Agar.io Lite", "IO", "agariolite.html"],
+  ["10minutestilldawn", "10 Minutes Till Dawn", "Shooter", "10minutestilldawn.html"],
+  ["8ballclassic", "8 Ball Classic", "Sports", "8ballclassic.html"],
+  ["3dflightsimulator", "3D Flight Simulator", "Simulation", "3Dflightsimulator.html"],
+  ["1v1lol", "1v1.LOL", "Shooter", "1v1.lol.html"],
+  ["1on1soccer", "1 On 1 Soccer", "Sports", "1on1soccer.html"],
+  ["minecraft112", "Minecraft 1.12", "Sandbox", "1.12.html"],
+  ["baldisbasics", "Baldi's Basics", "Horror", "baldisbasics.html"],
+  ["bowmasters", "Bowmasters", "Action", "bowmasters.html"],
+  ["chess-local", "Chess", "Board", "chess.html"],
+  ["crazycrashlanding", "Crazy Crash Landing", "Driving", "crazycrashlanding.html"],
+  ["crossyroad", "Crossy Road", "Arcade", "crossyroad.htm"],
+  ["drivemad-local", "Drive Mad", "Physics", "drivemad.htm"],
+  ["driftboss", "Drift Boss", "Driving", "driftboss.htm"],
+  ["elasticface", "Elastic Face", "Sandbox", "elasticface.htm"],
+  ["fnaf", "FNAF", "Horror", "fnaf.html"],
+  ["fnaf2", "FNAF 2", "Horror", "fnaf2.html"],
+  ["fnaf3", "FNAF 3", "Horror", "fnaf3.html"],
+  ["fnaf4", "FNAF 4", "Horror", "fnaf4.html"],
+  ["fnae", "FNAE", "Horror", "FNAE.html"],
+  ["fruitninja", "Fruit Ninja", "Arcade", "fruitninja.html"],
+  ["geometrydash", "Geometry Dash", "Runner", "geometrydash.html"],
+  ["geometrydashlite", "Geometry Dash Lite", "Runner", "geometrydashlite.html"],
+  ["geometryvibes", "Geometry Vibes", "Runner", "geometryvibes.html"],
+  ["granny", "Granny", "Horror", "granny.html"],
+  ["granny2", "Granny 2", "Horror", "granny2.html"],
+  ["hillclimbracinglite", "Hill Climb Racing Lite", "Driving", "hillclimbracinglite.html"],
+  ["highwaytraffic", "Highway Traffic", "Driving", "highwaytraffic.html"],
+  ["johnnytrigger", "Johnny Trigger", "Action", "johnnytrigger.html"],
+  ["jetpackjoyride", "Jetpack Joyride", "Runner", "jetpackjoyride.html"],
+  ["happywheels", "Happy Wheels", "Physics", "happywheels.html"],
+  ["melonplayground", "Melon Playground", "Sandbox", "melonplayground.html"],
+  ["minesweeper-local", "Minesweeper", "Puzzle", "minesweeper.html"],
+  ["motox3m3", "Moto X3M 3", "Racing", "motox3m3.html"],
+  ["monstertracks", "Monster Tracks", "Driving", "monstertracks.html"],
+  ["pacman-local", "Pac-Man", "Arcade", "pacman.html"],
+  ["paperio2", "Paper.io 2", "IO", "paperio2.htm"],
+  ["parkingfury3", "Parking Fury 3", "Driving", "parkingfury3.html"],
+  ["slope3", "Slope 3", "Runner", "slope3.html"],
+  ["snowrider-local", "Snow Rider", "Runner", "snowrider.htm"],
+  ["spacewaves", "Space Waves", "Arcade", "spacewaves.html"],
+  ["speedstars", "Speed Stars", "Sports", "speedstars.html"]
+].map(([id, title, category, file]) => ({
+  id: `imported-${id}`,
+  title,
+  category,
+  source: "imported",
+  badgeText: getBadgeInitials(title),
+  url: `./assets/games/imported/${file}`,
+  mirrors: [],
+  embedBlocked: false,
+  localOriginal: true,
+  note: `${title} imported from your local game files.`
+}));
+
+// Curated playable games, including the locally hosted Mudline game and user-imported pages.
 gameCatalog.splice(0, gameCatalog.length, {
   id: "stickmanhook",
   title: "Stickman Hook",
@@ -2016,7 +2080,7 @@ gameCatalog.splice(0, gameCatalog.length, {
   mirrors: [],
   embedBlocked: false,
   localOriginal: true
-});
+}, ...importedGameCatalog);
 Object.keys(localGameMeta).forEach((id) => delete localGameMeta[id]);
 
 Object.keys(webApps).forEach((id) => {
