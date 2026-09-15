@@ -47,7 +47,7 @@ const server=http.createServer(async(req,res)=>{
     await a.keyboard.down('ArrowRight');await a.waitForTimeout(1500);await a.keyboard.up('ArrowRight');await b.waitForFunction(()=>MudMultiplayer.state().players.some(p=>p.name==='Renz'&&p.state?.x>500));
     let count=0;await b.route('**/api/games/mudline',async route=>{if(route.request().postDataJSON().action==='sync'){await new Promise(r=>setTimeout(r,230));if(++count%4===0)return route.abort('failed');}return route.continue();});
     await a.waitForTimeout(2500);assert.ok((await b.evaluate(()=>MudMultiplayer.state())).connected);await b.unrouteAll({behavior:'wait'});await b.waitForFunction(()=>MudMultiplayer.state().failures===0);console.log('Delayed updates and dropped requests recover without stopping local physics');
-    for(let i=2;i<8;i++){const p=await page('Rider '+i);await join(p,code,'Rider '+i);}
+    for(let i=2;i<8;i++){const p=await page('Rider '+i);if(i<5){await p.locator('[data-panel="garage"]').click();await p.locator(`[data-vehicle="${['volt-mx','flux-trail','tundra'][i-2]}"]`).click();await p.locator('#applyTune').click();}await join(p,code,'Rider '+i);}
     await a.waitForFunction(()=>MudMultiplayer.state().players.length===8,{},{timeout:20000});await pages[7].waitForFunction(()=>MudMultiplayer.state().remoteCount===7,{},{timeout:20000});
     const denied=await fetch(base+'/api/games/mudline',{method:'POST',body:JSON.stringify({action:'join',code,username:'Ninth',build:ride.tune})});assert.equal(denied.status,409);
     console.log('Eight actual games, late join state and lobby capacity passed');

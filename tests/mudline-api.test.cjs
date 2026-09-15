@@ -54,3 +54,11 @@ test('host-only optional events, ordered checkpoints and no client money writes'
   assert.ok(result.room.event.progress[a.id].finished);assert.ok(result.room.event.finished);
   assert.ok(!JSON.stringify(f.data()).includes('money'));
 });
+test('new electric bikes and snowmobile join unrestricted parks but not ATV-only rooms',async()=>{
+  const f=fixture(),all=await create(f),atv=await create(f,{restriction:'atv'});
+  for(const vehicle of ['volt-mx','flux-trail','tundra']){
+    const joined=await f.call({action:'join',code:all.room.code,build:{...build,vehicle}});assert.equal(joined.status,200);
+    assert.equal(joined.room.players.at(-1).build.vehicle,vehicle);
+    assert.equal((await f.call({action:'join',code:atv.room.code,build:{...build,vehicle}})).status,400);
+  }
+});

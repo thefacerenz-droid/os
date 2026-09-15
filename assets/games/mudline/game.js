@@ -16,7 +16,10 @@
     { id: 'pearl', name: 'Pearl on Chrome', body: '#f4f4dd', trim: '#be4b4b', rim: '#e2eced', frame: '#d2dfe1', lift: 1.15, length: 135, mass: 6.1, snorkel: true },
     { id: 'violet', name: 'Violet Highrise', body: '#f2f2ec', trim: '#7654bc', rim: '#9571d6', frame: '#7654bc', lift: 1.2, length: 138, mass: 6.3, snorkel: true },
     { id: 'silverback', name: 'Silverback Lift', body: '#dce6df', trim: '#263b3e', rim: '#37484a', frame: '#d2ddd7', lift: 1.2, length: 139, mass: 6.8, snorkel: true },
-    { id: 'paddle', name: 'Paddle Monster', body: '#ebebe0', trim: '#303f41', rim: '#e6e9df', frame: '#e7e9df', lift: 1.3, length: 145, mass: 7.1, snorkel: true, disc: true }
+    { id: 'paddle', name: 'Paddle Monster', body: '#ebebe0', trim: '#303f41', rim: '#e6e9df', frame: '#e7e9df', lift: 1.3, length: 145, mass: 7.1, snorkel: true, disc: true },
+    { id: 'volt-mx', name: 'Volt MX', body: '#eeeae3', trim: '#d85244', rim: '#b8c4c7', frame: '#84969c', lift: .6, length: 140, mass: 4.5, bike: true },
+    { id: 'flux-trail', name: 'Flux Trail', body: '#273a43', trim: '#b8ce73', rim: '#b5bec3', frame: '#344d59', lift: .52, length: 124, mass: 3.8, bike: true },
+    { id: 'tundra', name: 'Tundra Snowmobile', body: '#e6edf0', trim: '#de704a', rim: '#a5babf', frame: '#8ca4ad', lift: .6, length: 180, mass: 7.5, snow: true }
   ];
   const defaults = { vehicle: 'highwater', power: 110, spring: 55, damping: 55, lift: 52, radius: 34, snorkel: 75, tires: 'mud', assist: true };
   const saved = read('mudline-tune-v1', {});
@@ -43,6 +46,7 @@
   let customMaps = read('mudline-maps-v1', []);
   customMaps = Array.isArray(customMaps) ? customMaps.filter(validMap).slice(0,20) : [];
   let map = makeMap('bog'), engine, chassis, wheels = [], springs = [], particles = [];
+  let rider;const remoteRiders=new Map();
   let endless=false,endlessLead=0,streamed=new Map(),lastStream=-999,flood=0,stalled=false,intakeClearance=999;
   const endlessSample=i=>MudEndless.sample(Math.max(0,i-endlessLead));
   let bestEndless=Number(read('mudline-endless-best-v1',0))||0;
@@ -79,7 +83,9 @@
     $('mapLabel').textContent = map.name;
   }
   function spawn(x) {
+    rider=MudRider.create();remoteRiders.clear();
     const v = rig(), r = tune.radius, lift = tune.lift * v.lift;
+    MudAudio.setVehicle(v.bike?'electric':v.snow?'snow':'atv');
     const y = terrainY(x) - r - lift - 15;
     const group = Body.nextGroup(true);
     chassis = Bodies.rectangle(x, y, v.length, 27, { chamfer: { radius: 9 }, friction: .5, frictionAir: .003, collisionFilter: { group }, label: 'chassis' });
@@ -103,17 +109,18 @@
   function simulate() {
     if(MudMultiplayer.blocked())release();
     if(endless)streamTerrain(chassis.position.x);
-    const intake=MudEndless.intake(chassis.position,chassis.angle,tune.snorkel,rig().length,rig().sxs),level=fluidLevel(intake.x);
+    const intake=MudEndless.intake(chassis.position,chassis.angle,rig().bike?30:rig().snow?55:tune.snorkel,rig().length,rig().sxs),level=fluidLevel(intake.x);
     intakeClearance=level===null?999:level-intake.y;
     flood=clamp(flood+(intakeClearance<0?.018:-.009),0,1);
-    if(flood>=1&&!stalled){stalled=true;toast('Engine flooded. Recover to the last dry checkpoint.');}
+    if(flood>=1&&!stalled){stalled=true;toast(rig().bike?'Water ingress. Recover the bike.':'Engine flooded. Recover to the last dry checkpoint.');}
     const gas = inputs.gas&&!stalled ? 1 : 0;
     const reverse = inputs.brake && !stalled && chassis.velocity.x < .6 ? -.45 : 0;
     const power = tune.power / 110, type = surfaceAt(chassis.position.x);
     const contacts = wheels.map(groundContact);
     wheels.forEach((wheel, i) => {
       const material = surfaceAt(wheel.position.x), grip = tune.tires === 'mud' ? { trail:1, mud:.85, water:.65, sand:.55 } : tune.tires === 'paddle' ? { trail:.65, mud:.95, water:.85, sand:1 } : { trail:1.15, mud:.32, water:.3, sand:.55 };
-      const drive = (gas + reverse)*(MudMultiplayer.controls().awd||i===0?1:0)*(MudMultiplayer.controls().diff?1.08:1);
+      const singleDrive=rig().bike||rig().snow;
+      const drive = (gas + reverse)*(singleDrive?(i===0?1.7:0):(MudMultiplayer.controls().awd||i===0?1:0))*(MudMultiplayer.controls().diff?1.08:1);
       if (contacts[i]) {
         Body.applyForce(wheel, wheel.position, { x: drive * .006 * power * grip[material] * (34 / tune.radius), y: 0 });
         Body.setAngularVelocity(wheel, clamp(wheel.angularVelocity + drive * .016 * power, -.3, .7));
@@ -125,12 +132,13 @@
       if (contacts[i]) Body.applyForce(wheel, wheel.position, { x: -wheel.velocity.x * drag, y: 0 });
       wheel.friction = grip[material];
       const spin=Math.abs(wheel.angularVelocity)*tune.radius;
-      if(contacts[i]&&(Math.abs(wheel.velocity.x)>.3||spin>1)&&stepCount%2===0){
-        const muddy=material==='mud',wet=material==='water',count=muddy?5:wet?4:2;
+      if((contacts[i]||immersion>.15)&&(Math.abs(wheel.velocity.x)>.3||spin>1)){
+        const muddy=material==='mud',wet=material==='water',count=muddy?12:wet?18:2;
         const direction=wheel.velocity.x<-.1?-1:1;
-        for(let j=0;j<count;j++)particles.push({x:wheel.position.x-direction*tune.radius*.65,y:wheel.position.y+tune.radius*.55,vx:-direction*(2+Math.random()*5+spin*.22),vy:-2-Math.random()*(muddy?8:5)-spin*.12,life:45+Math.random()*20,maxLife:65,size:muddy?2+Math.random()*5:1+Math.random()*3,material});
-        if(muddy)dirt[tune.vehicle]=clamp(dirt[tune.vehicle]+.0025+spin*.00009,0,1);
-        if(wet)dirt[tune.vehicle]=Math.max(0,dirt[tune.vehicle]-.003);
+        const sprayY=immersion>.15?Math.min(wheel.position.y+tune.radius*.5,fluidLevel(wheel.position.x)+10):wheel.position.y+tune.radius*.55;
+        for(let j=0;j<count;j++)particles.push({x:wheel.position.x-direction*tune.radius*.65+(Math.random()-.5)*14,y:sprayY,vx:-direction*(3+Math.random()*8+spin*.35),vy:-3-Math.random()*(muddy?12:16)-spin*.2,life:50+Math.random()*25,maxLife:75,size:muddy?3+Math.random()*7:1+Math.random()*4,material});
+        if(muddy)dirt[tune.vehicle]=clamp(dirt[tune.vehicle]+.012+spin*.0005,0,1);
+        if(wet)dirt[tune.vehicle]=Math.max(0,dirt[tune.vehicle]-.0008);
         if(material==='sand')dirt[tune.vehicle]=clamp(dirt[tune.vehicle]+.0004,0,1);
       }
     });
@@ -143,9 +151,10 @@
     if (inputs.down || (inputs.brake && !reverse)) chassis.torque += .9;
     if (type === 'water') Body.applyForce(chassis, chassis.position, { x: -chassis.velocity.x * .0005, y: -.001 });
     const bodyLevel=fluidLevel(chassis.position.x);
-    if(bodyLevel!==null){const submerged=clamp((chassis.position.y+18-bodyLevel)/60,0,1);Body.applyForce(chassis,chassis.position,{x:-chassis.velocity.x*.0016*submerged,y:-chassis.mass*.00028*submerged});if(submerged>.1)dirt[tune.vehicle]=clamp(dirt[tune.vehicle]+.003,0,1);}
+    if(bodyLevel!==null){const submerged=clamp((chassis.position.y+18-bodyLevel)/60,0,1);Body.applyForce(chassis,chassis.position,{x:-chassis.velocity.x*.0016*submerged,y:-chassis.mass*.00028*submerged});if(submerged>.1&&type==='mud')dirt[tune.vehicle]=clamp(dirt[tune.vehicle]+.012,0,1);}
     Body.applyForce(chassis,chassis.position,MudMultiplayer.forces(chassis.position));
     Engine.update(engine, 1000/60);
+    rider.step({vx:chassis.velocity.x,vy:chassis.velocity.y,angle:chassis.angle});
     if (contacts[0] && !contacts[1] && chassis.angle < -.14 && chassis.angle > -1.5 && Math.abs(chassis.velocity.x) > .5) wheelieTime += 1/60;
     else { if (wheelieTime > bestWheelie) { bestWheelie = wheelieTime; write('mudline-best-v1', bestWheelie); } wheelieTime = 0; }
     if (chassis.position.x > checkpoint + 700 && type === 'trail' && Math.abs(chassis.angle) < .4) checkpoint = chassis.position.x;
@@ -153,7 +162,7 @@
     if (!endless && chassis.position.x > LENGTH - 220 && !finished) { finished = true; toast('TRAIL COMPLETE! Choose a new map or keep riding.'); }
     if(endless&&stepCount%120===0){bestEndless=Math.max(bestEndless,Math.round((chassis.position.x-180)/12));write('mudline-endless-best-v1',bestEndless);}
     if (Math.abs(chassis.angle) > 2 && stepCount % 180 === 0) toast('Rolled over? Use Recover to get back on the trail.');
-    if (particles.length > 320) particles.splice(0, particles.length - 320);
+    const particleLimit=width<740?700:1100;if(particles.length>particleLimit)particles.splice(0,particles.length-particleLimit);
     particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vx*=.99;p.vy += .24; p.life--;if(p.y>terrainY(p.x)){p.y=terrainY(p.x)+1;p.vx*=.45;p.vy=0;p.life-=2;} }); particles = particles.filter(p => p.life > 0);
     if(stepCount%120===0)write('mudline-dirt-v1',dirt);
     stepCount++;
@@ -207,20 +216,21 @@
     }
     line(c,[[-a+6,-16],[-a+24,-17]],'#ffffff70',2);
   }
-  function drawRig(c,v,bodyPosition,angle,wheelPositions,r,wheelAngles,remote=null) {
+  function drawRig(c,v,bodyPosition,angle,wheelPositions,r,wheelAngles,remote=null,riderPose=null) {
     const toWorld = p => Vector.add(bodyPosition,Vector.rotate(p,angle));
     wheelPositions.forEach((w,i) => {
       const anchor = toWorld({x:(i?1:-1)*v.length*.4,y:5});
       line(c,[[anchor.x,anchor.y],[w.x,w.y]],'#182f36',8);
       const dx=w.x-anchor.x,dy=w.y-anchor.y,len=Math.hypot(dx,dy), nx=-dy/len,ny=dx/len;
       const zig=[[anchor.x,anchor.y]]; for(let s=1;s<10;s++) zig.push([anchor.x+dx*s/10+nx*(s%2?4:-4),anchor.y+dy*s/10+ny*(s%2?4:-4)]); zig.push([w.x,w.y]); line(c,zig,v.frame,3);
-      if(remote)MudModels.wheel(c,w.x,w.y,r,wheelAngles[i],v,remote.tires,remote.dirt);else wheelArt(c,w.x,w.y,r,wheelAngles[i],v);
+      if(!v.snow){if(remote)MudModels.wheel(c,w.x,w.y,r,wheelAngles[i],v,remote.tires,remote.dirt);else wheelArt(c,w.x,w.y,r,wheelAngles[i],v);}
     });
-    c.save();c.translate(bodyPosition.x,bodyPosition.y);c.rotate(angle);if(remote)MudModels.body(c,v,remote.dirt);else bodyArt(c,v);c.restore();
+    if(v.snow)MudModels.track(c,wheelPositions,r,angle,v,wheelAngles[0],remote?remote.dirt:dirt[v.id]||0);
+    c.save();c.translate(bodyPosition.x,bodyPosition.y);c.rotate(angle);if(remote)MudModels.body(c,v,remote.dirt);else bodyArt(c,v);MudRider.draw(c,riderPose,v,remote?remote.dirt:dirt[v.id]||0);c.restore();
   }
   function thumbnail(target,v) {
     target.width=360;target.height=170;const c=target.getContext('2d');c.fillStyle='#24434a';c.fillRect(0,0,360,170);
-    const scale=Math.min(v.sxs?1.1:1.25,145/(tune.snorkel+80));c.save();c.translate(180,160-59*scale);c.scale(scale,scale);drawRig(c,{...v,snorkelHeight:tune.snorkel},{x:0,y:0},0,[{x:-v.length*.4,y:32},{x:v.length*.4,y:32}],27,[0,0]);c.restore();
+    const scale=Math.min(v.sxs?1.1:1.25,145/((v.bike||v.snow?80:tune.snorkel)+80));c.save();c.translate(180,160-59*scale);c.scale(scale,scale);drawRig(c,{...v,snorkelHeight:tune.snorkel},{x:0,y:0},0,[{x:-v.length*.4,y:32},{x:v.length*.4,y:32}],27,[0,0]);c.restore();
   }
   function scenery() {
     const theme = mapInfo[map.theme];ctx.fillStyle=theme.sky;ctx.fillRect(0,0,width,height);
@@ -266,7 +276,7 @@
         for(let x=60;x<330;x+=85){line(ctx,[[x,478],[x+55,478]],'#eee3b3',3);circle(ctx,x+15,353,4,'#fff1a6');}
         if(MudMultiplayer.active())for(let x=360;x<1560;x+=180){line(ctx,[[x-65,478],[x+65,478]],'#eee3b3',3);line(ctx,[[x+85,478],[x+85,350]],'#b7c6b4',3);circle(ctx,x+85,346,5,'#fff1a6');}
       }
-      drawRig(ctx,rig(),chassis.position,chassis.angle,wheels.map(w=>w.position),tune.radius,wheels.map(w=>w.angle));
+      drawRig(ctx,rig(),chassis.position,chassis.angle,wheels.map(w=>w.position),tune.radius,wheels.map(w=>w.angle),null,rider.points());
       if(MudMultiplayer.controls().lights){ctx.fillStyle='#fff3a432';poly(ctx,[[chassis.position.x+60,chassis.position.y-10],[chassis.position.x+320,chassis.position.y-45],[chassis.position.x+320,chassis.position.y+60]],'#fff3a432',null);}
       MudMultiplayer.draw(ctx);
       if(endless)for(let i=start;i<end;i++){const s=at(i);if(s.level!==null){poly(ctx,[[i*STEP,s.level],[(i+1)*STEP,s.level],[(i+1)*STEP,at(i+1).height],[i*STEP,s.height]],s.material==='water'?'#4aa0b16b':'#715737a8',null);line(ctx,[[i*STEP+5,s.level+Math.sin(time*2+i)*2],[i*STEP+32,s.level]],s.material==='water'?'#a2dedb':'#a1895d',2);}}
@@ -286,9 +296,11 @@
   function openPanel(kind){if(MudMultiplayer.active()){toast('Leave the park before changing your build or map.');return;}release();activePanel=kind;$('panelTitle').textContent={garage:'The garage',maps:'Find your next trail',editor:'Build a trail'}[kind];$('panelEyebrow').textContent={garage:'EIGHT RIGS. YOUR BUILD.',maps:'MUD / WATER / SAND',editor:'MAP CREATOR'}[kind];if(kind==='garage')garage();if(kind==='maps')maps();if(kind==='editor')editorPanel();if(!panel.open)panel.showModal();icons();}
   function garage(){
     garageSnapshot={...tune};
+    $('panelEyebrow').textContent='ELEVEN BUILDS. YOUR RIDE.';
     $('panelContent').innerHTML=`<div class="garage"><div class="vehicle-grid">${vehicles.map(v=>`<button class="vehicle-card ${v.id===tune.vehicle?'selected':''}" data-vehicle="${v.id}"><canvas aria-label="${v.name}"></canvas><span>${v.name}</span></button>`).join('')}</div><div class="tuning"><h2 id="tuneName">${rig().name}</h2>${[['power','Engine power',60,200,'%'],['spring','Spring stiffness',15,95,'%'],['damping','Shock damping',10,90,'%'],['lift','Suspension lift',30,78,''],['radius','Wheel size',25,48,'in']].map(([id,label,min,max,unit])=>`<label><span>${label}<output id="out-${id}">${tune[id]}${unit}</output></span><input type="range" data-tune="${id}" data-unit="${unit}" min="${min}" max="${max}" value="${tune[id]}" aria-label="${label}"></label>`).join('')}<label><span>Tire type</span><select id="tireType"><option value="mud">Deep-lug mud tires</option><option value="paddle">Paddle tires</option><option value="trail">All-terrain tires</option></select></label><label class="check"><input id="assist" type="checkbox" ${tune.assist?'checked':''}>Assisted wheelies</label><button class="ride-button" id="applyTune"><i data-lucide="check"></i>Apply build & ride</button></div></div>`;
     document.querySelectorAll('[data-vehicle]').forEach(b=>{thumbnail(b.querySelector('canvas'),vehicles.find(v=>v.id===b.dataset.vehicle));b.onclick=()=>{tune.vehicle=b.dataset.vehicle;document.querySelectorAll('[data-vehicle]').forEach(el=>el.classList.toggle('selected',el===b));$('tuneName').textContent=rig().name;};});
     const snorkel=document.createElement('label');snorkel.innerHTML=`<span>Snorkel height<output id="out-snorkel">${tune.snorkel}</output></span><input type="range" data-tune="snorkel" data-unit="" min="45" max="180" value="${tune.snorkel}" aria-label="Snorkel height">`;document.querySelector('.tuning').insertBefore(snorkel,$('tireType').parentElement);
+    const intakeControl=()=>{snorkel.hidden=!!(rig().bike||rig().snow);};document.querySelectorAll('[data-vehicle]').forEach(b=>b.addEventListener('click',intakeControl));intakeControl();
     document.querySelectorAll('[data-tune]').forEach(el=>el.oninput=()=>{tune[el.dataset.tune]=Number(el.value);$('out-'+el.dataset.tune).textContent=el.value+el.dataset.unit;if(el.dataset.tune==='snorkel')document.querySelectorAll('[data-vehicle]').forEach(b=>thumbnail(b.querySelector('canvas'),vehicles.find(v=>v.id===b.dataset.vehicle)));});
     const wash=document.createElement('button');wash.textContent='Wash vehicle';wash.className='ride-button';wash.onclick=()=>{dirt[tune.vehicle]=0;write('mudline-dirt-v1',dirt);document.querySelectorAll('[data-vehicle]').forEach(b=>thumbnail(b.querySelector('canvas'),vehicles.find(v=>v.id===b.dataset.vehicle)));toast('Washed and ready');};document.querySelector('.tuning').append(wash);
     $('tireType').value=tune.tires;$('tireType').onchange=e=>tune.tires=e.target.value;$('assist').onchange=e=>tune.assist=e.target.checked;
@@ -336,8 +348,8 @@
     snapshot:controls=>({x:chassis.position.x,y:chassis.position.y,angle:chassis.angle,vx:chassis.velocity.x,vy:chassis.velocity.y,wheels:wheels.map(w=>({x:w.position.x,y:w.position.y,angle:w.angle})),throttle:inputs.gas,braking:inputs.brake,...controls,stalled,dirt:dirt[tune.vehicle],terrain:surfaceAt(chassis.position.x)}),
     enter:(kind,x=180)=>{endless=kind==='endless';endlessLead=27;map=makeMap(endless?'bog':kind);if(endless)map.name='Endless Backcountry';else for(let i=0;i<38;i++){map.heights[i]=480+(map.heights[i]-480)*clamp((i-32)/6,0,1);map.surfaces[i]='trail';}editing=false;paused=false;checkpoint=180;$('editorBar').hidden=true;$('driveControls').hidden=false;$('balance').hidden=false;release();createWorld(x);},
     exit:()=>{release();},
-    drawRemote:(c,build,s)=>{const v={...vehicles.find(v=>v.id===build.vehicle),snorkelHeight:build.snorkel};drawRig(c,v,s,s.angle,s.wheels,build.radius,s.wheels.map(w=>w.angle),{tires:build.tires,dirt:s.dirt});}
+    drawRemote:(c,build,s,id)=>{const v={...vehicles.find(v=>v.id===build.vehicle),snorkelHeight:build.snorkel},now=performance.now();let puppet=remoteRiders.get(id);if(!puppet){puppet={rig:MudRider.create(),at:now};remoteRiders.set(id,puppet);}puppet.rig.step(s,(now-puppet.at)/1000);puppet.at=now;for(const [key,p]of remoteRiders)if(now-p.at>5000)remoteRiders.delete(key);drawRig(c,v,s,s.angle,s.wheels,build.radius,s.wheels.map(w=>w.angle),{tires:build.tires,dirt:s.dirt},puppet.rig.points());}
   });
   addEventListener('resize',resize);resize();createWorld();icons();requestAnimationFrame(loop);
-  window.mudline = { state:()=>({x:chassis.position.x,y:chassis.position.y,angle:chassis.angle,speed:chassis.velocity.x,vehicle:tune.vehicle,dirt:dirt[tune.vehicle],particles:particles.length,muted:MudAudio.isMuted(),tune:{...tune},editing,paused,endless,flood,stalled,intakeClearance,groundBodies:streamed.size,map:map.name,savedMaps:customMaps.length,terrain:map.heights.slice(),surfaces:map.surfaces.slice(),wheels:wheels.map(w=>({x:w.position.x,y:w.position.y}))}), vehicles, thumbnail };
+  window.mudline = { state:()=>({x:chassis.position.x,y:chassis.position.y,angle:chassis.angle,speed:chassis.velocity.x,vehicle:tune.vehicle,rider:rider.points(),dirt:dirt[tune.vehicle],particles:particles.length,muted:MudAudio.isMuted(),tune:{...tune},editing,paused,endless,flood,stalled,intakeClearance,groundBodies:streamed.size,map:map.name,savedMaps:customMaps.length,terrain:map.heights.slice(),surfaces:map.surfaces.slice(),wheels:wheels.map(w=>({x:w.position.x,y:w.position.y}))}), vehicles, thumbnail };
 })();

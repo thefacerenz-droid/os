@@ -2,7 +2,11 @@
 
 A locally hosted, 2D off-road game made for Veloi. Open index.html through the existing server. No remote game provider or proxy is required.
 
-Eight original cartoon rigs are inspired by the user's ATV and side-by-side reference photographs. Artwork is drawn with Canvas, with separately animated wheels and suspension. These are stylized interpretations, not photo conversions or licensed manufacturer models.
+Eleven original rigs include the user's ATV/SXS reference-inspired builds, Volt MX (Stark Varg-inspired), Flux Trail (Sur-Ron-inspired), and Tundra Snowmobile. The new electric bikes have separate battery/frame/fork/swingarm details and spoked wheels; the snowmobile has an animated rear track and front ski. They use original unbranded artwork, not licensed manufacturer models. The snowmobile uses the existing two-contact arcade terrain solver, not a continuous-track simulation.
+
+Riders now use seven articulated Matter.js nodes with limb constraints and elastic seat/hand/foot anchors. Vehicle acceleration, pitch and impacts drive the cosmetic rig, with looser hands/feet during large tilts. This is a seated ragdoll, not a full rider-ejection system. Remote riders regenerate this effect from vehicle snapshots without extra network messages. Recovery rebuilds the rider, and its separate physics world cannot destabilize the vehicle suspension.
+
+Mud and water emission rates are substantially higher, with desktop/tablet particle counts capped at 1100 and narrow screens at 700. Remote spray has a shared 300-particle cap. Dirt reaches full coverage much faster and coats panels, rims, tires and rider clothing. Water slowly rinses it; the garage wash clears it. Electric bikes have a synthesized motor whine, and the snowmobile has a higher-rev engine tone.
 
 Matter.js 0.20.0 handles rigid-body collisions and suspension constraints. Terrain-specific traction and drag, adjustable engine power, spring stiffness, damping, lift, tire size and tire type affect driving. Wheelie assist uses damped pitch control; manual mode permits overturning. This is an arcade simulation, not an engineering vehicle simulator.
 
@@ -54,4 +58,5 @@ Server validation rejects malformed states, extreme speeds, large teleports, inv
 - node --test tests/mudline-api.test.cjs tests/messenger.test.cjs
 - tests/mudline-multiplayer.cjs uses Playwright and the real game/API with an isolated in-memory transactional test store. It starts its own temporary HTTP server and launches eight separate browser contexts, not NPCs. It checks actual cross-instance builds, wheels, movement, chat, consent-based line attachment, late joins, capacity, host departure, repeated rejoining and delayed/dropped HTTP updates.
 - tests/mudline-ui.cjs and tests/mudline-effects.cjs cover solo driving, touch layout, garage, maps, editing, sound and dirt against localhost:3020.
+- tests/mudline-riders.cjs covers all three new builds, constrained rider motion, heavy dirt/spray, garage availability and tablet layout.
 - The tests do not establish production Redis latency, real WAN/iPad performance, realistic multi-vehicle collision outcomes, or reliable stuck-vehicle recovery under poor network conditions. Those need broader playtesting before calling this production-ready.

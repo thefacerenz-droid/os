@@ -1,3 +1,10 @@
+# Heavy spray and articulated riders
+
+- Much denser mud/water spray with bounded particle counts and heavier persistent mud coating.
+- Original Volt MX and Flux Trail electric bike builds, plus Tundra Snowmobile with animated track/ski rendering.
+- Separate Matter.js rider ragdolls reacting to bumps, acceleration, pitch and rollovers, including remote riders.
+- Electric motor sounds, stronger terrain audio, and mixed-vehicle multiplayer validation.
+
 # Multiplayer foundation
 
 - Endless streamed bog terrain, adjustable snorkels and intake flooding.

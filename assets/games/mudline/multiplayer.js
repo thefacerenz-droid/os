@@ -148,10 +148,10 @@
     const now=Date.now()+clockOffset;
     for(const player of room.players){
       if(player.id===session.id)continue;const s=sample(player.id);if(!s)continue;
-      c.save();if(now-s.at>1500)c.globalAlpha=.4;game.drawRemote(c,player.build,s);
+      c.save();if(now-s.at>1500)c.globalAlpha=.4;game.drawRemote(c,player.build,s,player.id);
       if(s.lights){c.fillStyle='#fff3a42b';c.beginPath();c.moveTo(s.x+60,s.y-10);c.lineTo(s.x+320,s.y-45);c.lineTo(s.x+320,s.y+60);c.fill();}
       if(settings.names){c.font='bold 12px Arial';c.textAlign='center';c.fillStyle='#102e34';c.fillText(player.name,s.x,s.y-player.build.snorkel-38);}
-      if(s.throttle&&['mud','water','sand'].includes(s.terrain)&&samples.length<120){const wheel=s.wheels[0];samples.push({x:wheel.x,y:wheel.y+player.build.radius*.5,vx:-2-Math.random()*3,vy:-3-Math.random()*4,life:35,wet:s.terrain==='water'});}c.restore();
+      if(s.throttle&&['mud','water','sand'].includes(s.terrain)&&samples.length<300){const wheel=s.wheels[0];for(let i=0;i<6&&samples.length<300;i++)samples.push({x:wheel.x,y:wheel.y+player.build.radius*.5,vx:-3-Math.random()*8,vy:-4-Math.random()*11,life:40,wet:s.terrain==='water'});}c.restore();
     }
     for(const tow of room.tows){if(!tow.active)continue;const a=tow.a===session.id?game.snapshot(controls):sample(tow.a),b=tow.b===session.id?game.snapshot(controls):sample(tow.b);if(!a||!b)continue;c.strokeStyle=tow.kind==='strap'?'#ebbe65':'#aabdc0';c.lineWidth=3;c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo((a.x+b.x)/2,(a.y+b.y)/2+16,b.x,b.y);c.stroke();}
     for(const p of samples){p.x+=p.vx;p.y+=p.vy;p.vy+=.23;p.life--;c.globalAlpha=p.life/35;c.fillStyle=p.wet?'#96d6de':'#785535';c.fillRect(p.x,p.y,4,3);}c.globalAlpha=1;samples=samples.filter(p=>p.life>0);
