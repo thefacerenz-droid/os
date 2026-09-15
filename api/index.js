@@ -52,6 +52,7 @@ async function dispatch(req, res) {
   if (apiPath === "dev/presence") return handleDevPresence(req, res);
   if (apiPath === "dev/screen") return handleDevScreen(req, res);
   if (apiPath === "games/flappy") return handleFlappyLeaderboard(req, res);
+  if (apiPath === "games/mudline") return require('../lib/api/games/mudline.js')(req,res);
   if (apiPath === "soundboard") return handleSoundboard(req, res);
   if (apiPath === "lobbies") return handleLobbies(req, res);
 

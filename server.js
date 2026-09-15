@@ -27,6 +27,7 @@ const handleDevScreen = require("./lib/api/dev/screen.js");
 const handleChatTyping = require("./lib/chatTyping.js");
 const handleMessenger = require("./lib/api/messenger.js");
 const handleFlappyLeaderboard = require("./lib/api/games/flappy.js");
+const handleMudline = require("./lib/api/games/mudline.js");
 const handleLive = require("./lib/live.js");
 const handleProxyRequest = require("./lib/api/configuredProxy.js");
 const handleBilling = require("./lib/api/billing.js");
@@ -846,6 +847,7 @@ async function handleRequest(req, res) {
     if (url.pathname === "/api/dev/presence") return await handleDevPresence(req, res);
     if (url.pathname === "/api/dev/screen") return await handleDevScreen(req, res);
     if (url.pathname === "/api/games/flappy") return await handleFlappyLeaderboard(req, res);
+    if (url.pathname === "/api/games/mudline") return await handleMudline(req, res);
     if (url.pathname === "/api/live") return await handleLive(req, res);
     if (url.pathname === "/api/secret/videos") return handleSecretVideos(req, res);
     if (req.method === "GET" && url.pathname === "/api/youtube/search") return await handleYoutubeSearch(req, res, url);

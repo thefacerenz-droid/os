@@ -43,7 +43,8 @@
   let customMaps = read('mudline-maps-v1', []);
   customMaps = Array.isArray(customMaps) ? customMaps.filter(validMap).slice(0,20) : [];
   let map = makeMap('bog'), engine, chassis, wheels = [], springs = [], particles = [];
-  let endless=false,streamed=new Map(),lastStream=-999,flood=0,stalled=false,intakeClearance=999;
+  let endless=false,endlessLead=0,streamed=new Map(),lastStream=-999,flood=0,stalled=false,intakeClearance=999;
+  const endlessSample=i=>MudEndless.sample(Math.max(0,i-endlessLead));
   let bestEndless=Number(read('mudline-endless-best-v1',0))||0;
   let width = 1000, height = 650, zoom = 1, camera = { x: 0, y: 0 }, paused = false, editing = false, activePanel = '', time = 0, stepCount = 0;
   let wheelieTime = 0, bestWheelie = Number(read('mudline-best-v1', 0)) || 0, checkpoint = 180, finished = false, brushActive = false, undoStack = [], stroke = null;
@@ -53,14 +54,14 @@
   function rig() { return {...vehicles.find(v => v.id === tune.vehicle),snorkelHeight:tune.snorkel}; }
   const savedDirt=read('mudline-dirt-v1',{});
   const dirt=Object.fromEntries(vehicles.map(v=>[v.id,clamp(Number(savedDirt?.[v.id])||0,0,1)]));
-  function terrainY(x) { const i = endless?Math.max(0,Math.floor(x/STEP)):clamp(Math.floor(x / STEP), 0, COUNT - 2), t = clamp((x - i * STEP) / STEP, 0, 1); return endless?MudEndless.sample(i).height*(1-t)+MudEndless.sample(i+1).height*t:map.heights[i] * (1-t) + map.heights[i+1] * t; }
-  function surfaceAt(x) { return endless?MudEndless.sample(Math.max(0,Math.floor(x/STEP))).material:map.surfaces[clamp(Math.floor(x / STEP), 0, COUNT - 1)]; }
-  function fluidLevel(x){return endless?MudEndless.sample(Math.max(0,Math.floor(x/STEP))).level:null;}
+  function terrainY(x) { const i = endless?Math.max(0,Math.floor(x/STEP)):clamp(Math.floor(x / STEP), 0, COUNT - 2), t = clamp((x - i * STEP) / STEP, 0, 1); return endless?endlessSample(i).height*(1-t)+endlessSample(i+1).height*t:map.heights[i] * (1-t) + map.heights[i+1] * t; }
+  function surfaceAt(x) { return endless?endlessSample(Math.max(0,Math.floor(x/STEP))).material:map.surfaces[clamp(Math.floor(x / STEP), 0, COUNT - 1)]; }
+  function fluidLevel(x){return endless?endlessSample(Math.max(0,Math.floor(x/STEP))).level:null;}
   function streamTerrain(x){
     const index=Math.floor(x/STEP);if(index===lastStream)return;lastStream=index;
     const first=Math.max(0,index-45),last=index+85;
     for(const [i,body]of streamed)if(i<first||i>last){Composite.remove(engine.world,body);streamed.delete(i);}
-    for(let i=first;i<=last;i++)if(!streamed.has(i)){const a=MudEndless.sample(i).height,b=MudEndless.sample(i+1).height;const body=Bodies.rectangle((i+.5)*STEP,(a+b)/2+28,Math.hypot(STEP,b-a)+6,56,{isStatic:true,angle:Math.atan2(b-a,STEP),friction:.9,label:'ground'});streamed.set(i,body);Composite.add(engine.world,body);}
+    for(let i=first;i<=last;i++)if(!streamed.has(i)){const a=endlessSample(i).height,b=endlessSample(i+1).height;const body=Bodies.rectangle((i+.5)*STEP,(a+b)/2+28,Math.hypot(STEP,b-a)+6,56,{isStatic:true,angle:Math.atan2(b-a,STEP),friction:.9,label:'ground'});streamed.set(i,body);Composite.add(engine.world,body);}
   }
   function createWorld(x = 180) {
     engine = Engine.create({ gravity: { x: 0, y: 1, scale: .001 }, positionIterations: 8, velocityIterations: 8, constraintIterations: 5 });
@@ -96,10 +97,11 @@
     camera.x = clamp(x - width / zoom * .32, 0, endless?Infinity:Math.max(0,LENGTH - width / zoom)); camera.y = y - height / zoom * .56;
     $('vehicleLabel').textContent = v.name;
   }
-  function recover() { createWorld(checkpoint); release(); toast('Recovered at the last trail marker'); }
+  function recover() { if(MudMultiplayer.active()){release();MudMultiplayer.recover();return;}createWorld(checkpoint); release(); toast('Recovered at the last trail marker'); }
   function release() { for (const key in inputs) inputs[key] = false; document.querySelectorAll('.pressed').forEach(b => b.classList.remove('pressed')); }
   function groundContact(wheel) { return Math.abs(wheel.position.y + tune.radius - terrainY(wheel.position.x)) < 18; }
   function simulate() {
+    if(MudMultiplayer.blocked())release();
     if(endless)streamTerrain(chassis.position.x);
     const intake=MudEndless.intake(chassis.position,chassis.angle,tune.snorkel,rig().length,rig().sxs),level=fluidLevel(intake.x);
     intakeClearance=level===null?999:level-intake.y;
@@ -111,7 +113,7 @@
     const contacts = wheels.map(groundContact);
     wheels.forEach((wheel, i) => {
       const material = surfaceAt(wheel.position.x), grip = tune.tires === 'mud' ? { trail:1, mud:.85, water:.65, sand:.55 } : tune.tires === 'paddle' ? { trail:.65, mud:.95, water:.85, sand:1 } : { trail:1.15, mud:.32, water:.3, sand:.55 };
-      const drive = gas + reverse;
+      const drive = (gas + reverse)*(MudMultiplayer.controls().awd||i===0?1:0)*(MudMultiplayer.controls().diff?1.08:1);
       if (contacts[i]) {
         Body.applyForce(wheel, wheel.position, { x: drive * .006 * power * grip[material] * (34 / tune.radius), y: 0 });
         Body.setAngularVelocity(wheel, clamp(wheel.angularVelocity + drive * .016 * power, -.3, .7));
@@ -142,6 +144,7 @@
     if (type === 'water') Body.applyForce(chassis, chassis.position, { x: -chassis.velocity.x * .0005, y: -.001 });
     const bodyLevel=fluidLevel(chassis.position.x);
     if(bodyLevel!==null){const submerged=clamp((chassis.position.y+18-bodyLevel)/60,0,1);Body.applyForce(chassis,chassis.position,{x:-chassis.velocity.x*.0016*submerged,y:-chassis.mass*.00028*submerged});if(submerged>.1)dirt[tune.vehicle]=clamp(dirt[tune.vehicle]+.003,0,1);}
+    Body.applyForce(chassis,chassis.position,MudMultiplayer.forces(chassis.position));
     Engine.update(engine, 1000/60);
     if (contacts[0] && !contacts[1] && chassis.angle < -.14 && chassis.angle > -1.5 && Math.abs(chassis.velocity.x) > .5) wheelieTime += 1/60;
     else { if (wheelieTime > bestWheelie) { bestWheelie = wheelieTime; write('mudline-best-v1', bestWheelie); } wheelieTime = 0; }
@@ -204,16 +207,16 @@
     }
     line(c,[[-a+6,-16],[-a+24,-17]],'#ffffff70',2);
   }
-  function drawRig(c,v,bodyPosition,angle,wheelPositions,r,wheelAngles) {
+  function drawRig(c,v,bodyPosition,angle,wheelPositions,r,wheelAngles,remote=null) {
     const toWorld = p => Vector.add(bodyPosition,Vector.rotate(p,angle));
     wheelPositions.forEach((w,i) => {
       const anchor = toWorld({x:(i?1:-1)*v.length*.4,y:5});
       line(c,[[anchor.x,anchor.y],[w.x,w.y]],'#182f36',8);
       const dx=w.x-anchor.x,dy=w.y-anchor.y,len=Math.hypot(dx,dy), nx=-dy/len,ny=dx/len;
       const zig=[[anchor.x,anchor.y]]; for(let s=1;s<10;s++) zig.push([anchor.x+dx*s/10+nx*(s%2?4:-4),anchor.y+dy*s/10+ny*(s%2?4:-4)]); zig.push([w.x,w.y]); line(c,zig,v.frame,3);
-      wheelArt(c,w.x,w.y,r,wheelAngles[i],v);
+      if(remote)MudModels.wheel(c,w.x,w.y,r,wheelAngles[i],v,remote.tires,remote.dirt);else wheelArt(c,w.x,w.y,r,wheelAngles[i],v);
     });
-    c.save();c.translate(bodyPosition.x,bodyPosition.y);c.rotate(angle);bodyArt(c,v);c.restore();
+    c.save();c.translate(bodyPosition.x,bodyPosition.y);c.rotate(angle);if(remote)MudModels.body(c,v,remote.dirt);else bodyArt(c,v);c.restore();
   }
   function thumbnail(target,v) {
     target.width=360;target.height=170;const c=target.getContext('2d');c.fillStyle='#24434a';c.fillRect(0,0,360,170);
@@ -236,11 +239,11 @@
   }
   function render() {
     if(!engine) return;
-    if(!editing){ const tx=clamp(chassis.position.x-width/zoom*.32,0,endless?Infinity:Math.max(0,LENGTH-width/zoom));camera.x+=(tx-camera.x)*.09;camera.y+=(chassis.position.y-height/zoom*.58-camera.y)*.04; }
+    if(!editing){ const focus=MudMultiplayer.camera()||chassis.position,tx=clamp(focus.x-width/zoom*.32,0,endless?Infinity:Math.max(0,LENGTH-width/zoom));camera.x+=(tx-camera.x)*.09;camera.y+=(focus.y-height/zoom*.58-camera.y)*.04; }
     scenery();const theme=mapInfo[map.theme];
     ctx.save();ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
     const start=clamp(Math.floor(camera.x/STEP)-2,0,endless?Infinity:COUNT-2),end=clamp(Math.ceil((camera.x+width/zoom)/STEP)+2,1,endless?Infinity:COUNT-1);
-    const at=i=>endless?MudEndless.sample(i):{height:map.heights[i],material:map.surfaces[i],level:null};
+    const at=i=>endless?endlessSample(i):{height:map.heights[i],material:map.surfaces[i],level:null};
     ctx.beginPath();ctx.moveTo(start*STEP,1100);for(let i=start;i<=end;i++)ctx.lineTo(i*STEP,at(i).height);ctx.lineTo(end*STEP,1100);ctx.closePath();ctx.fillStyle=theme.soil;ctx.fill();
     for(let i=start;i<end;i++) {
       const x=i*STEP,y=at(i).height,ny=at(i+1).height,material=at(i).material;
@@ -257,32 +260,42 @@
     for(let x=Math.max(900,Math.ceil(start*STEP/900)*900);x<end*STEP;x+=900){const y=terrainY(x);line(ctx,[[x,y],[x,y-68]],'#e3d8b4',4);poly(ctx,[[x,y-66],[x+32,y-66],[x+27,y-43],[x,y-43]],'#e8bf57');ctx.fillStyle='#23424a';ctx.font='bold 10px Arial';ctx.fillText(`${Math.round(x/12)}m`,x+3,y-50);}
     if(editing){ctx.strokeStyle='#ffffff25';ctx.lineWidth=1;for(let i=start;i<=end;i++){ctx.beginPath();ctx.moveTo(i*STEP,camera.y);ctx.lineTo(i*STEP,camera.y+height/zoom);ctx.stroke();} }
     else {
+      if(camera.x<1800){
+        ctx.fillStyle='#38575b';ctx.fillRect(40,340,300,8);line(ctx,[[48,348],[48,480]],'#d6c994',6);line(ctx,[[330,348],[330,480]],'#d6c994',6);
+        ctx.fillStyle='#193c42';ctx.font='bold 15px Arial';ctx.fillText('MUDLINE / MEET AREA',58,331);
+        for(let x=60;x<330;x+=85){line(ctx,[[x,478],[x+55,478]],'#eee3b3',3);circle(ctx,x+15,353,4,'#fff1a6');}
+        if(MudMultiplayer.active())for(let x=360;x<1560;x+=180){line(ctx,[[x-65,478],[x+65,478]],'#eee3b3',3);line(ctx,[[x+85,478],[x+85,350]],'#b7c6b4',3);circle(ctx,x+85,346,5,'#fff1a6');}
+      }
       drawRig(ctx,rig(),chassis.position,chassis.angle,wheels.map(w=>w.position),tune.radius,wheels.map(w=>w.angle));
+      if(MudMultiplayer.controls().lights){ctx.fillStyle='#fff3a432';poly(ctx,[[chassis.position.x+60,chassis.position.y-10],[chassis.position.x+320,chassis.position.y-45],[chassis.position.x+320,chassis.position.y+60]],'#fff3a432',null);}
+      MudMultiplayer.draw(ctx);
       if(endless)for(let i=start;i<end;i++){const s=at(i);if(s.level!==null){poly(ctx,[[i*STEP,s.level],[(i+1)*STEP,s.level],[(i+1)*STEP,at(i+1).height],[i*STEP,s.height]],s.material==='water'?'#4aa0b16b':'#715737a8',null);line(ctx,[[i*STEP+5,s.level+Math.sin(time*2+i)*2],[i*STEP+32,s.level]],s.material==='water'?'#a2dedb':'#a1895d',2);}}
       for(const p of particles){ctx.globalAlpha=clamp(p.life/20,0,1);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(Math.atan2(p.vy,p.vx));ctx.fillStyle=p.material==='water'?'#b3e5dabd':p.material==='sand'?'#d9b574':'#755335';ctx.beginPath();ctx.ellipse(0,0,p.size*(p.material==='water'?2:1.3),p.size,0,0,Math.PI*2);ctx.fill();ctx.restore();}ctx.globalAlpha=1;
     }
     ctx.restore();
+    if(endless)$('vehicleLabel').textContent=stalled?'ENGINE FLOODED':`SNORKEL ${intakeClearance===999?'DRY':Math.round(intakeClearance)+' clearance'} / BEST ${bestEndless}m`;
     if(!editing){$('speed').textContent=Math.round(Math.abs(chassis.velocity.x)*3);$('distance').textContent=Math.max(0,Math.round((chassis.position.x-180)/12));$('surface').textContent=surfaceAt(chassis.position.x).toUpperCase();$('wheelieStat').textContent=wheelieTime>.1?`WHEELIE ${wheelieTime.toFixed(1)}s`:`BEST WHEELIE ${bestWheelie.toFixed(1)}s`;$('balanceNeedle').style.left=`${clamp((chassis.angle+1.3)/2*100,0,100)}%`;}
   }
   function resize(){width=innerWidth;height=innerHeight;const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);zoom=clamp(width/1150,.63,1.3);}
   let previous=0,accumulator=0;
-  function loop(now){const delta=Math.min((now-previous)/1000,.06);previous=now;if(!paused&&!editing&&!activePanel){accumulator+=delta;while(accumulator>=1/60){simulate();accumulator-=1/60;}}else accumulator=0;time+=delta;MudAudio.update(chassis.velocity.x,inputs.gas,surfaceAt(chassis.position.x),!paused&&!editing&&!activePanel&&!document.hidden);render();requestAnimationFrame(loop);}
+  function loop(now){const delta=Math.min((now-previous)/1000,.06);previous=now;if(!paused&&!editing&&!activePanel){accumulator+=delta;while(accumulator>=1/60){simulate();accumulator-=1/60;}}else accumulator=0;time+=delta;MudAudio.update(chassis.velocity.x,inputs.gas,surfaceAt(chassis.position.x),!stalled&&!paused&&!editing&&!activePanel&&!document.hidden);render();requestAnimationFrame(loop);}
   const panel=$('panel');
   function icons(){lucide.createIcons();}
   let garageSnapshot;
   function closePanel(){if(activePanel==='garage'&&garageSnapshot){Object.assign(tune,garageSnapshot);garageSnapshot=null;}panel.close();activePanel='';release();}
-  function openPanel(kind){release();activePanel=kind;$('panelTitle').textContent={garage:'The garage',maps:'Find your next trail',editor:'Build a trail'}[kind];$('panelEyebrow').textContent={garage:'EIGHT RIGS. YOUR BUILD.',maps:'MUD / WATER / SAND',editor:'MAP CREATOR'}[kind];if(kind==='garage')garage();if(kind==='maps')maps();if(kind==='editor')editorPanel();if(!panel.open)panel.showModal();icons();}
+  function openPanel(kind){if(MudMultiplayer.active()){toast('Leave the park before changing your build or map.');return;}release();activePanel=kind;$('panelTitle').textContent={garage:'The garage',maps:'Find your next trail',editor:'Build a trail'}[kind];$('panelEyebrow').textContent={garage:'EIGHT RIGS. YOUR BUILD.',maps:'MUD / WATER / SAND',editor:'MAP CREATOR'}[kind];if(kind==='garage')garage();if(kind==='maps')maps();if(kind==='editor')editorPanel();if(!panel.open)panel.showModal();icons();}
   function garage(){
     garageSnapshot={...tune};
     $('panelContent').innerHTML=`<div class="garage"><div class="vehicle-grid">${vehicles.map(v=>`<button class="vehicle-card ${v.id===tune.vehicle?'selected':''}" data-vehicle="${v.id}"><canvas aria-label="${v.name}"></canvas><span>${v.name}</span></button>`).join('')}</div><div class="tuning"><h2 id="tuneName">${rig().name}</h2>${[['power','Engine power',60,200,'%'],['spring','Spring stiffness',15,95,'%'],['damping','Shock damping',10,90,'%'],['lift','Suspension lift',30,78,''],['radius','Wheel size',25,48,'in']].map(([id,label,min,max,unit])=>`<label><span>${label}<output id="out-${id}">${tune[id]}${unit}</output></span><input type="range" data-tune="${id}" data-unit="${unit}" min="${min}" max="${max}" value="${tune[id]}" aria-label="${label}"></label>`).join('')}<label><span>Tire type</span><select id="tireType"><option value="mud">Deep-lug mud tires</option><option value="paddle">Paddle tires</option><option value="trail">All-terrain tires</option></select></label><label class="check"><input id="assist" type="checkbox" ${tune.assist?'checked':''}>Assisted wheelies</label><button class="ride-button" id="applyTune"><i data-lucide="check"></i>Apply build & ride</button></div></div>`;
     document.querySelectorAll('[data-vehicle]').forEach(b=>{thumbnail(b.querySelector('canvas'),vehicles.find(v=>v.id===b.dataset.vehicle));b.onclick=()=>{tune.vehicle=b.dataset.vehicle;document.querySelectorAll('[data-vehicle]').forEach(el=>el.classList.toggle('selected',el===b));$('tuneName').textContent=rig().name;};});
-    document.querySelectorAll('[data-tune]').forEach(el=>el.oninput=()=>{tune[el.dataset.tune]=Number(el.value);$('out-'+el.dataset.tune).textContent=el.value+el.dataset.unit;});
+    const snorkel=document.createElement('label');snorkel.innerHTML=`<span>Snorkel height<output id="out-snorkel">${tune.snorkel}</output></span><input type="range" data-tune="snorkel" data-unit="" min="45" max="180" value="${tune.snorkel}" aria-label="Snorkel height">`;document.querySelector('.tuning').insertBefore(snorkel,$('tireType').parentElement);
+    document.querySelectorAll('[data-tune]').forEach(el=>el.oninput=()=>{tune[el.dataset.tune]=Number(el.value);$('out-'+el.dataset.tune).textContent=el.value+el.dataset.unit;if(el.dataset.tune==='snorkel')document.querySelectorAll('[data-vehicle]').forEach(b=>thumbnail(b.querySelector('canvas'),vehicles.find(v=>v.id===b.dataset.vehicle)));});
     const wash=document.createElement('button');wash.textContent='Wash vehicle';wash.className='ride-button';wash.onclick=()=>{dirt[tune.vehicle]=0;write('mudline-dirt-v1',dirt);document.querySelectorAll('[data-vehicle]').forEach(b=>thumbnail(b.querySelector('canvas'),vehicles.find(v=>v.id===b.dataset.vehicle)));toast('Washed and ready');};document.querySelector('.tuning').append(wash);
     $('tireType').value=tune.tires;$('tireType').onchange=e=>tune.tires=e.target.value;$('assist').onchange=e=>tune.assist=e.target.checked;
     $('applyTune').onclick=()=>{write('mudline-tune-v1',tune);garageSnapshot=null;editing=false;$('editorBar').hidden=true;$('driveControls').hidden=false;$('balance').hidden=false;createWorld(checkpoint);closePanel();toast('Build applied');};
   }
   function mapThumbnail(target,data){target.width=420;target.height=160;const c=target.getContext('2d'),theme=mapInfo[data.theme];c.fillStyle=theme.sky;c.fillRect(0,0,420,160);circle(c,340,36,17,'#f7e6a8');c.beginPath();c.moveTo(0,160);for(let i=0;i<COUNT;i++)c.lineTo(i/(COUNT-1)*420,80+(data.heights[i]-480)*.3);c.lineTo(420,160);c.fillStyle=theme.soil;c.fill();for(let i=0;i<COUNT-1;i++)line(c,[[i/(COUNT-1)*420,80+(data.heights[i]-480)*.3],[(i+1)/(COUNT-1)*420,80+(data.heights[i+1]-480)*.3]],{water:'#398eaa',mud:'#5f5640',sand:'#ecd18b',trail:theme.grass}[data.surfaces[i]],5);}
-  function loadMap(data,infinite=false){endless=infinite;map=clone(data);if(infinite)map.name='Endless Backcountry';checkpoint=180;editing=false;$('editorBar').hidden=true;$('driveControls').hidden=false;$('balance').hidden=false;createWorld();closePanel();toast(map.name);}
+  function loadMap(data,infinite=false){endless=infinite;endlessLead=0;map=clone(data);if(infinite)map.name='Endless Backcountry';checkpoint=180;editing=false;$('editorBar').hidden=true;$('driveControls').hidden=false;$('balance').hidden=false;createWorld();closePanel();toast(map.name);}
   function maps(){
     $('panelContent').innerHTML=`<div class="map-grid">${Object.entries(mapInfo).map(([id,m])=>`<button class="map-card" data-map="${id}"><canvas></canvas><strong>${m.name}</strong><small>${m.sub}</small></button>`).join('')}</div><h2 class="section-title">Your trails</h2><div id="savedMaps"></div><button id="newMap"><i data-lucide="plus"></i>Create a map</button>`;
     document.querySelectorAll('[data-map]').forEach(b=>{mapThumbnail(b.querySelector('canvas'),makeMap(b.dataset.map));b.onclick=()=>loadMap(makeMap(b.dataset.map));});
@@ -294,7 +307,7 @@
   function editorPanel(){
     $('panelContent').innerHTML='<div class="editor-start"><label>Trail name<input id="mapName" maxlength="40" placeholder="My mud park"></label><label>Starting terrain<select id="editorTheme"><option value="current">Current map</option><option value="bog">Cypress Bog</option><option value="pond">Backwater Ponds</option><option value="dunes">Sunbreak Dunes</option></select></label><p>Drag the Terrain brush to shape hills. Paint mud, ponds, sand or dry trail with the other brushes. Use Map position to move along the course. Save keeps your trail on this device.</p><button id="beginEdit" class="ride-button">Open creator</button></div>';
     $('mapName').value=map.name;
-    $('beginEdit').onclick=()=>{const theme=$('editorTheme').value;const name=$('mapName').value.trim()||'My mud park';if(theme!=='current')map=makeMap(theme);map=clone(map);map.name=name.slice(0,40);editing=true;undoStack=[];$('undo').disabled=true;$('editorBar').hidden=false;$('driveControls').hidden=true;$('balance').hidden=true;$('mapLabel').textContent=map.name;camera={x:0,y:480-height/zoom*.52};$('mapPan').max=Math.max(0,LENGTH-width/zoom);$('mapPan').value=0;closePanel();};
+    $('beginEdit').onclick=()=>{const theme=$('editorTheme').value;const name=$('mapName').value.trim()||'My mud park';if(theme!=='current')map=makeMap(theme);map=clone(map);map.name=name.slice(0,40);endless=false;endlessLead=0;editing=true;undoStack=[];$('undo').disabled=true;$('editorBar').hidden=false;$('driveControls').hidden=true;$('balance').hidden=true;$('mapLabel').textContent=map.name;camera={x:0,y:480-height/zoom*.52};$('mapPan').max=Math.max(0,LENGTH-width/zoom);$('mapPan').value=0;closePanel();};
   }
   function brushPoint(event){const x=event.clientX/zoom+camera.x,y=event.clientY/zoom+camera.y;const index=Math.round(x/STEP),size=Number($('brushSize').value),mode=$('brush').value;for(let i=Math.max(8,index-size);i<=Math.min(COUNT-2,index+size);i++){if(mode==='height'){const influence=1-Math.abs(i-index)/(size+1);map.heights[i]=clamp(map.heights[i]*(1-influence)+y*influence,270,670);}else map.surfaces[i]=mode;}
     // Limit neighboring slopes so a touch stroke cannot create an impassable wall.
@@ -310,7 +323,7 @@
   $('testMap').onclick=()=>{editing=false;checkpoint=180;$('editorBar').hidden=true;$('driveControls').hidden=false;$('balance').hidden=false;createWorld();toast('Testing '+map.name);};
   document.querySelectorAll('[data-control]').forEach(button=>{button.addEventListener('pointerdown',event=>{event.preventDefault();button.setPointerCapture(event.pointerId);inputs[button.dataset.control]=true;button.classList.add('pressed');});const end=()=>{inputs[button.dataset.control]=false;button.classList.remove('pressed');};button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);button.addEventListener('contextmenu',e=>e.preventDefault());});
   const keys={ArrowRight:'gas',KeyD:'gas',ArrowLeft:'brake',KeyA:'brake',Space:'wheelie',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down'};
-  addEventListener('keydown',e=>{if(activePanel||editing)return;if(keys[e.code]){e.preventDefault();inputs[keys[e.code]]=true;}if(e.code==='KeyR')recover();});
+  addEventListener('keydown',e=>{if(activePanel||editing||MudMultiplayer.blocked())return;if(keys[e.code]){e.preventDefault();inputs[keys[e.code]]=true;}if(e.code==='KeyR')recover();});
   addEventListener('keyup',e=>{if(keys[e.code]){e.preventDefault();inputs[keys[e.code]]=false;}});
   addEventListener('blur',release);document.addEventListener('visibilitychange',()=>{release();if(document.hidden){paused=true;MudAudio.update(0,false,'trail',false);$('pause').innerHTML='<i data-lucide="play"></i>';icons();}});
   document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>openPanel(b.dataset.panel));
@@ -318,6 +331,13 @@
   $('reset').onclick=recover;$('pause').onclick=()=>{paused=!paused;release();$('pause').innerHTML=`<i data-lucide="${paused?'play':'pause'}"></i>`;$('pause').setAttribute('aria-label',paused?'Resume':'Pause');icons();toast(paused?'Paused':'Ride on');};
   const sound=document.createElement('button');sound.id='sound';sound.title='Toggle sound';sound.setAttribute('aria-label','Toggle sound');sound.setAttribute('aria-pressed',String(!MudAudio.isMuted()));sound.innerHTML=`<i data-lucide="${MudAudio.isMuted()?'volume-x':'volume-2'}"></i>`;sound.onclick=()=>{const muted=MudAudio.toggle();sound.setAttribute('aria-pressed',String(!muted));sound.innerHTML=`<i data-lucide="${muted?'volume-x':'volume-2'}"></i>`;icons();};document.querySelector('.hud nav').append(sound);
   addEventListener('pointerdown',()=>MudAudio.start(),{passive:true});addEventListener('keydown',()=>MudAudio.start());
+  MudMultiplayer.init({
+    release,toast,build:()=>({...tune}),garage:()=>openPanel('garage'),vehicleName:id=>vehicles.find(v=>v.id===id)?.name||'ATV',heightAt:terrainY,
+    snapshot:controls=>({x:chassis.position.x,y:chassis.position.y,angle:chassis.angle,vx:chassis.velocity.x,vy:chassis.velocity.y,wheels:wheels.map(w=>({x:w.position.x,y:w.position.y,angle:w.angle})),throttle:inputs.gas,braking:inputs.brake,...controls,stalled,dirt:dirt[tune.vehicle],terrain:surfaceAt(chassis.position.x)}),
+    enter:(kind,x=180)=>{endless=kind==='endless';endlessLead=27;map=makeMap(endless?'bog':kind);if(endless)map.name='Endless Backcountry';else for(let i=0;i<38;i++){map.heights[i]=480+(map.heights[i]-480)*clamp((i-32)/6,0,1);map.surfaces[i]='trail';}editing=false;paused=false;checkpoint=180;$('editorBar').hidden=true;$('driveControls').hidden=false;$('balance').hidden=false;release();createWorld(x);},
+    exit:()=>{release();},
+    drawRemote:(c,build,s)=>{const v={...vehicles.find(v=>v.id===build.vehicle),snorkelHeight:build.snorkel};drawRig(c,v,s,s.angle,s.wheels,build.radius,s.wheels.map(w=>w.angle),{tires:build.tires,dirt:s.dirt});}
+  });
   addEventListener('resize',resize);resize();createWorld();icons();requestAnimationFrame(loop);
-  window.mudline = { state:()=>({x:chassis.position.x,y:chassis.position.y,angle:chassis.angle,speed:chassis.velocity.x,vehicle:tune.vehicle,dirt:dirt[tune.vehicle],particles:particles.length,muted:MudAudio.isMuted(),tune:{...tune},editing,paused,map:map.name,savedMaps:customMaps.length,terrain:map.heights.slice(),surfaces:map.surfaces.slice(),wheels:wheels.map(w=>({x:w.position.x,y:w.position.y}))}), vehicles, thumbnail };
+  window.mudline = { state:()=>({x:chassis.position.x,y:chassis.position.y,angle:chassis.angle,speed:chassis.velocity.x,vehicle:tune.vehicle,dirt:dirt[tune.vehicle],particles:particles.length,muted:MudAudio.isMuted(),tune:{...tune},editing,paused,endless,flood,stalled,intakeClearance,groundBodies:streamed.size,map:map.name,savedMaps:customMaps.length,terrain:map.heights.slice(),surfaces:map.surfaces.slice(),wheels:wheels.map(w=>({x:w.position.x,y:w.position.y}))}), vehicles, thumbnail };
 })();

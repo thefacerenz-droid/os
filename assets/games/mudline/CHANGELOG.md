@@ -1,3 +1,13 @@
+# Multiplayer foundation
+
+- Endless streamed bog terrain, adjustable snorkels and intake flooding.
+- Shared 2-8 player rooms, private codes, public directory and late joining.
+- Buffered remote vehicle/wheel/build snapshots and local effects.
+- Capped player contacts, consent-based recovery lines, optional checkpoint activities.
+- Text chat, player list, read-only inspection, spectating and visibility settings.
+- Server movement/session validation and eight-instance browser regression tests.
+- Currency, purchased progression and full authoritative physics remain deferred; see README.
+
 # Initial release
 
 - Eight reference-inspired ATV/SXS builds with independent cartoon body, wheel and suspension rendering.
