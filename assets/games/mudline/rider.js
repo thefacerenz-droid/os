@@ -1,24 +1,22 @@
-/* Cosmetic articulated Matter rig: it cannot destabilize the vehicle solver. */
+/* Small, damped riding-pose offsets; hands, feet and seat stay planted. */
 window.MudRider=(()=>{
-  const {Engine,Bodies,Body,Composite,Constraint}=Matter;
   const rest=[{x:0,y:-27},{x:9,y:-51},{x:19,y:-72},{x:29,y:-42},{x:42,y:-52},{x:-17,y:-3},{x:10,y:15}];
   function create(){
-    const engine=Engine.create({gravity:{x:0,y:0},constraintIterations:5});
-    const nodes=rest.map((p,i)=>{const b=Bodies.circle(p.x,p.y,i===2?10:4,{collisionFilter:{mask:0},frictionAir:.09});Body.setMass(b,.15);return b;});
-    const joints=[[0,1],[1,2],[1,3],[3,4],[0,5],[5,6]].map(([a,b])=>Constraint.create({bodyA:nodes[a],bodyB:nodes[b],length:Math.hypot(rest[a].x-rest[b].x,rest[a].y-rest[b].y),stiffness:.85,damping:.18}));
-    const anchors=[0,4,6].map(i=>Constraint.create({pointA:{...rest[i]},bodyB:nodes[i],length:0,stiffness:i===0?.35:.055,damping:.15}));
-    Composite.add(engine.world,[...nodes,...joints,...anchors]);let last={vx:0,vy:0,angle:0},accumulator=0;
-    return {points:()=>nodes.map(n=>({...n.position})),step(s,dt=1/60){
-      accumulator+=Math.min(.05,dt);const ax=Math.max(-8,Math.min(8,(s.vx||0)-last.vx)),ay=Math.max(-8,Math.min(8,(s.vy||0)-last.vy));
-      const pitch=Math.atan2(Math.sin(s.angle-last.angle),Math.cos(s.angle-last.angle));
-      while(accumulator>=1/60){
-        const loose=Math.abs(Math.sin(s.angle))>.7||Math.abs(pitch)>.1;
-        anchors[1].stiffness=loose?.006:.055;anchors[2].stiffness=loose?.008:.065;
-        for(const node of nodes){const fx=-ax*.00013+Math.sin(s.angle)*.00008-pitch*.0008,fy=-ay*.00013+Math.cos(s.angle)*.00008;Body.applyForce(node,node.position,{x:fx,y:fy});}
-        Engine.update(engine,1000/60);accumulator-=1/60;
-        for(let i=0;i<nodes.length;i++)if(!Number.isFinite(nodes[i].position.x)||Math.hypot(nodes[i].position.x,nodes[i].position.y)>155){Body.setPosition(nodes[i],rest[i]);Body.setVelocity(nodes[i],{x:0,y:0});}
-      }
-      last={vx:s.vx||0,vy:s.vy||0,angle:s.angle};
+    const clamp=(v,max)=>Math.max(-max,Math.min(max,v));
+    let last=null,lean=0,bounce=0;
+    return {points:()=>rest.map((p,i)=>{
+      const weight=[0,.72,1,.35,0,.16,0][i];
+      return {x:p.x+lean*weight,y:p.y+bounce*weight};
+    }),step(s,dt=1/60){
+      if(!Number.isFinite(dt)||dt<=0)return;
+      const current={vx:Number.isFinite(s.vx)?s.vx:0,vy:Number.isFinite(s.vy)?s.vy:0,angle:Number.isFinite(s.angle)?s.angle:0};
+      const elapsed=Math.min(.05,dt),frames=Math.max(.1,elapsed*60);
+      const ax=last?(current.vx-last.vx)/frames:0,ay=last?(current.vy-last.vy)/frames:0;
+      const pitch=last?Math.atan2(Math.sin(current.angle-last.angle),Math.cos(current.angle-last.angle))/frames:0;
+      const blend=1-Math.exp(-10*elapsed);
+      lean+=(clamp(-ax*.45-current.vx*.12+Math.sin(current.angle)*2-pitch*5,4.5)-lean)*blend;
+      bounce+=(clamp(-ay*.4,2.5)-bounce)*blend;
+      last=current;
     }};
   }
   function draw(c,points,v,dirt=0){

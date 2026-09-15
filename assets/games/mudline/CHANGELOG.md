@@ -1,3 +1,8 @@
+# Subtle rider movement
+
+- Replaced floppy ragdolls with small, damped body lean and bounce.
+- Hands, feet and seat remain planted, including during rollovers.
+
 # Heavy spray and articulated riders
 
 - Much denser mud/water spray with bounded particle counts and heavier persistent mud coating.
