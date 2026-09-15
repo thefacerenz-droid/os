@@ -4784,16 +4784,10 @@ function getVelChatUnreadCount() {
 }
 
 function setVelFaviconBadge(count = 0) {
-  const label = count > 0 ? String(Math.min(99, count)) : "V";
-  const fontSize = count > 0 ? 54 : 58;
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
-      <rect width="96" height="96" rx="24" fill="#050505"/>
-      <rect x="5" y="5" width="86" height="86" rx="21" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="3"/>
-      <text x="48" y="${count > 0 ? 66 : 68}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="900" fill="#fff">${label}</text>
-    </svg>`;
+  const label = String(Math.min(99, count));
   document.querySelectorAll('link[rel~="icon"]').forEach((link) => {
-    link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    link.type = "image/x-icon";
+    link.href = "/favicon.ico?v=2";
   });
   document.title = count > 0 ? `(${label}) Clever` : "Clever";
 }
