@@ -3362,6 +3362,68 @@ body[data-icon-pack="revamp"] .youtube-badge {
   background: #0a0a0a;
 }
 
+.web-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.web-browser-chrome .url-form {
+  scroll-margin-bottom: 42dvh;
+}
+
+.mobile-game-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.mobile-game-control {
+  position: absolute;
+  min-width: 72px;
+  min-height: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 18px;
+  background: rgba(8, 10, 13, 0.56);
+  color: #fff;
+  font: 800 0.72rem/1.1 var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.mobile-game-control.is-pressed {
+  transform: translateY(2px) scale(0.98);
+  background: rgba(82, 255, 117, 0.62);
+  border-color: rgba(215, 255, 218, 0.76);
+}
+
+.mobile-game-control-left:nth-of-type(1) { left: max(18px, env(safe-area-inset-left)); bottom: calc(28px + env(safe-area-inset-bottom)); }
+.mobile-game-control-left:nth-of-type(2) { left: calc(max(18px, env(safe-area-inset-left)) + 84px); bottom: calc(28px + env(safe-area-inset-bottom)); }
+.mobile-game-control-left:nth-of-type(3) { left: calc(max(18px, env(safe-area-inset-left)) + 42px); bottom: calc(96px + env(safe-area-inset-bottom)); }
+.mobile-game-control-left:nth-of-type(4) { left: calc(max(18px, env(safe-area-inset-left)) + 42px); bottom: calc(28px + env(safe-area-inset-bottom)); }
+.mobile-game-control-right { right: max(18px, env(safe-area-inset-right)); bottom: calc(28px + env(safe-area-inset-bottom)); }
+.mobile-game-control-right:nth-last-of-type(2) { right: calc(max(18px, env(safe-area-inset-right)) + 84px); }
+.mobile-game-control-primary {
+  min-width: 92px;
+  min-height: 72px;
+  border-radius: 22px;
+  background: rgba(77, 255, 111, 0.2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-game-controls {
+    display: none;
+  }
+}
+
 .web-frame-helper {
   position: absolute;
   right: 1rem;

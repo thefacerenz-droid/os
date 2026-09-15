@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Veloi Test Helper</title><link rel="icon" href="./icon.svg"><link rel="stylesheet" href="./style.css"><script src="/assets/js/shorts-icons.js" defer></script><script type="module" src="./helper.js"></script></head>
+<body>
+<header><a class="brand" href="/" aria-label="Back to Veloi"><img src="./icon.svg" alt="" width="36" height="36"><span>Veloi <b>Test Helper</b></span></a><span id="state" role="status">Ready</span></header>
+<main>
+  <section class="capture">
+    <div class="section-head"><h1>Screen</h1><span id="source">Not sharing</span></div>
+    <div class="preview"><video id="screen" autoplay playsinline muted hidden></video><img id="snapshot" alt="Uploaded screenshot" hidden><div id="empty"><i data-lucide="monitor"></i><p>No screen selected</p></div></div>
+    <div class="toolbar"><button id="start" class="primary"><i data-lucide="play"></i>Start Testing</button><button id="stop" disabled><i data-lucide="square"></i>Stop</button><button id="scan" title="Scan now" aria-label="Scan now" disabled><i data-lucide="scan-text"></i></button><button id="upload" title="Upload screenshot" aria-label="Upload screenshot"><i data-lucide="image-plus"></i></button><input id="file" type="file" accept="image/png,image/jpeg" hidden></div>
+    <label class="consent"><input id="consent" type="checkbox">Send snapshots of my selected screen to OpenAI for question analysis.</label>
+    <p id="status" role="status">Ready to start.</p>
+    <p id="support" hidden></p>
+  </section>
+  <section class="answers"><div class="section-head"><h1>Answers <span id="count">0</span></h1><div class="answer-tools"><button id="copy" title="Copy answers" aria-label="Copy answers" disabled><i data-lucide="copy"></i></button><button id="popout" title="Open answer window" aria-label="Open answer window"><i data-lucide="external-link"></i></button><button id="clear" title="Clear answers" aria-label="Clear answers"><i data-lucide="trash-2"></i></button></div></div><div id="output" aria-live="polite"><div class="output-empty"><i data-lucide="list-checks"></i><p>No questions detected yet.</p></div></div><p class="footnote">AI answers may be incorrect. Check the question and explanation.</p></section>
+</main></body></html>

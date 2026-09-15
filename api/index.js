@@ -7,7 +7,6 @@ const handleDevScreen = (...args) => require("../lib/api/dev/screen.js")(...args
 const handleFlappyLeaderboard = (...args) => require("../lib/api/games/flappy.js")(...args);
 const handleYoutubeGlobal = (...args) => require("../lib/api/youtube/global.js")(...args);
 const handleYoutubeSearch = (...args) => require("../lib/api/youtube/search.js")(...args);
-const handleTikTok = (...args) => require("../lib/api/tiktok.js")(...args);
 const handleMessenger = (...args) => require("../lib/api/messenger.js")(...args);
 const handleProxy = (...args) => require("../lib/api/configuredProxy.js")(...args);
 const handleBilling = require("../lib/api/billing.js");
@@ -41,11 +40,11 @@ async function dispatch(req, res) {
   const apiPath = getApiPath(req);
   if (apiPath.startsWith("billing/")) return handleBilling(req, res, apiPath.slice(8));
   if (!handleBilling.requireAccess(req, res)) return;
+  if (apiPath === "test-helper") return require("../lib/api/test-helper.js")(req, res);
   if (apiPath === "proxy") return handleProxy(req, res);
 
   if (apiPath === "youtube/search") return handleYoutubeSearch(req, res);
   if (apiPath === "youtube/global") return handleYoutubeGlobal(req, res);
-  if (apiPath.startsWith("tiktok/")) return handleTikTok(req, res, apiPath.slice("tiktok/".length));
   if (apiPath === "messenger") return handleMessenger(req, res);
   if (apiPath === "chat/messages") return handleChatMessages(req, res);
   if (apiPath === "chat/typing") return handleChatTyping(req, res);

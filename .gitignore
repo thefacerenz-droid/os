@@ -1,3 +1,6 @@
 .env
 node_modules/
 data/*.json
+data/shorts-media/
+artifacts/shorts-*.png
+artifacts/test-helper-*.png

@@ -377,7 +377,7 @@
         </div>
       </section>
 
-      <section class="drawer media-drawer" id="mediaDrawer" aria-hidden="true">
+      <section class="drawer media-drawer" id="mediaDrawer" aria-hidden="true" hidden inert>
         <button class="drawer-scrim" type="button" aria-label="Close TikTok" data-close-panel="media"></button>
         <div class="drawer-panel media-panel">
           <header class="drawer-head media-head">
@@ -668,7 +668,8 @@
               <p id="webWarningText">This site may refuse to load inside a normal browser frame.</p>
             </div>
             <div class="web-frame-wrap">
-              <iframe id="webFrame" class="web-frame" title="Website view" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-forms allow-modals allow-presentation allow-scripts allow-downloads" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; picture-in-picture; web-share" allowfullscreen src="about:blank"></iframe>
+              <iframe id="webFrame" class="web-frame" title="Website view" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-forms allow-modals allow-presentation allow-scripts allow-downloads allow-same-origin allow-pointer-lock" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gamepad; gyroscope; picture-in-picture; web-share" allowfullscreen src="about:blank"></iframe>
+              <div class="mobile-game-controls" id="mobileGameControls" hidden></div>
               <div class="web-frame-helper" id="webFrameHelper" hidden>
                 <strong>iPad source helper</strong>
                 <p>Switch mirrors or open a local game that runs inside vel.os.</p>
@@ -1703,7 +1704,7 @@
     <link rel="stylesheet" href="./billing.css">
     <script src="./billing.js"></script>
     <link rel="stylesheet" href="./game-player.css">
-    <script src="./script.js?v=imported-games-v1"></script>
+    <script src="./script.js?v=test-helper-v1"></script>
     <link rel="stylesheet" href="./proxy-browser.css">
     <script src="./proxy-browser.js"></script>
   </body>

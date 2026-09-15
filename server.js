@@ -808,7 +808,7 @@ async function handleTikTokVideos(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
-  const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : /^\/test-helper\/?$/.test(url.pathname) ? "/test-helper/index.html" : url.pathname);
   if (/^\/data\//i.test(requestedPath)) return sendJson(res, 403, { error: "forbidden" });
   const filePath = path.resolve(PUBLIC_DIR, `.${requestedPath}`);
   if (!filePath.startsWith(PUBLIC_DIR) || filePath.includes(`${path.sep}.env`)) {
@@ -838,6 +838,8 @@ async function handleRequest(req, res) {
   try {
     if (url.pathname.startsWith("/api/billing/")) return await handleBilling(req, res, url.pathname.slice(13));
     if (url.pathname.startsWith("/api/") && !handleBilling.requireAccess(req, res)) return;
+    if (url.pathname === "/api/test-helper") return await require("./lib/api/test-helper.js")(req, res);
+    if (url.pathname.startsWith("/api/tiktok/")) return sendJson(res, 410, { message: "TikTok has been removed." });
     if (url.pathname === "/api/chat/messages" && url.searchParams.get("__typing") === "1") return await handleChatTyping(req, res);
     if (url.pathname === "/api/chat/messages") return await handleChatMessages(req, res, url);
     if (url.pathname === "/api/chat/typing") return await handleChatTyping(req, res);

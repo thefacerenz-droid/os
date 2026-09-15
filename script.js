@@ -655,9 +655,9 @@ const webApps = {
   },
 
   tiktok: {
-    title: "TikTok",
+    title: "Veloi Shorts",
     tag: "Media Provider",
-    description: "Connect TikTok to display profile videos.",
+    description: "Watch videos published on Veloi.",
     url: "about:blank",
     mode: "mediaProvider",
     provider: "tiktok",
@@ -2009,6 +2009,7 @@ const importedGameCatalog = [
   ["10minutestilldawn", "10 Minutes Till Dawn", "Shooter", "10minutestilldawn.html"],
   ["8ballclassic", "8 Ball Classic", "Sports", "8ballclassic.html"],
   ["3dflightsimulator", "3D Flight Simulator", "Simulation", "3Dflightsimulator.html"],
+  ["crazymotorcycle", "Crazy Motorcycle", "Racing", "crazymotorcycle.html"],
   ["1v1lol", "1v1.LOL", "Shooter", "1v1.lol.html"],
   ["1on1soccer", "1 On 1 Soccer", "Sports", "1on1soccer.html"],
   ["minecraft112", "Minecraft 1.12", "Sandbox", "1.12.html"],
@@ -2136,12 +2137,12 @@ const utilityApps = {
     action: "panel",
     panel: "youtube"
   },
-  media: {
-    title: "TikTok",
-    label: "TikTok",
-    badgeSrc: "./assets/images/apps/tiktok.svg",
+  testhelper: {
+    title: "Veloi Test Helper",
+    label: "Test Helper",
+    badgeSrc: "./test-helper/icon.svg",
     action: "panel",
-    panel: "media"
+    panel: "testhelper"
   },
   chat: {
     title: "Stranger Chat",
@@ -2789,6 +2790,7 @@ const webWarning = document.getElementById("webWarning");
 const webWarningText = document.getElementById("webWarningText");
 const webFrame = document.getElementById("webFrame");
 const webFrameBaseSandbox = webFrame?.getAttribute("sandbox") || "allow-forms allow-modals allow-presentation allow-scripts allow-downloads";
+const mobileGameControls = document.getElementById("mobileGameControls");
 const webFrameHelper = document.getElementById("webFrameHelper");
 const webHelperMirrorButton = document.getElementById("webHelperMirrorButton");
 const webHelperLocalButton = document.getElementById("webHelperLocalButton");
@@ -3095,9 +3097,9 @@ const WEB_BROWSER_TABS_KEY = "vel-browser-tabs-v1";
 const WEB_BROWSER_ACTIVE_TAB_KEY = "vel-browser-active-tab";
 const WEB_BROWSER_PROXY_KEY = "vel-browser-proxy-mode";
 const WEB_BROWSER_STAY_INSIDE_KEY = "vel-browser-stay-inside-v1";
-let webBrowserProxyMode = storage.get(WEB_BROWSER_PROXY_KEY, "proxy") === "direct" ? "direct" : "proxy";
+let webBrowserProxyMode = storage.get(WEB_BROWSER_PROXY_KEY, "direct") === "proxy" ? "proxy" : "direct";
 if (storage.get(WEB_BROWSER_STAY_INSIDE_KEY, "0") !== "1") {
-  webBrowserProxyMode = "proxy";
+  webBrowserProxyMode = "direct";
   storage.set(WEB_BROWSER_PROXY_KEY, webBrowserProxyMode);
   storage.set(WEB_BROWSER_STAY_INSIDE_KEY, "1");
 }
@@ -3392,6 +3394,7 @@ installedApps = Array.isArray(installedApps)
   ? [...new Set(installedApps.filter((item) => typeof item === "string"))]
   : ["web:browser", "panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "panel:velhub", "panel:lobbies", "panel:soundboard", "panel:dev", "panel:music", "panel:calculator", "panel:settings"];
 installedApps = installedApps.filter((item) => item !== "panel:ai");
+installedApps = ["panel:testhelper", ...installedApps.filter(item => item !== "panel:media" && item !== "panel:testhelper")].slice(0, 40);
 storage.set("vel-installed-apps", JSON.stringify(installedApps.slice(0, 40)));
 if (storage.get("vel-installed-apps-v2", "0") !== "1" && !installedApps.includes("panel:velhub")) {
   installedApps = ["panel:velhub", ...installedApps].slice(0, 40);
@@ -3434,7 +3437,7 @@ if (storage.get("vel-installed-apps-v9", "0") !== "1" && !installedApps.includes
   storage.set("vel-installed-apps-v9", "1");
 }
 if (storage.get("vel-installed-apps-v10", "0") !== "1") {
-  const featuredApps = ["panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "web:browser"];
+  const featuredApps = ["panel:youtube", "panel:testhelper", "panel:chat", "web:minecraftclassic", "web:browser"];
   installedApps = [...featuredApps, ...installedApps.filter((ref) => !featuredApps.includes(ref))].slice(0, 40);
   storage.set("vel-installed-apps", JSON.stringify(installedApps));
   storage.set("vel-installed-apps-v10", "1");
@@ -3619,7 +3622,7 @@ if (storage.get("vel-desktop-browser-shortcut-v1", "0") !== "1") {
 }
 
 if (storage.get("vel-app-wall-order-v1", "0") !== "1") {
-  const featuredOrder = ["panel:launcher", "panel:youtube", "panel:media", "panel:chat", "web:minecraftclassic", "web:browser"];
+  const featuredOrder = ["panel:launcher", "panel:youtube", "panel:testhelper", "panel:chat", "web:minecraftclassic", "web:browser"];
   const savedDesktopOrder = readStoredJson(DESKTOP_SHORTCUT_ORDER_KEY, []);
   const previousOrder = Array.isArray(savedDesktopOrder) ? savedDesktopOrder : [];
   const nextDesktopOrder = [...featuredOrder, ...previousOrder.filter((ref) => !featuredOrder.includes(ref))];
@@ -4081,6 +4084,8 @@ function exitSiteFullscreen() {
 }
 
 function openPanel(name) {
+  if (name === "media") return false;
+  if (name === "testhelper") { window.location.assign("/test-helper/"); return true; }
   if (isDevAppLocked(name)) {
     showDevAppLocked(name);
     return false;
@@ -12607,67 +12612,7 @@ function renderShortsFeed() {
 }
 
 async function loadTikTokData() {
-  mediaState.loading = true;
-  mediaState.tiktokError = "";
-  mediaState.tiktokAuthRequired = false;
-  mediaState.tiktokLinkOnly = false;
-  renderMediaHub();
-
-  try {
-    const statusResponse = await fetch("/api/tiktok/status");
-    const status = await statusResponse.json();
-    if (!statusResponse.ok) throw new Error(status.message || "TikTok login status could not load.");
-
-    mediaState.tiktokConfigured = Boolean(status.configured);
-    mediaState.tiktokConnected = Boolean(status.connected);
-
-    if (!mediaState.tiktokConfigured) {
-      mediaState.tiktokLinkOnly = true;
-      mediaState.tiktokProfile = null;
-      mediaState.tiktokVideos = [];
-      return;
-    }
-
-    if (!mediaState.tiktokConnected) {
-      mediaState.tiktokAuthRequired = true;
-      mediaState.tiktokProfile = null;
-      mediaState.tiktokVideos = [];
-      return;
-    }
-
-    const [profileResponse, videosResponse] = await Promise.all([
-      fetch("/api/tiktok/profile"),
-      fetch("/api/tiktok/videos")
-    ]);
-    const profile = await profileResponse.json();
-    const videos = await videosResponse.json();
-
-    if (profileResponse.status === 401 || videosResponse.status === 401) {
-      mediaState.tiktokConnected = false;
-      mediaState.tiktokAuthRequired = true;
-      mediaState.tiktokProfile = null;
-      mediaState.tiktokVideos = [];
-      return;
-    }
-
-    if (!profileResponse.ok) throw new Error(profile.message || "TikTok profile could not load.");
-    if (!videosResponse.ok) throw new Error(videos.message || "TikTok videos could not load.");
-
-    mediaState.tiktokProfile = profile;
-    mediaState.tiktokVideos = videos.videos || [];
-  } catch (error) {
-    const message = error.message || "TikTok could not load.";
-    if (/credentials.+not configured|not configured.+credentials/i.test(message)) {
-      mediaState.tiktokLinkOnly = true;
-      mediaState.tiktokProfile = null;
-      mediaState.tiktokVideos = [];
-    } else {
-      mediaState.tiktokError = message;
-    }
-  } finally {
-    mediaState.loading = false;
-    renderMediaHub();
-  }
+  return;
 }
 
 function renderTikTokConnectCard() {
@@ -13067,6 +13012,7 @@ async function disconnectTikTok() {
 
 function renderMediaHub() {
   if (!mediaGrid) return;
+  if (mediaState.provider === "tiktok") { mediaGrid.replaceChildren(); return; }
 
   mediaProviderButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mediaProvider === mediaState.provider);
@@ -13078,9 +13024,6 @@ function renderMediaHub() {
 
   if (provider === "all" || provider === "youtube") {
     sections.push(renderYouTubeCards());
-  }
-  if (provider === "all" || provider === "tiktok") {
-    sections.push(provider === "tiktok" ? renderTikTokFeed() : renderTikTokCards());
   }
 
   const html = sections.filter(Boolean).join("");
@@ -13172,6 +13115,7 @@ async function handleMediaSearch(value) {
 }
 
 function openMediaProvider(provider) {
+  if (provider === "tiktok" || provider === "shorts") return;
   mediaState.provider = ["all", "youtube", "tiktok"].includes(provider) ? provider : "youtube";
   storage.set("vel-media-tab", mediaState.provider);
   mediaState.youtubeNextPageToken = "";
@@ -13492,8 +13436,108 @@ function setWebProxyMode(mode = "direct") {
   }
 }
 
+function isTouchGameControlsCandidate(app = {}) {
+  if (!app?.category || activeWeb === "browser") return false;
+  const isTouchDevice = window.matchMedia?.("(pointer: coarse)")?.matches || navigator.maxTouchPoints > 0;
+  if (!isTouchDevice && window.innerWidth > 900) return false;
+  return Boolean(app.localOriginal || String(app.source || "") === "imported");
+}
+
+function getMobileGameControlProfile(app = {}) {
+  const text = `${app.title || ""} ${app.category || ""}`.toLowerCase();
+  if (/(car|drive|drift|traffic|parking|racing|motor|moto|bike|hill|flight|simulator|tracks|slope|snow)/.test(text)) {
+    return [
+      { label: "Left", key: "ArrowLeft", code: "ArrowLeft", cluster: "left" },
+      { label: "Right", key: "ArrowRight", code: "ArrowRight", cluster: "left" },
+      { label: "Brake", key: "ArrowDown", code: "ArrowDown", cluster: "right" },
+      { label: "Gas", key: "ArrowUp", code: "ArrowUp", cluster: "right primary" }
+    ];
+  }
+  if (/(shooter|action|tank|trigger|dawn|1v1|backrooms|fnaf|granny|baldi)/.test(text)) {
+    return [
+      { label: "Move", key: "w", code: "KeyW", cluster: "left" },
+      { label: "Left", key: "a", code: "KeyA", cluster: "left" },
+      { label: "Right", key: "d", code: "KeyD", cluster: "left" },
+      { label: "Back", key: "s", code: "KeyS", cluster: "left" },
+      { label: "Action", key: " ", code: "Space", cluster: "right primary" },
+      { label: "Reload", key: "r", code: "KeyR", cluster: "right" }
+    ];
+  }
+  if (/(chess|minesweeper|pool|8 ball|elastic|melon|sandbox|puzzle|board)/.test(text)) {
+    return [];
+  }
+  return [
+    { label: "Left", key: "ArrowLeft", code: "ArrowLeft", cluster: "left" },
+    { label: "Right", key: "ArrowRight", code: "ArrowRight", cluster: "left" },
+    { label: "Jump", key: " ", code: "Space", cluster: "right primary" },
+    { label: "Up", key: "ArrowUp", code: "ArrowUp", cluster: "right" }
+  ];
+}
+
+function sendMobileGameKey(control, type = "keydown") {
+  if (!webFrame?.contentWindow || !control?.key) return;
+  const key = control.key;
+  const eventInit = {
+    key,
+    code: control.code || key,
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    keyCode: key === " " ? 32 : key.startsWith("Arrow") ? ({ ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 }[key] || 0) : key.toUpperCase().charCodeAt(0),
+    which: key === " " ? 32 : key.startsWith("Arrow") ? ({ ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40 }[key] || 0) : key.toUpperCase().charCodeAt(0)
+  };
+  try {
+    const targetWindow = webFrame.contentWindow;
+    const targetDocument = targetWindow.document;
+    const target = targetDocument.activeElement && targetDocument.activeElement !== targetDocument.body
+      ? targetDocument.activeElement
+      : targetDocument;
+    target.dispatchEvent(new KeyboardEvent(type, eventInit));
+    targetWindow.dispatchEvent(new KeyboardEvent(type, eventInit));
+  } catch (error) {
+    webFrame.contentWindow.postMessage({ type: "vel-os-game-key", eventType: type, key: control.key, code: control.code }, "*");
+  }
+}
+
+function renderMobileGameControls(app = {}) {
+  if (!mobileGameControls) return;
+  const controls = isTouchGameControlsCandidate(app) ? getMobileGameControlProfile(app) : [];
+  if (!controls.length) {
+    mobileGameControls.hidden = true;
+    mobileGameControls.innerHTML = "";
+    return;
+  }
+  mobileGameControls.hidden = false;
+  mobileGameControls.innerHTML = controls.map((control, index) => `
+    <button class="mobile-game-control ${String(control.cluster || "right").split(/\s+/).filter(Boolean).map((name) => `mobile-game-control-${escapeHtml(name)}`).join(" ")}" type="button" data-control-index="${index}" aria-label="${escapeHtml(control.label)}">
+      ${escapeHtml(control.label)}
+    </button>
+  `).join("");
+  mobileGameControls.querySelectorAll("[data-control-index]").forEach((button) => {
+    const control = controls[Number(button.dataset.controlIndex)];
+    const press = (event) => {
+      event.preventDefault();
+      button.setPointerCapture?.(event.pointerId);
+      button.classList.add("is-pressed");
+      webFrame?.focus?.();
+      sendMobileGameKey(control, "keydown");
+    };
+    const release = (event) => {
+      event.preventDefault();
+      button.classList.remove("is-pressed");
+      sendMobileGameKey(control, "keyup");
+    };
+    button.addEventListener("pointerdown", press);
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("pointerleave", (event) => {
+      if (button.classList.contains("is-pressed")) release(event);
+    });
+  });
+}
+
 function setWebWindow(app, url, mirrorIndex = 0, options = {}) {
-  webDrawer?.classList.toggle("is-game-only", ["stickmanhook", "mudline"].includes(activeWeb));
+  webDrawer?.classList.toggle("is-game-only", Boolean(app.category || /game/i.test(app.tag || "")));
   currentWebUrl = url;
   currentWebMirrorIndex = mirrorIndex;
   webTag.textContent = app.tag;
@@ -13528,6 +13572,7 @@ function setWebWindow(app, url, mirrorIndex = 0, options = {}) {
       || navigator.maxTouchPoints > 0;
     webFrameHelper.hidden = true;
   }
+  renderMobileGameControls(app);
   if (webHelperMirrorButton) {
     webHelperMirrorButton.hidden = sources.length < 2;
   }
