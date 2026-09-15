@@ -3310,11 +3310,20 @@ body[data-active-panel="messages"] .vel-chat {
 
 .messages-thread {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto 28px;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   background: #0b0d0e;
 }
+
+/* Explicit rows keep hidden call/typing sections from moving the scroll area. */
+.messages-thread > .messages-thread-head { grid-row: 1; }
+.messages-thread > .messages-call { grid-row: 2; max-height: 35dvh; overflow-y: auto; }
+.messages-thread > .messages-history { grid-row: 3; overscroll-behavior: contain; }
+.messages-thread > .messages-typing { grid-row: 4; }
+.messages-thread > .messages-compose { grid-row: 5; }
+.messages-thread > .messages-status { grid-row: 6; overflow-y: auto; }
 
 .messages-thread-head {
   display: grid;
